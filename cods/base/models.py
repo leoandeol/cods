@@ -3,6 +3,7 @@ import pickle
 from typing import Union
 
 import torch
+import torch.utils.data
 
 from cods.base.data import Predictions
 

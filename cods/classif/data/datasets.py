@@ -4,11 +4,9 @@ import urllib.request
 from typing import Callable, Dict, Union
 
 import torch
+import torch.utils.data
 import torchvision.transforms as T
 from timm.data.dataset import ImageDataset
-
-# from PIL import Image
-# from torch.utils.data import Dataset
 
 # from torchvision.datasets import ImageNet
 
