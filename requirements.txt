@@ -1,0 +1,12 @@
+tqdm
+numba
+glob2
+Pillow
+numpy
+matplotlib
+torch
+torchvision
+scikit-learn
+scikit-optimize
+timm
+pycocotools
