@@ -1,11 +1,10 @@
 import torch
 
-from cods.od.data import MSCOCODataset
-from cods.od.models import DETRModel
 from cods.od.cp import ODConformalizer, ODRiskConformalizer
-from cods.od.tr import ODToleranceRegion
+from cods.od.data import MSCOCODataset
 from cods.od.metrics import unroll_metrics
-
+from cods.od.models import DETRModel
+from cods.od.tr import ODToleranceRegion
 
 # MODES = ["classification", "localization", "detection", "combined"]
 
@@ -164,9 +163,7 @@ class Benchmark:
                 preds_val, conf_boxes, conf_cls, verbose=verbose
             )
             all_metrics[f"{conformalizer.__class__.__name__}-{method}"] = metrics
-            unroll_metrics(
-                val_preds=preds_val, conf_boxes=conf_boxes, conf_cls=conf_cls
-            )
+            unroll_metrics(od_preds=preds_val, conf_boxes=conf_boxes, conf_cls=conf_cls)
 
 
 if __name__ == "__main__":

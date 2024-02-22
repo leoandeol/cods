@@ -1,32 +1,6 @@
 # Classification metrics
 
-import numpy as np
 import torch
-from sklearn.metrics import (
-    accuracy_score,
-    auc,
-    average_precision_score,
-    balanced_accuracy_score,
-    brier_score_loss,
-    classification_report,
-    cohen_kappa_score,
-    confusion_matrix,
-    f1_score,
-    fbeta_score,
-    hamming_loss,
-    hinge_loss,
-    jaccard_score,
-    log_loss,
-    matthews_corrcoef,
-    multilabel_confusion_matrix,
-    precision_recall_curve,
-    precision_recall_fscore_support,
-    precision_score,
-    recall_score,
-    roc_auc_score,
-    roc_curve,
-    zero_one_loss,
-)
 
 from cods.classif.data import ClassificationPredictions
 from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss

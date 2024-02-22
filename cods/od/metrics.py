@@ -1,12 +1,11 @@
+from typing import Any, Optional
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
-from numba import jit
 import tqdm
-from typing import Optional, Any
 
 from cods.od.data import ODPredictions
-
 from cods.od.utils import f_iou
 
 

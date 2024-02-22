@@ -23,9 +23,7 @@ from cods.od.score import (
 from cods.od.utils import (
     apply_margins,
     compute_risk_box_level,
-    compute_risk_image_level,
     evaluate_cls_conformalizer,
-    flatten_conf_cls,
     get_classif_preds_from_od_preds,
     get_conf_cls_for_od,
 )
@@ -264,7 +262,7 @@ class ObjectnessConformalizer(Conformalizer):
 
     def calibrate(
         self, preds: ODPredictions, alpha: float = 0.1, verbose: bool = True
-    ) -> float:
+    ) -> torch.Tensor:
         """
         Calibrates the conformalizer using the given predictions.
 
@@ -355,7 +353,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
     def __init__(
         self,
         prediction_set: str = "additive",
-        loss: str = None,
+        loss: Union[str, None] = None,
         optimizer: str = "binary_search",
     ):
         """
@@ -455,7 +453,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
         steps: int = 13,
         bounds: List[float] = [0, 1000],
         verbose: bool = True,
-        confidence_threshold: float = None,
+        confidence_threshold: Union[float, None] = None,
     ) -> float:
         """
         Calibrate the conformalizer.
@@ -517,7 +515,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
         return conf_boxes
 
     def evaluate(
-        self, preds: ODPredictions, conf_boxes: List[List[float]], verbose: bool = True
+        self, preds: ODPredictions, conf_boxes: List[torch.Tensor], verbose: bool = True
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Evaluate the conformalized predictions.
@@ -533,7 +531,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
         """
         if self.lbd is None:
             raise ValueError("Conformalizer must be calibrated before evaluating.")
-        if preds.conf_boxes is None:
+        if conf_boxes is None:
             raise ValueError("Predictions must be conformalized before evaluating.")
         true_boxes = preds.true_boxes
         conf_boxes = list(
@@ -550,7 +548,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
         )
         safety = 1 - risk
 
-        def compute_set_size(boxes: List[List[float]]) -> torch.Tensor:
+        def compute_set_size(boxes: List[torch.Tensor]) -> torch.Tensor:
             set_sizes = []
             for image_boxes in boxes:
                 for box in image_boxes:

@@ -1,8 +1,7 @@
-import numpy as np
 import torch
 
 from cods.base.loss import Loss
-from cods.od.utils import get_covered_areas_of_gt_union, get_covered_areas_of_gt_max
+from cods.od.utils import get_covered_areas_of_gt_max, get_covered_areas_of_gt_union
 
 
 # Object Detection Loss, many are wrappers of Segmentation losses

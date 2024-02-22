@@ -11,7 +11,6 @@ from cods.od.metrics import compute_global_coverage
 from cods.od.utils import (
     apply_margins,
     compute_risk_box_level,
-    compute_risk_image_level,
     evaluate_cls_conformalizer,
     get_classif_preds_from_od_preds,
     get_conf_cls_for_od,

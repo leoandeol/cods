@@ -1,7 +1,6 @@
 import torch
-
+from scipy.optimize import brentq
 from scipy.stats import binom
-from scipy.optimize import brentq, bisect
 
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
 
