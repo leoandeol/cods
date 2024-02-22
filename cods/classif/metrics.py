@@ -3,35 +3,33 @@
 import numpy as np
 import torch
 from sklearn.metrics import (
-    confusion_matrix,
     accuracy_score,
+    auc,
+    average_precision_score,
+    balanced_accuracy_score,
+    brier_score_loss,
+    classification_report,
+    cohen_kappa_score,
+    confusion_matrix,
+    f1_score,
+    fbeta_score,
+    hamming_loss,
+    hinge_loss,
+    jaccard_score,
+    log_loss,
+    matthews_corrcoef,
+    multilabel_confusion_matrix,
+    precision_recall_curve,
+    precision_recall_fscore_support,
     precision_score,
     recall_score,
-    f1_score,
     roc_auc_score,
     roc_curve,
-    auc,
+    zero_one_loss,
 )
-from sklearn.metrics import precision_recall_curve
-from sklearn.metrics import average_precision_score
-from sklearn.metrics import cohen_kappa_score
-from sklearn.metrics import matthews_corrcoef
-from sklearn.metrics import classification_report
-from sklearn.metrics import log_loss
-from sklearn.metrics import brier_score_loss
-from sklearn.metrics import hamming_loss
-from sklearn.metrics import zero_one_loss
-from sklearn.metrics import jaccard_score
-from sklearn.metrics import hinge_loss
-from sklearn.metrics import fbeta_score
-from sklearn.metrics import multilabel_confusion_matrix
-from sklearn.metrics import balanced_accuracy_score
-from sklearn.metrics import classification_report
-from sklearn.metrics import precision_recall_fscore_support
-from sklearn.metrics import precision_recall_curve
 
 from cods.classif.data import ClassificationPredictions
-from cods.classif.loss import ClassificationLoss, CLASSIFICATION_LOSSES
+from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 
 
 def get_coverage(
@@ -93,7 +91,7 @@ def get_empirical_safety(
     if isinstance(loss, str):
         loss = ACCEPTED_LOSSES[loss]()
     elif isinstance(loss, ClassificationLoss):
-        loss = loss()
+        loss = loss
     else:
         raise ValueError(
             f"loss must be a string or a ClassificationLoss instance, got {loss}"

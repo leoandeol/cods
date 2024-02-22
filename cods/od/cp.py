@@ -1,35 +1,34 @@
+from typing import Callable, List, Optional, Sequence, Tuple, Union
+
 import torch
 from tqdm import tqdm
 
-from typing import Union, Tuple, List, Optional, Callable, Sequence
-
 from cods.base.cp import Conformalizer, RiskConformalizer
-from cods.classif.cp import ClassificationConformalizer
-from cods.od.utils import compute_risk_image_level, compute_risk_box_level
-from cods.od.score import (
-    MinAdditiveSignedAssymetricHausdorffNCScore,
-    MinMultiplicativeSignedAssymetricHausdorffNCScore,
-    UnionAdditiveSignedAssymetricHausdorffNCScore,
-    UnionMultiplicativeSignedAssymetricHausdorffNCScore,
-    ObjectnessNCScore,
-)
-
-from cods.od.data import ODPredictions
-from cods.od.loss import PixelWiseRecallLoss, BoxWiseRecallLoss
 from cods.base.optim import (
     BinarySearchOptimizer,
     GaussianProcessOptimizer,
     MonteCarloOptimizer,
 )
+from cods.classif.cp import ClassificationConformalizer
+from cods.od.data import ODPredictions
+from cods.od.loss import BoxWiseRecallLoss, PixelWiseRecallLoss
+from cods.od.metrics import compute_global_coverage
+from cods.od.score import (
+    MinAdditiveSignedAssymetricHausdorffNCScore,
+    MinMultiplicativeSignedAssymetricHausdorffNCScore,
+    ObjectnessNCScore,
+    UnionAdditiveSignedAssymetricHausdorffNCScore,
+    UnionMultiplicativeSignedAssymetricHausdorffNCScore,
+)
 from cods.od.utils import (
     apply_margins,
+    compute_risk_box_level,
+    compute_risk_image_level,
+    evaluate_cls_conformalizer,
+    flatten_conf_cls,
     get_classif_preds_from_od_preds,
     get_conf_cls_for_od,
-    flatten_conf_cls,
-    evaluate_cls_conformalizer,
 )
-from cods.od.metrics import compute_global_coverage
-
 
 ################ BASIC BRICS ####################################################
 
@@ -187,7 +186,7 @@ class LocalizationConformalizer(Conformalizer):
         conf_boxes = self._score_function.apply_margins(
             preds.pred_boxes, self.quantiles
         )
-        preds.conf_boxes = conf_boxes
+
         preds.confidence_threshold = self.confidence_threshold
         return conf_boxes
 
@@ -388,7 +387,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
 
     def _get_risk_function(
         self, preds: ODPredictions, alpha: float, objectness_threshold: float, **kwargs
-    ) -> Callable[[float], float]:
+    ) -> Callable[[float], torch.Tensor]:
         """
         Get the risk function for risk conformalization.
 
@@ -407,7 +406,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
             ]
         )
 
-        def risk_function(lbd: float) -> float:
+        def risk_function(lbd: float) -> torch.Tensor:
             """
             Compute the risk given a lambda value.
 
@@ -489,7 +488,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,
@@ -514,7 +513,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
             preds.pred_boxes, [self.lbd] * 4, mode=self.prediction_set
         )
         preds.confidence_threshold = preds.confidence_threshold
-        preds.conf_boxes = conf_boxes
+
         return conf_boxes
 
     def evaluate(
@@ -1049,7 +1048,7 @@ class AsymptoticLocalizationObjectnessRiskConformalizer(RiskConformalizer):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,

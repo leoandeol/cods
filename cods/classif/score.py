@@ -10,14 +10,12 @@ class ClassifNCScore(NCScore):
         super().__init__()
         self.n_classes = n_classes
 
-    def __call__(self, **kwargs):
+    def __call__(self, pred_cls: torch.Tensor, y: torch.Tensor, **kwargs):
         raise NotImplementedError("ClassifNCScore is an abstract class.")
 
     def get_set(self, pred_cls, quantile):
-        ys = list(range(self.n_classes))
-        pred_set = list(
-            [y for y in ys if self._score_function(pred_cls, y) <= quantile]
-        )
+        ys = torch.arange(self.n_classes)
+        pred_set = list([y for y in ys if self(pred_cls, y) <= quantile])
         pred_set = torch.tensor(pred_set)
         return pred_set
 
@@ -26,7 +24,7 @@ class LACNCScore(ClassifNCScore):
     def __init__(self, n_classes: int, **kwargs):
         super().__init__(n_classes=n_classes)
 
-    def __call__(self, pred_cls: torch.Tensor, y: int, **kwargs):
+    def __call__(self, pred_cls: torch.Tensor, y: torch.Tensor, **kwargs):
         return 1 - pred_cls[y]
 
     def get_set(self, pred_cls, quantile):
@@ -37,7 +35,7 @@ class APSNCScore(ClassifNCScore):
     def __init__(self, n_classes, **kwargs):
         super().__init__(n_classes=n_classes)
 
-    def __call__(self, pred_cls: torch.Tensor, y: int, **kwargs):
+    def __call__(self, pred_cls: torch.Tensor, y: torch.Tensor, **kwargs):
         values, indices = torch.sort(pred_cls, descending=True)
         cumsum = torch.cumsum(values, dim=0)
         return cumsum[torch.where(indices == y)[0]]

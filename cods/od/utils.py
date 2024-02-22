@@ -1,11 +1,12 @@
-import torch
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
+import torch
 from tqdm import tqdm
-from typing import Union, List, Dict
 
 from cods.classif.cp import ClassificationConformalizer
-from cods.classif.tr import ClassificationToleranceRegion
 from cods.classif.data import ClassificationPredictions
+from cods.classif.tr import ClassificationToleranceRegion
 from cods.od.data import ODPredictions
 
 
@@ -123,7 +124,7 @@ def evaluate_cls_conformalizer(
     conf_cls: List[List[torch.Tensor]],
     conformalizer: Union[ClassificationConformalizer, ClassificationToleranceRegion],
     verbose: bool = False,
-) -> torch.Tensor:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Evaluate the performance of a classification conformalizer.
 
@@ -202,7 +203,7 @@ def mesh_func(x1, y1, x2, y2, pbs):
         yy.reshape((1, -1)) <= (pbs[:, 3, None])
     )
 
-    Z = torch.any(outxx & outyy, axis=0).reshape((x2 - x1 + 1, y2 - y1 + 1))
+    Z = torch.any(outxx & outyy, dim=0).reshape((x2 - x1 + 1, y2 - y1 + 1))
     return Z
 
 
@@ -252,6 +253,7 @@ def get_covered_areas_of_gt_max(pred_boxes, true_boxes):
 
             p_area = Z.sum() / ((x2 - x1 + 1) * (y2 - y1 + 1))
             p_areas.append(p_area)
+        p_areas = torch.stack(p_areas)
         area = torch.max(p_areas)
         areas.append(area)
     areas = torch.stack(areas)
@@ -371,7 +373,7 @@ def apply_margins(pred_boxes, Qs, mode="additive"):
             w = pred_boxes[i][:, 2] - pred_boxes[i][:, 0]
             h = pred_boxes[i][:, 3] - pred_boxes[i][:, 1]
             new_boxes[i] = pred_boxes[i] + torch.mul(
-                torch.stack((-w, -h, w, h), axis=-1), Qst
+                torch.stack((-w, -h, w, h), dim=-1), Qst
             )
     return new_boxes
 

@@ -1,9 +1,10 @@
-import torch
 from typing import Callable
 
+import torch
+
 from cods.base.tr import ToleranceRegion
-from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 from cods.classif.data import ClassificationPredictions
+from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 
 
 class ClassificationToleranceRegion(ToleranceRegion):
@@ -71,7 +72,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,

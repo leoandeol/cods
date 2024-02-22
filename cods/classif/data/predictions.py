@@ -1,5 +1,6 @@
+from typing import Dict, List
+
 import torch
-from typing import List, Dict
 
 from cods.base.data import Predictions
 
@@ -14,7 +15,7 @@ class ClassificationPredictions(Predictions):
         image_paths: List[str],
         idx_to_cls: Dict[int, str],
         true_cls: torch.Tensor,
-        pred_cls: List[torch.Tensor],
+        pred_cls: torch.Tensor,
     ):
         super().__init__(dataset_name, split_name, task_name="classification")
         self.image_paths = image_paths
@@ -46,8 +47,10 @@ class ClassificationPredictions(Predictions):
             end = int(sum(splits_ratios[: i + 1]) * n)
             splits.append(
                 ClassificationPredictions(
+                    dataset_name=self.dataset_name,
+                    idx_to_cls=self.idx_to_cls,
+                    image_paths=self.image_paths[start:end],
                     split_name=splits_names[i],
-                    images=self.images[start:end],
                     true_cls=self.true_cls[start:end],
                     pred_cls=self.pred_cls[start:end],
                 )

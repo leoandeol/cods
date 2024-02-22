@@ -1,5 +1,6 @@
-import torch
+from typing import Any, Optional, Union
 
+import torch
 from tqdm import tqdm
 
 from cods.base.models import Model
@@ -9,13 +10,13 @@ from cods.classif.data import ClassificationPredictions
 class ClassificationModel(Model):
     def __init__(
         self,
-        model,
-        model_name,
-        pretrained=True,
-        weights=None,
-        device="cuda",
-        save=True,
-        save_dir_path=None,
+        model: torch.nn.Module,
+        model_name: str,
+        pretrained: bool = True,
+        weights: Union[str, None] = None,
+        device: str = "cuda",
+        save: bool = True,
+        save_dir_path: Union[str, None] = None,
     ):
         super().__init__(
             model_name=model_name,
@@ -36,21 +37,27 @@ class ClassificationModel(Model):
         shuffle: bool = False,
         verbose: bool = True,
         **kwargs,
-    ):
+    ) -> ClassificationPredictions:
         preds = self._load_preds_if_exists(
             dataset_name=dataset_name, split_name=split_name, task_name="classification"
         )
         if preds is not None:
             if verbose:
                 print("Predictions already exist, loading them...")
-            return preds
+            if isinstance(preds, ClassificationPredictions):
+                return preds
+            else:
+                raise ValueError(
+                    f"Predictions already exist, but are of wrong type: {type(preds)}"
+                )
         elif verbose:
             print("Predictions do not exist, building them...")
 
         dataloader = torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
         )
-        predictions = {"true_cls": [], "pred_cls": []}
+        true_cls = []
+        pred_cls = []
         if verbose:
             print("Building predictions...")
         ids = []
@@ -61,9 +68,9 @@ class ClassificationModel(Model):
                 labels = labels.to(self.device)
                 ids.extend(id)
                 preds = self.model(images)
-                # _, preds = torch.max(outputs, 1)
-                predictions["true_cls"].extend(labels)  # .cpu().numpy())
-                predictions["pred_cls"].extend(preds)  # .cpu().numpy())
+                true_cls.extend(labels)
+                pred_cls.extend(preds)
+        predictions = {}
         predictions["dataset_name"] = dataset_name
         predictions["split_name"] = split_name
         paths = ids  # dataset.get_paths(ids)

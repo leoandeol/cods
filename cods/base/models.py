@@ -1,6 +1,9 @@
 import os
 import pickle
+from typing import Union
+
 import torch
+
 from cods.base.data import Predictions
 
 
@@ -8,10 +11,10 @@ class Model:
     def __init__(
         self,
         model_name: str,
-        save_dir_path: str,
-        pretrained=True,
-        weights=None,
-        device="cuda",
+        save_dir_path: Union[str, None],
+        pretrained: bool = True,
+        weights: Union[str, None] = None,
+        device: str = "cuda",
     ):
         self.model_name = model_name
         self.pretrained = pretrained
@@ -55,7 +58,7 @@ class Model:
         dataset_name: str,
         split_name: str,
         task_name: str,
-    ) -> Predictions:
+    ) -> Union[Predictions, None]:
         """Load predictions if they exist, else return None
 
         Args:

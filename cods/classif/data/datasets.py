@@ -1,28 +1,24 @@
-import urllib.request
 import json
 import os
+import urllib.request
+from typing import Callable, Dict, Union
 
 import torch
-
-from typing import Callable, Dict
+import torchvision.transforms as T
+from timm.data.dataset import ImageDataset
 
 # from PIL import Image
 # from torch.utils.data import Dataset
 
 # from torchvision.datasets import ImageNet
 
-import torchvision.transforms as T
-
-
-from timm.data.dataset import ImageDataset
-
 
 class ClassificationDataset(ImageDataset):
     def __init__(
         self,
         path: str,
-        transforms: Callable = None,
-        idx_to_cls: Dict[int, str] = None,
+        transforms: Union[Callable, None] = None,
+        idx_to_cls: Union[Dict[int, str], None] = None,
         **kwargs
     ):
         super().__init__(path, **kwargs)
@@ -48,7 +44,7 @@ class ClassificationDataset(ImageDataset):
 
 
 class ImageNetDataset(ClassificationDataset):
-    def __init__(self, path: str, transforms: Callable = None, **kwargs):
+    def __init__(self, path: str, transforms: Union[Callable, None] = None, **kwargs):
         tmp = json.loads(
             urllib.request.urlopen(
                 "https://s3.amazonaws.com/deep-learning-models/image-models/imagenet_class_index.json"
@@ -72,6 +68,7 @@ class ImageNetDataset(ClassificationDataset):
 
     def __getitem__(self, item):
         img, label = super(ImageNetDataset, self).__getitem__(item)
-        img = self.transforms(img)
+        if self.transforms is not None:
+            img = self.transforms(img)
 
-        return os.path.join(self._path, self.filename(item)), img, label
+        return os.path.join(self._path, str(self.filename(item))), img, label

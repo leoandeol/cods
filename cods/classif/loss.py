@@ -4,7 +4,7 @@ from cods.base.loss import Loss
 
 
 class ClassificationLoss(Loss):
-    def __init__(self, upper_bound: float, **kwargs):
+    def __init__(self, upper_bound: float = 1, **kwargs):
         super().__init__()
         self.upper_bound = upper_bound
 
