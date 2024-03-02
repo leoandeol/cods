@@ -70,7 +70,7 @@ If you use CODS in your research, please cite the following reference:
     title={Conformal Object Detection \& Segmentation},
     author={Andéol, Léo and Mossina, Luca},
     year={2024},
-    url={https://github.com/leoandeol/cods}
+    howpublished={https://github.com/leoandeol/cods},
 }
 #+END_SRC
 
