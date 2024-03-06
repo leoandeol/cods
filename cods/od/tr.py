@@ -4,6 +4,7 @@ import torch
 
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
 from cods.base.tr import ToleranceRegion
+from cods.classif.loss import ClassificationLoss
 from cods.classif.tr import ClassificationToleranceRegion
 from cods.od.data import ODPredictions
 from cods.od.loss import (
@@ -472,18 +473,26 @@ class ODToleranceRegion(ToleranceRegion):
 
     def __init__(
         self,
-        localization_loss: Union[None, str, LocalizationToleranceRegion] = "boxwise",
-        confidence_loss: Union[None, str, ConfidenceToleranceRegion] = "box_number",
-        classification_loss: Union[None, str, ClassificationToleranceRegion] = "lac",
-        inequality="binomial_inverse_cdf",
-        margins=1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
-        prediction_set="additive",
+        localization_loss: Union[
+            None, str, LocalizationLoss, LocalizationToleranceRegion
+        ] = "boxwise",
+        confidence_loss: Union[
+            None, str, ConfidenceLoss, ConfidenceToleranceRegion
+        ] = "box_number",
+        classification_loss: Union[
+            None, str, ClassificationLoss, ClassificationToleranceRegion
+        ] = "lac",
+        inequality: Union[str, Callable] = "binomial_inverse_cdf",
+        margins: int = 1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
+        prediction_set: str = "additive",
         multiple_testing_correction: str = "bonferroni",
         confidence_threshold: Optional[float] = None,
         **kwargs,
     ):
         # TODO: add option of putting a loss object directly
-        if isinstance(localization_loss, str):
+        if isinstance(localization_loss, str) or isinstance(
+            localization_loss, LocalizationLoss
+        ):
             self.loc_conformalizer = LocalizationToleranceRegion(
                 loss=localization_loss,
                 inequality=inequality,
@@ -498,7 +507,10 @@ class ODToleranceRegion(ToleranceRegion):
             raise ValueError(
                 "localization_loss must be a string or a LocalizationToleranceRegion"
             )
-        if isinstance(confidence_loss, str):
+
+        if isinstance(confidence_loss, str) or isinstance(
+            confidence_loss, ConfidenceLoss
+        ):
             self.obj_conformalizer = ConfidenceToleranceRegion(
                 loss=confidence_loss, inequality="binomial_inverse_cdf"
             )
@@ -510,7 +522,10 @@ class ODToleranceRegion(ToleranceRegion):
             raise ValueError(
                 "confidence_loss must be a string or a ConfidenceToleranceRegion"
             )
-        if isinstance(classification_loss, str):
+
+        if isinstance(classification_loss, str) or isinstance(
+            classification_loss, ClassificationLoss
+        ):
             self.cls_conformalizer = ClassificationToleranceRegion(
                 loss=classification_loss, inequality="binomial_inverse_cdf"
             )
@@ -522,7 +537,7 @@ class ODToleranceRegion(ToleranceRegion):
             raise ValueError(
                 "classification_loss must be a string or a ClassificationToleranceRegion"
             )
-        self.localization_loss = localization_loss
+
         self.margins = margins
         self.kwargs = kwargs
         self.inequality_name = inequality

@@ -177,7 +177,7 @@ def evaluate_cls_conformalizer(
     return covs, set_sizes
 
 
-def mesh_func(x1, y1, x2, y2, pbs):
+def mesh_func(x1: int, y1: int, x2: int, y2: int, pbs: torch.Tensor) -> torch.Tensor:
     """
     Compute mesh function.
 
@@ -186,7 +186,7 @@ def mesh_func(x1, y1, x2, y2, pbs):
         y1 (int): y-coordinate of the top-left corner of the bounding box.
         x2 (int): x-coordinate of the bottom-right corner of the bounding box.
         y2 (int): y-coordinate of the bottom-right corner of the bounding box.
-        pbs (List[List[int]]): List of predicted bounding boxes.
+        pbs (torch.Tensor): List of predicted bounding boxes.
 
     Returns:
         torch.Tensor: Mesh function.
@@ -207,13 +207,15 @@ def mesh_func(x1, y1, x2, y2, pbs):
     return Z
 
 
-def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
+def get_covered_areas_of_gt_union(
+    pred_boxes: List[torch.Tensor], true_boxes: List[torch.Tensor]
+) -> torch.Tensor:
     """
     Compute the covered areas of ground truth bounding boxes using union.
 
     Args:
-        pred_boxes (List[List[int]]): List of predicted bounding boxes.
-        true_boxes (List[List[int]]): List of ground truth bounding boxes.
+        pred_boxes (List[torch.Tensor]): List of predicted bounding boxes.
+        true_boxes (List[torch.Tensor]): List of ground truth bounding boxes.
 
     Returns:
         torch.Tensor: Covered areas of ground truth bounding boxes.
@@ -231,13 +233,15 @@ def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
     return areas
 
 
-def get_covered_areas_of_gt_max(pred_boxes, true_boxes):
+def get_covered_areas_of_gt_max(
+    pred_boxes: List[torch.Tensor], true_boxes: List[torch.Tensor]
+) -> torch.Tensor:
     """
     Compute the covered areas of ground truth bounding boxes using maximum.
 
     Args:
-        pred_boxes (List[List[int]]): List of predicted bounding boxes.
-        true_boxes (List[List[int]]): List of ground truth bounding boxes.
+        pred_boxes (List[torch.Tensor]): List of predicted bounding boxes.
+        true_boxes (List[torch.Tensor]): List of ground truth bounding boxes.
 
     Returns:
         torch.Tensor: Covered areas of ground truth bounding boxes.
@@ -358,23 +362,26 @@ def matching_by_iou(preds, verbose=False):
     return all_matching
 
 
-def apply_margins(pred_boxes, Qs, mode="additive"):
+def apply_margins(
+    pred_boxes: List[torch.Tensor], Qs: list, mode: str = "additive"
+) -> List[torch.Tensor]:
     n = len(pred_boxes)
-    new_boxes = [None] * n
+    new_boxes = []
     # print(Qs)
     Qst = torch.FloatTensor([Qs]).cuda()
     for i in range(n):
         # print(pred_boxes[i].shape, Qst.shape)
         if mode == "additive":
-            new_boxes[i] = pred_boxes[i] + torch.mul(
+            new_boxs = pred_boxes[i] + torch.mul(
                 torch.FloatTensor([[-1, -1, 1, 1]]).cuda(), Qst
             )
         elif mode == "multiplicative":
             w = pred_boxes[i][:, 2] - pred_boxes[i][:, 0]
             h = pred_boxes[i][:, 3] - pred_boxes[i][:, 1]
-            new_boxes[i] = pred_boxes[i] + torch.mul(
+            new_boxs = pred_boxes[i] + torch.mul(
                 torch.stack((-w, -h, w, h), dim=-1), Qst
             )
+            new_boxes.append(new_boxs)
     return new_boxes
 
 
