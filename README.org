@@ -31,6 +31,7 @@ It is built on top of PyTorch for efficiency (with CUDA support), and is designe
 
 ** Example
 Application of CODS to the image of a kitchen in MS-COCO with $\alpha=0.1$
+
 [[./docs/pics/kitchen.png]]
 
 
