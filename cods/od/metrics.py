@@ -75,7 +75,7 @@ def compute_global_coverage(
                 loc_coverage = 1
 
             coverage = conf_coverage * cls_coverage * loc_coverage
-            coverage = torch.tensor(coverage, dtype=float)
+            coverage = torch.tensor(coverage, dtype=torch.float)
             covs.append(coverage)
     covs = torch.stack(covs)
     return covs

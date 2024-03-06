@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 
 import torch
 
@@ -13,7 +13,7 @@ class ClassificationPredictions(Predictions):
         dataset_name: str,
         split_name: str,
         image_paths: List[str],
-        idx_to_cls: Dict[int, str],
+        idx_to_cls: Union[Dict[int, str], None],
         true_cls: torch.Tensor,
         pred_cls: torch.Tensor,
     ):

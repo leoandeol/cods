@@ -7,7 +7,9 @@ from cods.classif.data import ClassificationPredictions
 
 
 def plot_predictions(
-    idxs: list, preds: ClassificationPredictions, conf_cls: Union[list, None] = None
+    idxs: Union[int, list],
+    preds: ClassificationPredictions,
+    conf_cls: Union[list, None] = None,
 ):
     if isinstance(idxs, int):
         idxs = [idxs]
@@ -15,6 +17,8 @@ def plot_predictions(
         raise ValueError(
             f"len(preds)={len(preds)} and len(conf_cls)={len(conf_cls)} must be equal"
         )
+    if preds.idx_to_cls is None:
+        raise ValueError("preds.idx_to_cls must be set")
 
     n = len(idxs)
     fig, axs = plt.subplots(int(np.ceil(n / 4)), min(4, n), figsize=(12, 12))

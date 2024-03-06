@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
-from cods.od.models.detr import DETRModel
 from PIL import Image
+
+from cods.od.models.detr import DETRModel
 
 
 def plot_preds(
@@ -26,6 +27,7 @@ def plot_preds(
     pred_boxes = preds.pred_boxes[idx]
     true_boxes = preds.true_boxes[idx]
     conf_boxes = conf_boxes[idx]
+    conf_cls = conf_cls[idx]
     true_cls = preds.true_cls[idx]
     conf = preds.confidence[idx]
     cls_probas = preds.pred_cls[idx]
@@ -39,6 +41,7 @@ def plot_preds(
     keep = conf > confidence_threshold
     pred_boxes = pred_boxes[keep]
     conf_boxes = conf_boxes[keep]
+    conf_cls = conf_cls[keep]
     cls_probas = cls_probas[keep]
 
     image = Image.open(img_path)
