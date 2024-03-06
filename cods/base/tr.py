@@ -1,8 +1,10 @@
+from typing import Callable, List, Union
+
 import torch
-
+from scipy.optimize import brentq
 from scipy.stats import binom
-from scipy.optimize import brentq, bisect
 
+from cods.base.data import Predictions
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
 
 
@@ -44,12 +46,6 @@ def binom_inv_cdf(Rhat, n, delta):
     def f_bin(p):
         return binom.cdf(k, n, p) - delta - 1e-5
 
-    # print(Rhat, n, delta)
-    # print(f_bin(0), f_bin(1))
-    # if f_bin(0) < 0:
-    #     return 1.0
-    # todo: check this closely
-
     if f_bin(1) > 0:
         return 1.0
 
@@ -76,45 +72,66 @@ class ToleranceRegion:
 
     def __init__(
         self,
-        inequality="binomial_inverse_cdf",
-        optimizer="binary_search",
-        optimizer_args={},
+        inequality: Union[str, Callable] = "binomial_inverse_cdf",
+        optimizer: str = "binary_search",
+        optimizer_args: dict = {},
     ):
-        if inequality not in self.AVAILABLE_INEQUALITIES:
+        if isinstance(inequality, str):
+            if inequality not in self.AVAILABLE_INEQUALITIES.keys():
+                raise ValueError(
+                    f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}"
+                )
+            self.inequality_name = inequality
+            self.f_inequality = self.AVAILABLE_INEQUALITIES[inequality]
+        elif isinstance(inequality, Callable):
+            self.f_inequality = inequality
+            self.inequality_name = inequality.__name__
+        else:
             raise ValueError(
-                f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}"
+                "Inequality must be a string or a callable function, got {type(inequality)}"
             )
-        self.inequality_name = inequality
-        self.f_inequality = self.AVAILABLE_INEQUALITIES[inequality]
-        if optimizer not in self.ACCEPTED_OPTIMIZERS:
+        if optimizer not in self.ACCEPTED_OPTIMIZERS.keys():
             raise ValueError(
                 f"Available optimizers are {self.ACCEPTED_OPTIMIZERS.keys()}"
             )
         self.optimizer_name = optimizer
         self.optimizer = self.ACCEPTED_OPTIMIZERS[optimizer](**optimizer_args)
 
-    def calibrate(self, preds, alpha=0.1, delta=0.1, verbose=True, **kwargs):
+    def calibrate(
+        self,
+        preds: Predictions,
+        alpha: float = 0.1,
+        delta: float = 0.1,
+        verbose: bool = True,
+        **kwargs,
+    ):
         raise NotImplementedError(
             "ToleranceRegion is an abstract class, must be instantiated on a given task."
         )
 
-    def conformalize(self, preds, verbose=True, **kwargs):
+    def conformalize(self, preds: Predictions, verbose: bool = True, **kwargs):
         raise NotImplementedError(
             "ToleranceRegion is an abstract class, must be instantiated on a given task."
         )
 
-    def evaluate(self, preds, verbose=True, **kwargs):
+    def evaluate(self, preds: Predictions, verbose: bool = True, **kwargs):
         raise NotImplementedError(
             "ToleranceRegion is an abstract class, must be instantiated on a given task."
         )
 
 
 class CombiningToleranceRegions(ToleranceRegion):
-    def __init__(self, *tregions, mode="bonferroni"):
+    def __init__(self, *tregions, mode: str = "bonferroni"):
         self.tregions = tregions
         self.mode = mode
 
-    def calibrate(self, preds, alpha=0.1, delta=0.1, parameters=None):
+    def calibrate(
+        self,
+        preds: Predictions,
+        alpha: float = 0.1,
+        delta: float = 0.1,
+        parameters: Union[None, List] = None,
+    ):
         if parameters is None:
             parameters = [{} for _ in range(len(self.tregions))]
         if self.mode == "bonferroni":
