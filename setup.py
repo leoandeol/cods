@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import setuptools
 from distutils.core import setup
 
 setup(
@@ -9,7 +10,5 @@ setup(
     author="Léo Andéol, Luca Mossina",
     author_email="leo@andeol.eu",
     url="https://github.com/leoandeol/cods/",
-    packages=[
-        "cods",
-    ],
+    packages=setuptools.find_namespace_packages(include=["cods.*"]),
 )
