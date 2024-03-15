@@ -1,10 +1,12 @@
-import tqdm
-import torch
-import torchvision
 from typing import Optional
 
-from cods.od.data import ODPredictions
+import torch
+import torch.utils.data
+import torchvision
+import tqdm
+
 from cods.base.models import Model
+from cods.od.data import ODPredictions
 
 
 class ODModel(Model):
@@ -67,7 +69,12 @@ class ODModel(Model):
         if preds is not None:
             if verbose:
                 print("Predictions already exist, loading them...")
-            return preds
+            if isinstance(preds, ODPredictions):
+                return preds
+            else:
+                raise ValueError(
+                    f"Predictions already exist, but are of wrong type: {type(preds)}"
+                )
         elif verbose:
             print("Predictions do not exist, building them...")
 

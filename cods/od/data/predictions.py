@@ -1,5 +1,6 @@
+from typing import Any, Optional
+
 from cods.base.data import Predictions
-from typing import Optional, Any
 
 
 class ODPredictions(Predictions):
@@ -37,12 +38,12 @@ class ODPredictions(Predictions):
         self,
         dataset_name: str,
         split_name: str,
-        image_paths,
-        true_boxes,
-        pred_boxes,
-        confidences,
-        true_cls,
-        pred_cls,
+        image_paths: list,
+        true_boxes: list,
+        pred_boxes: list,
+        confidences: list,
+        true_cls: list,
+        pred_cls: list,
     ):
         super().__init__(dataset_name, split_name, task_name="object_detection")
         self.image_paths = image_paths

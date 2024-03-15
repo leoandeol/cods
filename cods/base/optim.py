@@ -1,14 +1,13 @@
 import logging
-from typing import Callable
+from typing import Callable, Union
 
 import numpy as np
-
-from tqdm import tqdm
 from skopt import gp_minimize
+from tqdm import tqdm
 
 
 class Optimizer:
-    def optimize(self, objective_function: Callable, alpha: int, **kwargs) -> float:
+    def optimize(self, objective_function: Callable, alpha: float, **kwargs) -> float:
         raise NotImplementedError("Optimizer is an abstract class")
 
 
@@ -20,12 +19,12 @@ class BinarySearchOptimizer(Optimizer):
     def optimize(
         self,
         objective_function: Callable,
-        alpha: int,
+        alpha: float,
         bounds: list,
         steps: int,
         epsilon=1e-5,
         verbose=True,
-    ) -> float:
+    ) -> Union[float, None]:
         """
         params:
         epsilon:
@@ -87,12 +86,12 @@ class GaussianProcessOptimizer(Optimizer):
     def optimize(
         self,
         objective_function: Callable,
-        alpha: int,
+        alpha: float,
         bounds: list,
         steps: int,
         epsilon=1e-5,
         verbose=True,
-    ) -> float:
+    ) -> Union[float, np.ndarray, None]:
         # TODO: experimental
         def fun_opti(params):
             corr_risk = objective_function(*params)
@@ -115,6 +114,9 @@ class GaussianProcessOptimizer(Optimizer):
             random_state=1234,
             verbose=verbose,
         )
+        if res is None:
+            logging.warning("No satisfactory solution of GPR found.")
+            return None
         logging.info(f"Ideal parameter after GPR is {res.x}")
         return res.x
 
@@ -126,17 +128,17 @@ class MonteCarloOptimizer(Optimizer):
     def optimize(
         self,
         objective_function: Callable,
-        alpha: int,
+        alpha: float,
         bounds: list,
         steps: int,
         epsilon=1e-4,
         verbose=True,
-    ) -> float:
+    ) -> Union[float, np.ndarray, None]:
         good_lbds = []
         lbds_risks = []
 
         pbar = tqdm(range(steps), disable=not verbose)
-        for i in pbar:
+        for it in pbar:
             lbd = np.random.uniform(size=len(bounds))
             for i, bound in enumerate(bounds):
                 lower, upper = bound
