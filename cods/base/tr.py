@@ -1,7 +1,8 @@
-import torch
+from typing import Callable, Union
 
+import torch
+from scipy.optimize import bisect, brentq
 from scipy.stats import binom
-from scipy.optimize import brentq, bisect
 
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
 
@@ -76,9 +77,9 @@ class ToleranceRegion:
 
     def __init__(
         self,
-        inequality="binomial_inverse_cdf",
-        optimizer="binary_search",
-        optimizer_args={},
+        inequality: Union[str, Callable] = "binomial_inverse_cdf",
+        optimizer: str = "binary_search",
+        optimizer_args: dict = {},
     ):
         if inequality not in self.AVAILABLE_INEQUALITIES:
             raise ValueError(
@@ -110,7 +111,7 @@ class ToleranceRegion:
 
 
 class CombiningToleranceRegions(ToleranceRegion):
-    def __init__(self, *tregions, mode="bonferroni"):
+    def __init__(self, *tregions: ToleranceRegion, mode: str = "bonferroni"):
         self.tregions = tregions
         self.mode = mode
 

@@ -1,5 +1,5 @@
-import os
 import json
+import os
 import random
 
 from PIL import Image
@@ -68,25 +68,27 @@ class MSCOCODataset(Dataset):
     def __len__(self):
         return len(self.image_ids)
 
-    def _load_image(self, idx: int, return_path: bool = False):
+    def _load_image(self, idx: int):
         new_idx = self.image_ids[idx]
         image_path = os.path.join(self.images_path, self.image_files[new_idx])
 
-        if return_path:
-            return image_path, Image.open(image_path)
-
         return Image.open(image_path)
+
+    def _load_image_with_path(self, idx: int):
+        new_idx = self.image_ids[idx]
+        image_path = os.path.join(self.images_path, self.image_files[new_idx])
+        return Image.open(image_path), image_path
 
     def _load_target(self, idx: int):
         new_idx = self.image_ids[idx]
         return self.reindexed_annotations[new_idx]
 
-    def __getitem__(self, idx):
-        img_path, img = self._load_image(idx, return_path=True)
+    def __getitem__(self, idx: int):
+        img, img_path = self._load_image_with_path(idx)
         target = self._load_target(idx)
 
         if self.transforms is not None:
-            image, target = self.transforms(img, target)
+            img, target = self.transforms(img, target)
 
         image_size = img.size
 

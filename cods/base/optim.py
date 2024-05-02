@@ -1,10 +1,9 @@
 import logging
-from typing import Callable
+from typing import Callable, List, Tuple, Union
 
 import numpy as np
-
-from tqdm import tqdm
 from skopt import gp_minimize
+from tqdm import tqdm
 
 
 class Optimizer:
@@ -20,8 +19,8 @@ class BinarySearchOptimizer(Optimizer):
     def optimize(
         self,
         objective_function: Callable,
-        alpha: int,
-        bounds: list,
+        alpha: float,
+        bounds: Union[Tuple, List[Tuple]],
         steps: int,
         epsilon=1e-5,
         verbose=True,
@@ -87,8 +86,8 @@ class GaussianProcessOptimizer(Optimizer):
     def optimize(
         self,
         objective_function: Callable,
-        alpha: int,
-        bounds: list,
+        alpha: float,
+        bounds: Union[Tuple, List[Tuple]],
         steps: int,
         epsilon=1e-5,
         verbose=True,
@@ -115,6 +114,9 @@ class GaussianProcessOptimizer(Optimizer):
             random_state=1234,
             verbose=verbose,
         )
+        if res is None:
+            logging.info("No satisfactory solution of GPR found.")
+            return None
         logging.info(f"Ideal parameter after GPR is {res.x}")
         return res.x
 
@@ -126,8 +128,8 @@ class MonteCarloOptimizer(Optimizer):
     def optimize(
         self,
         objective_function: Callable,
-        alpha: int,
-        bounds: list,
+        alpha: float,
+        bounds: Union[Tuple, List[Tuple]],
         steps: int,
         epsilon=1e-4,
         verbose=True,

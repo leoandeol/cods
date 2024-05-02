@@ -1,5 +1,8 @@
+from typing import Any, Optional, Union
+
+import torch
+
 from cods.base.data import Predictions
-from typing import Optional, Any
 
 
 class ODPredictions(Predictions):
@@ -57,7 +60,7 @@ class ODPredictions(Predictions):
 
         self.n_classes = len(self.pred_cls[0][0])
         self.matching: Optional[Any] = None
-        self.confidence_threshold: Optional[float] = None
+        self.confidence_threshold: Optional[Union[float, torch.Tensor]] = None
 
     def __len__(self):
         return len(self.image_paths)

@@ -1,19 +1,21 @@
-import torch
-from typing import Union, Callable, Tuple, Optional
+from typing import Callable, Optional, Tuple, Union
 
-from cods.base.tr import ToleranceRegion
-from cods.od.utils import compute_risk_image_level, compute_risk_box_level
-from cods.od.data import ODPredictions
-from cods.classif.tr import ClassificationToleranceRegion
-from cods.od.loss import PixelWiseRecallLoss, BoxWiseRecallLoss, ObjectnessLoss
+import torch
+
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
+from cods.base.tr import ToleranceRegion
+from cods.classif.tr import ClassificationToleranceRegion
+from cods.od.data import ODPredictions
+from cods.od.loss import BoxWiseRecallLoss, ObjectnessLoss, PixelWiseRecallLoss
+from cods.od.metrics import compute_global_coverage
 from cods.od.utils import (
     apply_margins,
+    compute_risk_box_level,
+    compute_risk_image_level,
+    evaluate_cls_conformalizer,
     get_classif_preds_from_od_preds,
     get_conf_cls_for_od,
-    evaluate_cls_conformalizer,
 )
-from cods.od.metrics import compute_global_coverage
 
 
 class LocalizationToleranceRegion(ToleranceRegion):
@@ -173,7 +175,7 @@ class LocalizationToleranceRegion(ToleranceRegion):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,
@@ -333,7 +335,7 @@ class ConfidenceToleranceRegion(ToleranceRegion):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,

@@ -1,12 +1,12 @@
+from typing import Any, Callable, Optional
+
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
-from numba import jit
 import tqdm
-from typing import Optional, Any
+from numba import jit
 
 from cods.od.data import ODPredictions
-
 from cods.od.utils import f_iou
 
 
@@ -17,7 +17,7 @@ def compute_global_coverage(
     confidence: bool = True,
     cls: bool = True,
     localization: bool = True,
-    loss=None,
+    loss: Optional[Callable] = None,
 ) -> torch.Tensor:
     """
     Compute the global coverage for object detection predictions.
@@ -37,30 +37,34 @@ def compute_global_coverage(
     covs = []
     for i in tqdm.tqdm(range(len(preds))):
         if confidence:
-            conf_coverage = (
-                1
+            conf_loss = (
+                0
                 if (preds.confidence[i] >= preds.confidence_threshold).sum()
                 >= len(preds.true_boxes[i])
-                else 0
+                else 1
             )
         else:
-            conf_coverage = 0
+            conf_loss = 0
         for j in range(len(preds.true_cls[i])):
             if cls:
                 true_cls = preds.true_cls[i][j].item()
                 conf_cls_i_k = conf_cls[i][j]
-                cls_coverage = 1 if true_cls in conf_cls_i_k else 0
+                cls_loss = 0 if true_cls in conf_cls_i_k else 1
             else:
-                cls_coverage = 1
+                cls_loss = 0
             if localization:
-                conf_boxes_i = [
-                    box
-                    for k, box in enumerate(conf_boxes[i])
-                    if preds.confidence[i][k] >= preds.confidence_threshold
+                # conf_boxes_i = [
+                #     box
+                #     for k, box in enumerate(conf_boxes[i])
+                #     if preds.confidence[i][k] >= preds.confidence_threshold
+                # ]
+                # Tensor style
+                conf_boxes_i = conf_boxes[i][
+                    preds.confidence[i] >= preds.confidence_threshold
                 ]
                 if loss is None:
                     true_box = preds.true_boxes[i][j]
-                    loc_coverage = 0
+                    loc_loss = 1
                     for conf_box in conf_boxes_i:
                         if (
                             true_box[0] >= conf_box[0]
@@ -68,14 +72,17 @@ def compute_global_coverage(
                             and true_box[2] <= conf_box[2]
                             and true_box[3] <= conf_box[3]
                         ):
-                            loc_coverage = 1
+                            loc_loss = 0
                             break
                 else:
-                    loc_coverage = 1 - loss(conf_boxes_i, [preds.true_boxes[i][j]])
+                    loc_loss = loss(conf_boxes_i, [preds.true_boxes[i][j]]).item()
             else:
-                loc_coverage = 1
+                loc_loss = 0
 
-            coverage = conf_coverage * cls_coverage * loc_coverage
+            # Formule incorrect = 1 - somme des loss
+            # coverage = conf_coverage * cls_coverage * loc_coverage
+            # coverage = 1 - (1 - conf_coverage) * (1 - cls_coverage) * (1 - loc_loss)
+            coverage = 1 - max(max(loc_loss, conf_loss), cls_loss)
             coverage = torch.tensor(coverage, dtype=float)
             covs.append(coverage)
     covs = torch.stack(covs)
