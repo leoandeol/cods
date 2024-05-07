@@ -60,8 +60,8 @@ class BinarySearchOptimizer(Optimizer):
 
                 if risk <= alpha:
                     good_lbds.append(current_lbds.copy())
-                if risk <= alpha and risk >= alpha - epsilon:
-                    break
+                    if risk >= alpha - epsilon:
+                        break
                 # TODO: find better approach
                 if step < steps - 1:
                     if risk <= alpha:

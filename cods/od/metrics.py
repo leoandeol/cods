@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -83,7 +83,7 @@ def compute_global_coverage(
             # coverage = conf_coverage * cls_coverage * loc_coverage
             # coverage = 1 - (1 - conf_coverage) * (1 - cls_coverage) * (1 - loc_loss)
             coverage = 1 - max(max(loc_loss, conf_loss), cls_loss)
-            coverage = torch.tensor(coverage, dtype=float)
+            coverage = torch.tensor(coverage, dtype=torch.float)
             covs.append(coverage)
     covs = torch.stack(covs)
     return covs
@@ -247,7 +247,7 @@ def unroll_metrics(
     od_preds: ODPredictions,
     conf_boxes: list[Any],
     conf_cls: list[Any],
-    confidence_threshold: Optional[float] = None,
+    confidence_threshold: Optional[Union[float, torch.Tensor]] = None,
     iou_threshold: float = 0.5,
     verbose: bool = True,
     # ) -> dict:

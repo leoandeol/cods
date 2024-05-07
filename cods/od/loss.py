@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from cods.base.loss import Loss
-from cods.od.utils import get_covered_areas_of_gt_union, get_covered_areas_of_gt_max
+from cods.od.utils import get_covered_areas_of_gt_max, get_covered_areas_of_gt_union
 
 
 # Object Detection Loss, many are wrappers of Segmentation losses
@@ -45,22 +45,93 @@ class ObjectnessLoss(Loss):
         super().__init__()
         self.upper_bound = upper_bound
 
+    # TODO: keep the same argument as with OD
     def __call__(
-        self, n_gt: int, confidence: torch.Tensor, lbd: float, **kwargs
+        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
     ) -> torch.Tensor:
         """
         Call the Objectness Loss.
 
         Parameters:
-        - n_gt (int): The number of ground truth objects.
-        - confidence (torch.Tensor): The confidence scores.
-        - lbd (float): The lambda value.
+        - conf_boxes (torch.Tensor): The conformal boxes, filtered by confidence.
+        - true_boxes (torch.Tensor): The true boxes.
 
         Returns:
         - torch.Tensor: The loss value.
         """
-        conf = torch.sort(confidence)[0][-n_gt]
-        return torch.zeros(1).cuda() if conf >= 1 - lbd else torch.ones(1).cuda()
+
+        return (
+            torch.zeros(1).cuda()
+            if len(conf_boxes) >= len(true_boxes)
+            else torch.ones(1).cuda()
+        )
+
+
+# IMAGE WISE VS BOX WISE GUARANTEE
+# wrapping classification loss, by converting the predictions from the od to the classification format
+class ClassificationLossWrapper(Loss):
+    def __init__(self, classification_loss, **kwargs):
+        """
+        Initialize the Classification Loss Wrapper.
+
+        Parameters:
+        - classification_loss (Loss): The classification loss.
+
+        Returns:
+        - None
+        """
+        super().__init__()
+        self.classification_loss = classification_loss
+
+    def __call__(
+        self,
+        conf_clss: torch.Tensor,
+        true_clss: torch.Tensor,
+    ) -> torch.Tensor:
+        """
+        Call the Classification Loss Wrapper.
+
+        Parameters:
+        - conf_cls (torch.Tensor): The conformal classes.
+        - true_cls (torch.Tensor): The true classes.
+
+        Returns:
+        - torch.Tensor: The loss value.
+        """
+        losses = []
+        for i in range(len(conf_clss)):
+            losses.append(self.classification_loss(conf_clss[i], true_clss[i]))
+        return torch.mean(torch.stack(losses))
+
+
+# MaximumLoss : maximum of a list of losses with a list of parameters
+
+
+# maximum of risk =!= of losses
+class MaximumLoss(Loss):
+    def __init__(self, *losses):
+        """
+        Initialize the Maximum Loss.
+
+        Parameters:
+        - losses (list): The list of losses.
+
+        Returns:
+        - None
+        """
+        super().__init__()
+        self.losses = losses
+
+    def __call__(
+        self, *conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+    ) -> torch.Tensor:
+        """
+        Call the Maximum Loss.
+
+        Returns:
+        - torch.Tensor: The loss value.
+        """
+        return max([loss(conf_boxes, true_boxes) for loss in self.losses])
 
 
 # Todo: formulate in classical conformal sense!
@@ -122,7 +193,9 @@ class BoxWiseRecallLoss(ODLoss):
             else get_covered_areas_of_gt_max
         )
 
-    def __call__(self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor) -> float:
+    def __call__(
+        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+    ) -> torch.Tensor:
         """
         Call the Box-wise Recall Loss.
 
@@ -134,9 +207,9 @@ class BoxWiseRecallLoss(ODLoss):
         - float: The loss value.
         """
         if len(true_boxes) == 0:
-            return 0
+            return torch.zeros(1).cuda()
         elif len(conf_boxes) == 0:
-            return 1
+            return torch.ones(1).cuda()
         else:
             areas = self.get_covered_areas(conf_boxes, true_boxes)
             is_not_covered = (
