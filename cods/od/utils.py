@@ -1,11 +1,12 @@
-import torch
+from typing import Dict, List, Union
+
 import numpy as np
+import torch
 from tqdm import tqdm
-from typing import Union, List, Dict
 
 from cods.classif.cp import ClassificationConformalizer
-from cods.classif.tr import ClassificationToleranceRegion
 from cods.classif.data import ClassificationPredictions
+from cods.classif.tr import ClassificationToleranceRegion
 from cods.od.data import ODPredictions
 
 
@@ -142,12 +143,15 @@ def evaluate_cls_conformalizer(
         pre_pred_cls_img = od_preds.pred_cls[i]
         pred_cls_img = []
         for j, true_cls_box in enumerate(true_cls_img):
+            # if len(od_preds.matching[i]) > j:
             pred_cls_box = pre_pred_cls_img[od_preds.matching[i][j]]
             pred_cls_img.append(pred_cls_box)
             if len(conf_cls[i][j]) == 0:
-                raise ValueError(
+                print(  # raise ValueError(
                     f"Warning: len(conf_cls[i][j]) == 0, conf_cls[i][j] = {conf_cls[i][j]}"
                 )
+            # else:
+            #    pred_cls_img.append(torch.empty(0).cuda())
         if len(pred_cls_img) != len(true_cls_img):
             raise ValueError(
                 "Warning: len(pred_cls_img) != len(true_cls_img), "
@@ -334,22 +338,26 @@ def matching_by_iou(preds, verbose=False):
         conf_thr = preds.confidence_threshold
     else:
         conf_thr = 0
-    for pred_boxes, true_boxes, confs in tqdm(
-        zip(preds.pred_boxes, preds.true_boxes, preds.confidence), disable=not verbose
+    # filter pred_boxes with low objectness
+    preds_boxes = list(
+        [x[y >= conf_thr] for x, y in zip(preds.pred_boxes, preds.confidence)]
+    )
+    for pred_boxes, true_boxes in tqdm(
+        zip(preds_boxes, preds.true_boxes), disable=not verbose
     ):
         matching = []
         for true_box in true_boxes:
             ious = []
-            for pred_box, conf in zip(pred_boxes, confs):
-                if conf < conf_thr:
-                    ious.append(-np.inf)
-                    continue
+            for pred_box in pred_boxes:
                 # TODO replace with hausdorff distance ?
                 # iou = f_iou(true_box, pred_box)
                 # TODO: test
                 iou = assymetric_hausdorff_distance(true_box, pred_box)
                 iou = iou.cpu().numpy() if isinstance(iou, torch.Tensor) else iou
                 ious.append(iou)  # .cpu().numpy())
+            if len(pred_boxes) == 0:
+                matching.append([])
+                continue
             matching.append(np.argmin(ious))  # np.argmax(ious))
         all_matching.append(matching)
     preds.matching = all_matching
@@ -388,6 +396,41 @@ def compute_risk_box_level(conf_boxes, true_boxes, loss):
         for j in range(len(tbs)):
             loss_value = loss(cbs, [tbs[j]])
             losses.append(loss_value)
+    losses = torch.stack(losses).ravel()
+    return torch.mean(losses)
+
+
+def compute_risk_cls_box_level(conf_boxes, conf_cls, true_boxes, true_cls, loss):
+    """
+    Input : conformal and true boxes of a all images
+    """
+    # filter out boxes with low objectness
+    losses = []
+    for i in range(len(true_boxes)):
+        tbs = true_boxes[i]
+        cbs = conf_boxes[i]
+        ccs = conf_cls[i]
+        tcs = true_cls[i]
+        for j in range(len(tbs)):
+            loss_value = loss(cbs, [ccs[j]], [tbs[j]], [tcs[j]])
+            losses.append(loss_value)
+    losses = torch.stack(losses).ravel()
+    return torch.mean(losses)
+
+
+def compute_risk_cls_image_level(conf_boxes, conf_cls, true_boxes, true_cls, loss):
+    """
+    Input : conformal and true boxes of a all images
+    """
+    # filter out boxes with low objectness
+    losses = []
+    for i in range(len(true_boxes)):
+        tbs = true_boxes[i]
+        cbs = conf_boxes[i]
+        ccs = conf_cls[i]
+        tcs = true_cls[i]
+        loss_value = loss(cbs, ccs, tbs, tcs)
+        losses.append(loss_value)
     losses = torch.stack(losses).ravel()
     return torch.mean(losses)
 

@@ -1,8 +1,10 @@
+from typing import Any, Optional
+
 import torch
+
 from cods.base.cp import Conformalizer
 from cods.classif.data import ClassificationPredictions
-from cods.classif.score import ClassifNCScore, LACNCScore, APSNCScore
-from typing import Optional, Any
+from cods.classif.score import APSNCScore, ClassifNCScore, LACNCScore
 
 
 class ClassificationConformalizer(Conformalizer):
@@ -32,7 +34,11 @@ class ClassificationConformalizer(Conformalizer):
         self._n_classes: Optional[Any] = None
 
     def calibrate(
-        self, preds: ClassificationPredictions, alpha: float = 0.1, verbose: bool = True
+        self,
+        preds: ClassificationPredictions,
+        alpha: float = 0.1,
+        verbose: bool = True,
+        lbd_minus: bool = False,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         self._n_classes = preds.n_classes
         if self._score_function is None:
@@ -50,11 +56,20 @@ class ClassificationConformalizer(Conformalizer):
         scores = torch.stack(scores).ravel()
         self._scores = scores
 
-        quantile = torch.quantile(
-            scores,
-            (1 - alpha) * ((n + 1) / n),
-            interpolation="higher",
-        )
+        if lbd_minus:
+            print("Using lbd_minus")
+            quantile = torch.quantile(
+                scores,
+                1 - (alpha * (n + 1) / n),
+                interpolation="higher",
+            )
+        else:
+            print("Using lbd_plus")
+            quantile = torch.quantile(
+                scores,
+                (1 - alpha) * ((n + 1) / n),
+                interpolation="higher",
+            )
         self._quantile = quantile
 
         if verbose:

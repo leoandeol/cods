@@ -174,6 +174,60 @@ class HausdorffSignedDistanceLoss(ODLoss):
             return loss
 
 
+class ClassBoxWiseRecallLoss(ODLoss):
+    def __init__(self, union_of_boxes: bool = True):
+        """
+        Initialize the Box-wise Recall Loss.
+
+        Parameters:
+        - union_of_boxes (bool): Whether to use the union of boxes.
+
+        Returns:
+        - None
+        """
+        self.upper_bound = 1
+        self.union_of_boxes = union_of_boxes
+        self.get_covered_areas = (
+            get_covered_areas_of_gt_union
+            if union_of_boxes
+            else get_covered_areas_of_gt_max
+        )
+
+    def __call__(
+        self, conf_boxes: torch.Tensor, conf_cls, true_boxes: torch.Tensor, true_cls
+    ) -> torch.Tensor:
+        """
+        Call the Box-wise Recall Loss.
+
+        Parameters:
+        - conf_boxes (torch.Tensor): The conformal boxes.
+        - true_boxes (torch.Tensor): The true boxes.
+
+        Returns:
+        - float: The loss value.
+        """
+        if len(true_boxes) == 0:
+            return torch.zeros(1).cuda()
+        elif len(conf_boxes) == 0:
+            return torch.ones(1).cuda()
+        else:
+            areas = self.get_covered_areas(conf_boxes, true_boxes)
+            is_not_covered_loc = (
+                areas < 0.999
+            )  # because doubt on the computation of the overlap, check formula TODO
+            is_not_covered_cls = torch.tensor(
+                [tc not in cc for (tc, cc) in zip(true_cls, conf_cls)],
+                dtype=torch.float,
+            ).cuda()
+            is_not_covered = torch.logical_or(
+                is_not_covered_loc, is_not_covered_cls
+            ).float()
+            miscoverage = torch.zeros(1).cuda() + torch.mean(
+                is_not_covered
+            )  # TODO: bugfix
+            return miscoverage
+
+
 class BoxWiseRecallLoss(ODLoss):
     def __init__(self, union_of_boxes: bool = True):
         """
@@ -214,8 +268,10 @@ class BoxWiseRecallLoss(ODLoss):
             areas = self.get_covered_areas(conf_boxes, true_boxes)
             is_not_covered = (
                 areas < 0.999
-            )  # because doubt on the computation of the overlap, check formula TODO
-            miscoverage = torch.mean(is_not_covered)
+            ).float()  # because doubt on the computation of the overlap, check formula TODO
+            miscoverage = torch.zeros(1).cuda() + torch.mean(
+                is_not_covered
+            )  # TODO: tmp for bugfix
             return miscoverage
 
 

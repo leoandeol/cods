@@ -20,7 +20,7 @@ def compute_global_coverage(
     loss: Optional[Callable] = None,
 ) -> torch.Tensor:
     """
-    Compute the global coverage for object detection predictions.
+    Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE #TODO
 
     Args:
         preds (ODPredictions): Object detection predictions.

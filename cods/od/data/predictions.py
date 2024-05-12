@@ -61,6 +61,7 @@ class ODPredictions(Predictions):
         self.n_classes = len(self.pred_cls[0][0])
         self.matching: Optional[Any] = None
         self.confidence_threshold: Optional[Union[float, torch.Tensor]] = None
+        # TODO: if change matching, then must reset the mathcing
 
     def __len__(self):
         return len(self.image_paths)

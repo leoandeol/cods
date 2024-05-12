@@ -1,10 +1,11 @@
-import tqdm
-import torch
-import torchvision
 from typing import Optional
 
-from cods.od.data import ODPredictions
+import torch
+import torchvision
+import tqdm
+
 from cods.base.models import Model
+from cods.od.data import ODPredictions
 
 
 class ODModel(Model):
@@ -42,6 +43,7 @@ class ODModel(Model):
         batch_size: int,
         shuffle: bool = False,
         verbose: bool = True,
+        force_recompute: bool = False,
         **kwargs,
     ) -> ODPredictions:
         """
@@ -59,17 +61,22 @@ class ODModel(Model):
         Returns:
             ODPredictions: Predictions object to use for prediction set construction.
         """
-        preds = self._load_preds_if_exists(
-            dataset_name=dataset_name,
-            split_name=split_name,
-            task_name="object_detection",
-        )
-        if preds is not None:
+        preds = None
+        if not force_recompute:
+            preds = self._load_preds_if_exists(
+                dataset_name=dataset_name,
+                split_name=split_name,
+                task_name="object_detection",
+            )
+            if preds is not None:
+                if verbose:
+                    print("Predictions already exist, loading them...")
+                return preds
+            elif verbose:
+                print("Predictions do not exist, building them...")
+        else:
             if verbose:
-                print("Predictions already exist, loading them...")
-            return preds
-        elif verbose:
-            print("Predictions do not exist, building them...")
+                print("Force recompute is set to True, building predictions...")
 
         dataloader = torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
