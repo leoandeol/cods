@@ -1,4 +1,7 @@
+from logging import getLogger
 from typing import Any, Callable, Optional, Union
+
+logger = getLogger("cods")
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,14 +9,13 @@ import torch
 import tqdm
 from numba import jit
 
-from cods.od.data import ODPredictions
+from cods.od.data import ODConformalizedPredictions, ODPredictions
 from cods.od.utils import f_iou
 
 
 def compute_global_coverage(
-    preds: ODPredictions,
-    conf_boxes: list,
-    conf_cls: list,
+    predictions: ODPredictions,
+    conformalized_predictiond: ODConformalizedPredictions,
     confidence: bool = True,
     cls: bool = True,
     localization: bool = True,
@@ -23,9 +25,8 @@ def compute_global_coverage(
     Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE #TODO
 
     Args:
-        preds (ODPredictions): Object detection predictions.
-        conf_boxes (list): List of confidence boxes.
-        conf_cls (list): List of confidence classes.
+        predictions (ODPredictions): Object detection predictions.
+        conformalized_predictiond (ODConformalizedPredictions): Conformalized object detection predictions.
         confidence (bool, optional): Whether to consider confidence coverage. Defaults to True.
         cls (bool, optional): Whether to consider class coverage. Defaults to True.
         localization (bool, optional): Whether to consider localization coverage. Defaults to True.
@@ -34,20 +35,33 @@ def compute_global_coverage(
     Returns:
         torch.Tensor: Global coverage tensor.
     """
+
+    conf_boxes = conformalized_predictiond.conf_boxes
+    if conf_boxes is None and (confidence is True or localization is True):
+        localization = False
+        confidence = False
+        logger.warning(
+            "No conformal boxes provided, skipping confidence and localization"
+        )
+    conf_cls = conformalized_predictiond.conf_cls
+    if conf_cls is None and cls is True:
+        cls = False
+        logger.warning("No conformal classes provided, skipping classification")
+
     covs = []
-    for i in tqdm.tqdm(range(len(preds))):
+    for i in tqdm.tqdm(range(len(predictions))):
         if confidence:
             conf_loss = (
                 0
-                if (preds.confidence[i] >= preds.confidence_threshold).sum()
-                >= len(preds.true_boxes[i])
+                if (predictions.confidence[i] >= predictions.confidence_threshold).sum()
+                >= len(predictions.true_boxes[i])
                 else 1
             )
         else:
             conf_loss = 0
-        for j in range(len(preds.true_cls[i])):
+        for j in range(len(predictions.true_cls[i])):
             if cls:
-                true_cls = preds.true_cls[i][j].item()
+                true_cls = predictions.true_cls[i][j].item()
                 conf_cls_i_k = conf_cls[i][j]
                 cls_loss = 0 if true_cls in conf_cls_i_k else 1
             else:
@@ -56,14 +70,14 @@ def compute_global_coverage(
                 # conf_boxes_i = [
                 #     box
                 #     for k, box in enumerate(conf_boxes[i])
-                #     if preds.confidence[i][k] >= preds.confidence_threshold
+                #     if predictions.confidence[i][k] >= predictions.confidence_threshold
                 # ]
                 # Tensor style
                 conf_boxes_i = conf_boxes[i][
-                    preds.confidence[i] >= preds.confidence_threshold
+                    predictions.confidence[i] >= predictions.confidence_threshold
                 ]
                 if loss is None:
-                    true_box = preds.true_boxes[i][j]
+                    true_box = predictions.true_boxes[i][j]
                     loc_loss = 1
                     for conf_box in conf_boxes_i:
                         if (
@@ -75,7 +89,7 @@ def compute_global_coverage(
                             loc_loss = 0
                             break
                 else:
-                    loc_loss = loss(conf_boxes_i, [preds.true_boxes[i][j]]).item()
+                    loc_loss = loss(conf_boxes_i, [predictions.true_boxes[i][j]]).item()
             else:
                 loc_loss = 0
 
@@ -89,12 +103,12 @@ def compute_global_coverage(
     return covs
 
 
-def getStretch(od_preds: ODPredictions, conf_boxes: list) -> torch.Tensor:
+def getStretch(od_predictions: ODPredictions, conf_boxes: list) -> torch.Tensor:
     """
     Get the stretch of object detection predictions.
 
     Args:
-        od_preds (ODPredictions): Object detection predictions.
+        od_predictions (ODPredictions): Object detection predictions.
         conf_boxes (list): List of confidence boxes.
 
     Returns:
@@ -102,14 +116,14 @@ def getStretch(od_preds: ODPredictions, conf_boxes: list) -> torch.Tensor:
     """
     stretches = []
     area = lambda x: (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
-    pred_boxes = od_preds.pred_boxes
+    pred_boxes = od_predictions.pred_boxes
     for i in range(len(pred_boxes)):
         stretches.append(area(conf_boxes[i]) / area(pred_boxes[i]))
     return torch.cat(stretches).mean()
 
 
 def get_recall_precision(
-    od_preds: ODPredictions,
+    od_predictions: ODPredictions,
     pred_boxes,  # =None,
     IOU_THRESHOLD=0.5,
     SCORE_THRESHOLD=0.5,
@@ -120,7 +134,7 @@ def get_recall_precision(
     Get the recall and precision for object detection predictions.
 
     Args:
-        od_preds (ODPredictions): Object detection predictions.
+        od_predictions (ODPredictions): Object detection predictions.
         pred_boxes (list): List of predicted boxes. Defaults to None.
         IOU_THRESHOLD (float, optional): IoU threshold. Defaults to 0.5.
         SCORE_THRESHOLD (float, optional): Score threshold. Defaults to 0.5.
@@ -130,13 +144,13 @@ def get_recall_precision(
     Returns:
         tuple: Tuple containing the recall, precision, and scores.
     """
-    true_boxes = od_preds.true_boxes
-    scores = od_preds.confidence
+    true_boxes = od_predictions.true_boxes
+    scores = od_predictions.confidence
 
     recalls = []
     precisions = []
     my_scores = []
-    for i in tqdm.tqdm(range(len(od_preds)), disable=not verbose):
+    for i in tqdm.tqdm(range(len(od_predictions)), disable=not verbose):
         tbs = true_boxes[i]
         pbs = pred_boxes[i]
         batch_scores = scores[i]
@@ -161,11 +175,11 @@ def get_recall_precision(
                     my_scores.append(my_score)
                     break
 
-        nb_preds = len(pbs)
+        nb_predictions = len(pbs)
         nb_true = len(tbs)
         recall = tp / nb_true if nb_true > 0 else 1
-        if nb_preds > 0:
-            precision = tp / nb_preds
+        if nb_predictions > 0:
+            precision = tp / nb_predictions
         else:
             precision = 1
 
@@ -180,7 +194,7 @@ def get_recall_precision(
 
 
 def getAveragePrecision(
-    od_preds: ODPredictions,
+    od_predictions: ODPredictions,
     pred_boxes,
     verbose=True,
     iou_threshold=0.3,
@@ -189,7 +203,7 @@ def getAveragePrecision(
     Get the average precision for object detection predictions.
 
     Args:
-        od_preds (ODPredictions): Object detection predictions.
+        od_predictions (ODPredictions): Object detection predictions.
         pred_boxes (list): List of predicted boxes.
         verbose (bool, optional): Whether to display progress. Defaults to True.
         iou_threshold (float, optional): IoU threshold. Defaults to 0.3.
@@ -203,7 +217,7 @@ def getAveragePrecision(
     pbar = tqdm.tqdm(threshes_objectness, disable=not verbose)
     for thresh in pbar:
         tmp_recalls, tmp_precisions, _ = get_recall_precision(
-            od_preds,
+            od_predictions,
             pred_boxes,
             IOU_THRESHOLD=iou_threshold,
             SCORE_THRESHOLD=thresh,
@@ -244,7 +258,7 @@ def plot_recall_precision(
 
 
 def unroll_metrics(
-    od_preds: ODPredictions,
+    od_predictions: ODPredictions,
     conf_boxes: list[Any],
     conf_cls: list[Any],
     confidence_threshold: Optional[Union[float, torch.Tensor]] = None,
@@ -256,7 +270,7 @@ def unroll_metrics(
     Unroll the metrics for object detection predictions.
 
     Args:
-        od_preds (ODPredictions): Object detection predictions.
+        od_predictions (ODPredictions): Object detection predictions.
         conf_boxes (list): List of confidence boxes.
         conf_cls (list): List of confidence classes.
         confidence_threshold (float, optional): Confidence threshold. Defaults to None.
@@ -269,11 +283,11 @@ def unroll_metrics(
     # TODO: include conf_cls for metrics
     if confidence_threshold is None:
         print("Defaulting to predictions' confidence threshold")
-        confidence_threshold = od_preds.confidence_threshold
+        confidence_threshold = od_predictions.confidence_threshold
     else:
         print(f"Using confidence threshold {confidence_threshold}")
 
-    pred_boxes = od_preds.pred_boxes
+    pred_boxes = od_predictions.pred_boxes
 
     (
         AP_vanilla,
@@ -281,13 +295,13 @@ def unroll_metrics(
         total_precisions_vanilla,
         threshes_objectness_vanilla,
     ) = getAveragePrecision(
-        od_preds, pred_boxes, verbose=True, iou_threshold=iou_threshold
+        od_predictions, pred_boxes, verbose=True, iou_threshold=iou_threshold
     )
     if verbose:
         print(f"Average Precision: {AP_vanilla}")
     AP_conf, total_recalls_conf, total_precisions_conf, threshes_objectness_conf = (
         getAveragePrecision(
-            od_preds, conf_boxes, verbose=True, iou_threshold=iou_threshold
+            od_predictions, conf_boxes, verbose=True, iou_threshold=iou_threshold
         )
     )
     if verbose:

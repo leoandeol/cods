@@ -19,6 +19,7 @@ class Conformalizer:
         )
 
 
+# TODO: deprecated
 class RiskConformalizer(Conformalizer):
     def __init__(self):
         pass

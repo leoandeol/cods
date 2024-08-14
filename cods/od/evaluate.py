@@ -1,11 +1,10 @@
 import torch
 
+from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
-from cods.od.models import DETRModel
-from cods.od.cp import ODConformalizer, ODRiskConformalizer
-from cods.od.tr import ODToleranceRegion
 from cods.od.metrics import unroll_metrics
-
+from cods.od.models import DETRModel
+from cods.od.tr import ODToleranceRegion
 
 # MODES = ["classification", "localization", "detection", "combined"]
 
@@ -142,13 +141,6 @@ class Benchmark:
                     classification_method="lac",
                     multiple_testing_correction="bonferroni",
                     inequality=inequality,
-                )
-            elif mode == "crc":
-                conformalizer = ODRiskConformalizer(
-                    localization_method=loss,
-                    objectness_method="box_number",
-                    classification_method="lac",
-                    multiple_testing_correction="bonferroni",
                 )
             else:
                 raise ValueError(f"Invalid mode: {mode}")

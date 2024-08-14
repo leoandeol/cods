@@ -1,4 +1,4 @@
-from typing import Any, Optional, Union
+from typing import Any, List, Optional, Union
 
 import torch
 
@@ -85,12 +85,14 @@ class ODParameters(Parameters):
     def __init__(
         self,
         global_alpha: float,
-        confidence_alpha: Optional[float],
-        localization_alpha: Optional[float],
-        classification_alpha: Optional[float],
-        confidence_lambda: Optional[float],
-        localization_lambda: Optional[float],
-        classification_lambda: Optional[float],
+        alpha_confidence: Optional[float],
+        alpha_localization: Optional[float],
+        alpha_classification: Optional[float],
+        lambda_confidence_plus: Optional[float],
+        lambda_confidence_minus: Optional[float],
+        lambda_localization: Optional[float],
+        lambda_classification: Optional[float],
+        confidence_threshold: float,
         predictions_id: int,
         unique_id: Optional[int] = None,
     ):
@@ -99,23 +101,27 @@ class ODParameters(Parameters):
 
         Parameters:
             global_alpha (float): The global alpha (the sum of the non-None alphas).
-            confidence_alpha (float): The confidence alpha.
-            localization_alpha (float): The localization alpha.
-            classification_alpha (float): The classification alpha.
-            confidence_lambda (float): The confidence lambda.
-            localization_lambda (float): The localization lambda.
-            classification_lambda (float): The classification lambda.
+            alpha_confidence (float): The alpha for confidence.
+            alpha_localization (float): The alpha for localization.
+            alpha_classification (float): The alpha for classification
+            lambda_confidence_plus (float): The lambda for confidence (conservative).
+            lambda_confidence_minus (float): The lambda for confidence (optimistic).
+            lambda_localization (float): The lambda for localization.
+            lambda_classification (float): The lambda for classification.
+            confidence_threshold (float): The confidence threshold.
             predictions_id (int): The unique ID of the predictions.
             unique_id (int): The unique ID of the parameters.
         """
         super().__init__(predictions_id, unique_id)
         self.global_alpha = global_alpha
-        self.confidence_alpha = confidence_alpha
-        self.localization_alpha = localization_alpha
-        self.classification_alpha = classification_alpha
-        self.confidence_lambda = confidence_lambda
-        self.localization_lambda = localization_lambda
-        self.classification_lambda = classification_lambda
+        self.alpha_confidence = alpha_confidence
+        self.alpha_localization = alpha_localization
+        self.alpha_classification = alpha_classification
+        self.lambda_confidence_plus = lambda_confidence_plus
+        self.lambda_confidence_minus = lambda_confidence_minus
+        self.lambda_localization = lambda_localization
+        self.lambda_classification = lambda_classification
+        self.confidence_threshold = confidence_threshold
 
 
 class ODConformalizedPredictions(ConformalizedPredictions):
@@ -157,12 +163,13 @@ class ODResults(Results):
         predictions: ODPredictions,
         parameters: Parameters,
         conformalized_predictions: ODConformalizedPredictions,
-        confidence_set_sizes: torch.Tensor,
-        confidence_coverages: torch.Tensor,
-        localization_set_sizes: torch.Tensor,
-        localization_coverages: torch.Tensor,
-        classification_set_sizes: torch.Tensor,
-        classification_coverages: torch.Tensor,
+        confidence_set_sizes: Optional[torch.Tensor | List[float]],
+        confidence_coverages: Optional[torch.Tensor | List[float]],
+        localization_set_sizes: Optional[torch.Tensor | List[float]],
+        localization_coverages: Optional[torch.Tensor | List[float]],
+        classification_set_sizes: Optional[torch.Tensor | List[float]],
+        classification_coverages: Optional[torch.Tensor | List[float]],
+        global_coverage: Optional[torch.Tensor | float] = None,
     ):
         """
         Initializes a new instance of the ODResults class.
@@ -190,3 +197,4 @@ class ODResults(Results):
         self.localization_coverages = localization_coverages
         self.classification_set_sizes = classification_set_sizes
         self.classification_coverages = classification_coverages
+        self.global_coverage = global_coverage

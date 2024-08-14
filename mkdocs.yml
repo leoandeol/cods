@@ -1,0 +1,10 @@
+site_name: CODS
+theme: readthedocs
+nav:
+    - Home: index.md
+    - About: about.md
+    - ...
+plugins:
+  - search
+  - awesome-pages
+  - mkdocstrings

@@ -14,7 +14,12 @@ from cods.base.optim import (
     MonteCarloOptimizer,
 )
 from cods.classif.cp import ClassificationConformalizer
-from cods.od.data import ODParameters, ODPredictions, ODResults, ODConformalizedPredictions
+from cods.od.data import (
+    ODConformalizedPredictions,
+    ODParameters,
+    ODPredictions,
+    ODResults,
+)
 from cods.od.loss import (
     BoxWiseRecallLoss,
     ClassBoxWiseRecallLoss,
@@ -266,111 +271,6 @@ class LocalizationConformalizer(Conformalizer):
         return coverage, set_sizes
 
 
-class ObjectnessConformalizer(Conformalizer):
-    def __init__(self, method: str = "box_number", **kwargs):
-        """
-        Conformalizer for objectness tasks.
-
-        Args:
-            method (str): The method to compute non-conformity scores. Must be "box_number".
-            **kwargs: Additional keyword arguments.
-        """
-        self.accepted_methods = {"box_number": ObjectnessNCScore}
-        self.method = method
-
-        self._score_function = None
-        self._quantile = None
-
-    def calibrate(
-        self,
-        preds: ODPredictions,
-        alpha: float = 0.1,
-        verbose: bool = True,
-        override_B=None,
-    ) -> torch.Tensor:
-        """
-        Calibrates the conformalizer using the given predictions.
-
-        Args:
-            preds (ODPredictions): The object detection predictions.
-            alpha (float): The significance level for the calibration.
-            verbose (bool): Whether to display progress information.
-
-        Returns:
-            float: The computed quantile.
-        """
-        if self._score_function is None:
-            self._score_function = self.accepted_methods[self.method]()
-
-        scores = []
-        for true_boxes, confidence in zip(preds.true_boxes, preds.confidence):
-            score = self._score_function(len(true_boxes), confidence)
-            scores.append(score)
-        scores = torch.stack(scores).squeeze()
-
-        n = len(scores)
-        if override_B is not None:
-            quantile = torch.quantile(scores, (1 - alpha), interpolation="higher")
-        else:
-            quantile = torch.quantile(
-                scores, (1 - alpha) * ((n + 1) / n), interpolation="higher"
-            )
-        self._quantile = quantile
-        return quantile
-
-    def conformalize(self, preds: ODPredictions) -> torch.Tensor:
-        """
-        Conformalizes the object detection predictions using the calibrated quantile.
-
-        Args:
-            preds (ODPredictions): The object detection predictions.
-
-        Returns:
-            float: The conformalized confidence threshold.
-        """
-        if self._quantile is None:
-            raise ValueError("Conformalizer must be calibrated before conformalizing.")
-        preds.confidence_threshold = 1 - self._quantile
-        return preds.confidence_threshold
-
-    def evaluate(
-        self, preds: ODPredictions, conf_boxes: list, verbose: bool = True
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Evaluates the conformalized predictions.
-
-        Args:
-            preds (ODPredictions): The object detection predictions.
-            conf_boxes (list): The conformalized bounding boxes.
-            verbose (bool): Whether to display evaluation results.
-
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor]: The computed coverage and set sizes.
-        """
-        if self._quantile is None:
-            raise ValueError("Conformalizer must be calibrated before evaluating.")
-        if preds.confidence_threshold is None:
-            raise ValueError("Predictions must be conformalized before evaluating.")
-        coverage = []
-        set_sizes = []
-        for true_boxes, confidence in zip(preds.true_boxes, preds.confidence):
-            cov = (
-                torch.ones(1).float()
-                if len(true_boxes) <= (confidence >= preds.confidence_threshold).sum()
-                else torch.zeros(1).float()
-            )
-            set_size = (confidence >= preds.confidence_threshold).sum().float()
-            set_sizes.append(set_size)
-            coverage.append(cov)
-        coverage = torch.stack(coverage).squeeze()
-        set_sizes = torch.stack(set_sizes).squeeze()
-        if verbose:
-            print(
-                f"Confidence Treshold {preds.confidence_threshold}, Coverage = {torch.mean(coverage)}, Median set size = {torch.mean(set_sizes)}"
-            )
-        return coverage, set_sizes
-
-
 class LocalizationRiskConformalizer(RiskConformalizer):
     """
     A class that performs risk conformalization for localization tasks.
@@ -599,7 +499,7 @@ class LocalizationRiskConformalizer(RiskConformalizer):
         return safety, set_sizes
 
 
-class ObjectnessRiskConformalizer(RiskConformalizer):
+class ConfidenceConformalizer(RiskConformalizer):
     """
     A class that performs risk conformalization for localization tasks.
     """
@@ -820,17 +720,54 @@ class ODClassificationConformalizer(Conformalizer):
 
 
 class ODConformalizer(Conformalizer):
-    """_summary_
+    """
+    Class representing conformalizers for object detection tasks.
+
+    Attributes:
+        MULTIPLE_TESTING_CORRECTIONS (List[str]): List of supported multiple testing correction methods.
+        BACKENDS (List[str]): List of supported backends.
+        GUARANTEE_LEVELS (List[str]): List of supported guarantee levels.
 
     Args:
-        Conformalizer (_type_): _description_
+        backend (str): The backend used for the conformalization. Only 'auto' is supported currently.
+        guarantee_level (str): The guarantee level for the conformalization. Must be one of ["image", "object"].
+        confidence_threshold (Optional[float]): The confidence threshold used for objectness conformalization. Mutually exclusive with 'confidence_method', if set, then confidence_method must be None.
+        multiple_testing_correction (Optional[str]): The method used for multiple testing correction. Must be one of ["bonferroni"] or None. None implies no correction is applied, and that a List of Alphas is expected for calibration instead.
+        confidence_method (Union[ConfidenceConformalizer, str, None]): The method used for confidence conformalization. Mutually exclusive with 'confidence_threshold', if set, then confidence_threshold must be None. Either pass a ConfidenceConformalizer instance, a string representing the method (loss) name, or None.
+        localization_method (Union[LocalizationConformalizer, str, None]): The method used for localization conformalization. Either pass a LocalizationConformalizer instance, a string representing the method (loss) name, or None.
+        classification_method (Union[ClassificationConformalizer, str, None]): The method used for classification conformalization. Either pass a ClassificationConformalizer instance, a string representing the method (loss) name, or None.
+        **kwargs: Additional keyword arguments.
 
     Raises:
-        ValueError: _description_
-        ValueError: _description_
-        ValueError: _description_
-        ValueError: _description_
-        ValueError: _description_
+        ValueError: If the provided backend is not supported.
+        ValueError: If the provided guarantee level is not supported.
+        ValueError: If both confidence_threshold and confidence_method are provided.
+        ValueError: If neither confidence_threshold nor confidence_method are provided.
+        ValueError: If the provided multiple_testing_correction is not supported.
+
+    Methods:
+        calibrate(predictions, global_alpha, alpha_confidence, alpha_localization, alpha_classification, verbose=True)
+            Calibrates the conformalizers and returns the calibration results.
+
+            Args:
+                predictions (ODPredictions): The predictions to be calibrated.
+                global_alpha (Optional[float]): The global alpha value for calibration. If multiple_testing_correction is None, individual alpha values will be used for each conformalizer.
+                alpha_confidence (Optional[float]): The alpha value for the confidence conformalizer.
+                alpha_localization (Optional[float]): The alpha value for the localization conformalizer.
+                alpha_classification (Optional[float]): The alpha value for the classification conformalizer.
+                verbose (bool, optional): Whether to print calibration information. Defaults to True.
+
+            Returns:
+                dict[str, Any]: A dictionary containing the calibration results, including target alpha values and estimated lambda values for each conformalizer.
+
+            Raises:
+                ValueError: If the multiple_testing_correction is not provided or is not valid.
+                ValueError: If the global_alpha is not provided when using the Bonferroni multiple_testing_correction.
+                ValueError: If explicit alpha values are provided when using the Bonferroni multiple_testing_correction.
+
+            Note:
+                - The multiple_testing_correction attribute of the class must be set before calling this method.
+                - The conformalizers must be initialized before calling this method.
     """
 
     MULTIPLE_TESTING_CORRECTIONS = ["bonferroni"]
@@ -933,10 +870,10 @@ class ODConformalizer(Conformalizer):
 
         if isinstance(classification_method, str):
             self.classification_method = classification_method
-            self.classification_conformalizer = ClassificationConformalizer(
+            self.classification_conformalizer = ODClassificationConformalizer(
                 method=classification_method
             )
-        elif isinstance(classification_method, ClassificationConformalizer):
+        elif isinstance(classification_method, ODClassificationConformalizer):
             self.classification_conformalizer = classification_method
             self.classification_method = classification_method.method
         else:
@@ -1062,12 +999,13 @@ class ODConformalizer(Conformalizer):
             if verbose:
                 logger.info("Calibrating Confidence Conformalizer")
 
-            lambda_confidence = self.confidence_conformalizer.calibrate(
-                predictions, alpha=alpha_confidence, verbose=verbose
+            lambda_confidence_minus, lambda_confidence_plus = (
+                self.confidence_conformalizer.calibrate(
+                    predictions, alpha=alpha_confidence, verbose=verbose
+                )
             )
             # Unique to Confidence due to dependence
-            self.confidence_conformalizer.conformalize(predictions)  # TODO: inplace ?
-            self.confidence_threshold = predictions.confidence_threshold
+            predictions.confidence_threshold = 1 - lambda_confidence_minus
 
             if verbose:
                 logger.info(
@@ -1102,15 +1040,23 @@ class ODConformalizer(Conformalizer):
             if verbose:
                 logger.info("Calibrated Classification λ : {lambda_classification}")
 
+        if self.confidence_conformalizer is not None:
+            # Switching back to lambda+ after calibration
+            logger.info("Switching back to λ+ after calibration")
+            self.confidence_conformalizer.conformalize(predictions)  # TODO: inplace ?
+            self.confidence_threshold = predictions.confidence_threshold
+
         result = ODParameters(
             predictions_id=predictions.unique_id,
             global_alpha=global_alpha,
             alpha_confidence=alpha_confidence,
             alpha_localization=alpha_localization,
             alpha_classification=alpha_classification,
-            lambda_confidence=lambda_confidence,
+            lambda_confidence_plus=lambda_confidence_plus,
+            lambda_confidence_minus=lambda_confidence_minus,
             lambda_localization=lambda_localization,
             lambda_classification=lambda_classification,
+            confidence_threshold=predictions.confidence_threshold,
         )
 
         # Saving the last parameters id to conformalize the predictions
@@ -1119,38 +1065,63 @@ class ODConformalizer(Conformalizer):
         return result
 
     def conformalize(
-        self, predictions: ODPredictions, parameters=Optional[ODParameters]
-    ) -> ODResults:
+        self,
+        predictions: ODPredictions,
+        parameters=Optional[ODParameters],
+        verbose: bool = True,
+    ) -> ODConformalizedPredictions:
         """
         Conformalize the given predictions.
 
         Args:
-            preds (ODPredictions): The predictions to be conformalized.
+            predictions (ODPredictions): The predictions to be conformalized.
+            parameters (Optional[ODParameters]): The parameters to be used for conformalization. If None, the last parameters will be used.
+            verbose (bool): Whether to print conformalization information.
 
         Returns:
             Tuple[torch.Tensor, torch.Tensor]: A tuple containing the conformalized predictions.
         """
-
+        if verbose:
+            logger.info("Conformalizing Predictions")
         if parameters is not None:
+            if verbose:
+                logger.info("Using provided parameters for conformalization")
+            if parameters.predictions_id != predictions.unique_id:
+                raise ValueError(
+                    "The parameters have been computed on another set of predictions."
+                )
             parameters_unique_id = parameters.unique_id
             lambda_confidence = parameters.lambda_confidence
             lambda_localization = parameters.lambda_localization
             lambda_classification = parameters.lambda_classification
         else:
+            if verbose:
+                logger.info("Using last parameters for conformalization")
             parameters_unique_id = self._last_parameters_id
             lambda_confidence = None
             lambda_localization = None
             lambda_classification = None
 
+        # TODO: later check this is correct behavior
         if self.confidence_conformalizer is not None:
+            if verbose:
+                logger.info("Conformalizing Confidence")
             self.confidence_conformalizer.conformalize(
                 predictions, replace_lambda=lambda_confidence
             )
         else:
-            # TODO what here ?
-            predictions.confidence_threshold = self.confidence_threshold
+            if parameters is not None:
+                if verbose:
+                    logger.info("Using provided confidence threshold")
+                predictions.confidence_threshold = parameters.confidence_threshold
+            else:
+                if verbose:
+                    logger.info("Using last confidence threshold")
+                predictions.confidence_threshold = self.confidence_threshold
 
         if self.localization_conformalizer is not None:
+            if verbose:
+                logger.info("Conformalizing Localization")
             conf_boxes = self.localization_conformalizer.conformalize(
                 predictions, replace_lambda=lambda_localization
             )
@@ -1158,13 +1129,15 @@ class ODConformalizer(Conformalizer):
             conf_boxes = None
 
         if self.classification_conformalizer is not None:
+            if verbose:
+                logger.info("Conformalizing Classification")
             conf_cls = self.classification_conformalizer.conformalize(
                 predictions, replace_lambda=lambda_classification
             )
         else:
             conf_cls = None
 
-        results = ODResults(
+        results = ODConformalizedPredictions(
             predictions_id=predictions.unique_id,
             parameters_id=parameters_unique_id,
             conf_boxes=conf_boxes,
@@ -1172,276 +1145,92 @@ class ODConformalizer(Conformalizer):
         )
 
         return results
-    
-    def evaluate
-
-
-######## NEW OD Generalization ####################################################
-
-
-# ODConformalizer, a class that can handle doing conformalization on OD predictions for Localization (or not), Objectness (or not) and Classification (or not)
-# It's a rewritting of the classes below, to avoid having a class for each possible combination. Here we can either conformalize each of the three cases, or use a constant/normal approach
-
-
-class OOOOOODConformalizer(Conformalizer):
-
-    def conformalize(self, preds: ODPredictions):
-        """
-        Perform conformalization on the predictions.
-
-        Parameters:
-        - preds: The ODPredictions object containing the predictions.
-
-        Returns:
-        - conf_boxes: The conformalized bounding boxes.
-        - conf_cls: The conformalized classification scores.
-        """
-        if self.obj_conformalizer is not None:
-            self.obj_conformalizer.conformalize(preds)
-        else:
-            preds.confidence_threshold = self.confidence_threshold
-
-        if self.loc_conformalizer is not None:
-            conf_boxes = self.loc_conformalizer.conformalize(preds)
-        else:
-            conf_boxes = None
-
-        if self.cls_conformalizer is not None:
-            conf_cls = get_conf_cls_for_od(preds, self.cls_conformalizer)
-        else:
-            conf_cls = None
-
-        return conf_boxes, conf_cls
 
     def evaluate(
         self,
-        preds: ODPredictions,
-        conf_boxes: list,
-        conf_cls: list,
+        predictions: ODPredictions,
+        parameters: ODParameters,
+        conformalized_predictions: ODConformalizedPredictions,
+        include_confidence_in_global: bool,
         verbose: bool = True,
-    ):
-        """
-        Evaluate the conformalizers.
+    ) -> ODResults:
 
-        Parameters:
-        - preds: The ODPredictions object containing the predictions.
-        - conf_boxes: The conformalized bounding boxes.
-        - conf_cls: The conformalized classification scores.
-        - verbose: Whether to print the evaluation results.
-        """
-        if self.loc_conformalizer is not None:
-            coverage_loc, set_size_loc = self.loc_conformalizer.evaluate(
-                preds, conf_boxes, verbose=False
+        if self.localization_conformalizer is not None:
+            if verbose:
+                logger.info("Evaluating Localization Conformalizer")
+            coverage_loc, set_size_loc = self.localization_conformalizer.evaluate(
+                predictions, conformalized_predictions.conf_boxes, verbose=False
             )
         else:
             coverage_loc, set_size_loc = None, None
-        if self.obj_conformalizer is not None:
-            coverage_obj, set_size_obj = self.obj_conformalizer.evaluate(
-                preds, conf_boxes, verbose=False
+        if self.confidence_conformalizer is not None:
+            if verbose:
+                logger.info("Evaluating Confidence Conformalizer")
+            coverage_obj, set_size_obj = self.confidence_conformalizer.evaluate(
+                predictions, conformalized_predictions.conf_boxes, verbose=False
             )
         else:
             coverage_obj, set_size_obj = None, None
-        if self.cls_conformalizer is not None:
+        if self.classification_conformalizer is not None:
+            if verbose:
+                logger.info("Evaluating Classification Conformalizer")
             coverage_cls, set_size_cls = evaluate_cls_conformalizer(
-                preds, conf_cls, self.cls_conformalizer, verbose=False
+                predictions,
+                conformalized_predictions.conf_cls,
+                self.classification_conformalizer,
+                verbose=False,
             )
         else:
             coverage_cls, set_size_cls = None, None
+
         global_coverage = compute_global_coverage(
-            preds=preds,
-            conf_boxes=conf_boxes,
-            conf_cls=conf_cls,
-            confidence=self.obj_conformalizer is not None,
+            predictions=predictions,
+            parameters=parameters,
+            conformalized_predictions=conformalized_predictions,
+            confidence=(
+                self.obj_conformalizer is not None
+                if include_confidence_in_global
+                else False
+            ),
             cls=self.cls_conformalizer is not None,
             localization=self.loc_conformalizer is not None,
         )
-        if verbose:
-            print("Confidence:")
-            print(f"\t Coverage: {torch.mean(coverage_obj):.2f}")
-            print(f"\t Mean Set Size: {torch.mean(set_size_obj):.2f}")
-            print("Localization:")
-            print(f"\t Coverage: {torch.mean(coverage_loc):.2f}")
-            print(f"\t Mean Set Size: {torch.mean(set_size_loc):.2f}")
-            print("Classification:")
-            print(f"\t Coverage: {torch.mean(coverage_cls):.2f}")
-            print(f"\t Mean Set Size: {torch.mean(set_size_cls):.2f}")
-            print("Global:")
-            print(f"\t Coverage: {torch.mean(global_coverage):.2f}")
 
-        return (
-            coverage_obj,
-            coverage_loc,
-            coverage_cls,
-            set_size_obj,
-            set_size_loc,
-            set_size_cls,
-            global_coverage,
+        # TODO: Use parameters to compare distance to ideal coverage and other things
+
+        if verbose:
+            # log results
+            logger.info("Evaluation Results:")
+            if self.confidence_conformalizer is not None:
+                logger.info("\t Confidence:")
+                logger.info(f"\t\t Coverage: {torch.mean(coverage_obj):.2f}")
+                logger.info(f"\t\t Mean Set Size: {torch.mean(set_size_obj):.2f}")
+            if self.localization_conformalizer is not None:
+                logger.info("\t Localization:")
+                logger.info(f"\t\t Coverage: {torch.mean(coverage_loc):.2f}")
+                logger.info(f"\t\t Mean Set Size: {torch.mean(set_size_loc):.2f}")
+            if self.classification_conformalizer is not None:
+                logger.info("\t Classification:")
+                logger.info(f"\t\t Coverage: {torch.mean(coverage_cls):.2f}")
+                logger.info(f"\t\t Mean Set Size: {torch.mean(set_size_cls):.2f}")
+            if global_coverage is not None:
+                logger.info("\t Global:")
+                logger.info(f"\t\t Coverage: {torch.mean(global_coverage):.2f}")
+
+        results = ODResults(
+            predictions=predictions,
+            parameters=parameters,
+            conformalized_predictions=conformalized_predictions,
+            coverage_cls=coverage_cls,
+            set_size_cls=set_size_cls,
+            coverage_obj=coverage_obj,
+            set_size_obj=set_size_obj,
+            coverage_loc=coverage_loc,
+            set_size_loc=set_size_loc,
+            global_coverage=global_coverage,
         )
 
-
-# class ODRiskConformalizer(ODConformalizer, RiskConformalizer):
-#     """
-#     ODRiskConformalizer class is used for risk conformalization in object detection tasks.
-#     It combines the functionalities of ODConformalizer and RiskConformalizer classes.
-
-#     Parameters:
-#         localization_method (Union[LocalizationRiskConformalizer, str, None]): The method used for localization risk conformalization.
-#             It can be an instance of LocalizationRiskConformalizer class, a string representing the loss function, or None.
-#         objectness_method (Union[ObjectnessConformalizer, str, None]): The method used for objectness conformalization.
-#             It can be an instance of ObjectnessConformalizer class, a string representing the method, or None.
-#         classification_method (Union[ClassificationConformalizer, str, None]): The method used for classification conformalization.
-#             It can be an instance of ClassificationConformalizer class, a string representing the method, or None.
-#         multiple_testing_correction (str): The method used for multiple testing correction.
-#             It should be one of the accepted multiple testing correction methods.
-#         confidence_threshold (float): The confidence threshold. It is ignored if objectness_method is not None.
-#         **kwargs: Additional keyword arguments.
-
-#     Attributes:
-#         loc_conformalizer (LocalizationRiskConformalizer): The localization risk conformalizer instance.
-#         localization_method (str): The localization method.
-#         obj_conformalizer (ObjectnessConformalizer): The objectness conformalizer instance.
-#         objectness_method (str): The objectness method.
-#         cls_conformalizer (ClassificationConformalizer): The classification conformalizer instance.
-#         classification_method (str): The classification method.
-#         multiple_testing_correction (str): The multiple testing correction method.
-#         confidence_threshold (float): The confidence threshold.
-
-#     Raises:
-#         ValueError: If the multiple_testing_correction is not one of the accepted methods.
-
-#     """
-
-#     def __init__(
-#         self,
-#         localization_method: Union[LocalizationRiskConformalizer, str, None] = None,
-#         objectness_method: Union[ObjectnessConformalizer, str, None] = None,
-#         classification_method: Union[ClassificationConformalizer, str, None] = None,
-#         multiple_testing_correction: str = "bonferroni",
-#         confidence_threshold: float = None,
-#         **kwargs,
-#     ):
-#         if isinstance(localization_method, str):
-#             self.localization_method = localization_method
-#             self.loc_conformalizer = LocalizationRiskConformalizer(
-#                 loss=localization_method
-#             )
-#         elif isinstance(localization_method, LocalizationRiskConformalizer):
-#             self.loc_conformalizer = localization_method
-#             self.localization_method = localization_method.method
-#         else:
-#             self.loc_conformalizer = None
-#             self.localization_method = None
-
-#         if isinstance(objectness_method, str):
-#             self.objectness_method = objectness_method
-#             self.obj_conformalizer = ObjectnessConformalizer(method=objectness_method)
-#         elif isinstance(objectness_method, ObjectnessConformalizer):
-#             self.obj_conformalizer = objectness_method
-#             self.objectness_method = objectness_method.method
-#         else:
-#             self.obj_conformalizer = None
-#             self.objectness_method = None
-
-#         if isinstance(classification_method, str):
-#             self.classification_method = classification_method
-#             self.cls_conformalizer = ClassificationConformalizer(
-#                 method=classification_method
-#             )
-#         elif isinstance(classification_method, ClassificationConformalizer):
-#             self.cls_conformalizer = classification_method
-#             self.classification_method = classification_method.method
-#         else:
-#             self.cls_conformalizer = None
-#             self.classification_method = None
-
-#         if multiple_testing_correction not in self.MULTIPLE_TESTING_CORRECTIONS:
-#             raise ValueError(
-#                 f"multiple_testing_correction {multiple_testing_correction} not accepted, should be one of {self.MULTIPLE_TESTING_CORRECTIONS}"
-#             )
-#         self.multiple_testing_correction = multiple_testing_correction
-#         self.confidence_threshold = confidence_threshold
-#         if self.confidence_threshold is not None and self.obj_conformalizer is not None:
-#             # TODO: replace by warnings
-#             print(
-#                 "Warning: confidence_threshold is ignored if objectness_method is not None"
-#             )
-
-#     def evaluate(
-#         self,
-#         preds: ODPredictions,
-#         conf_boxes: list,
-#         conf_cls: list,
-#         verbose: bool = True,
-#     ):
-#         """
-#         Evaluate the conformalizers.
-
-#         Parameters:
-#         - preds: The ODPredictions object containing the predictions.
-#         - conf_boxes: The conformalized bounding boxes.
-#         - conf_cls: The conformalized classification scores.
-#         - verbose: Whether to print the evaluation results.
-#         """
-#         if self.loc_conformalizer is not None:
-#             coverage_loc, set_size_loc = self.loc_conformalizer.evaluate(
-#                 preds, conf_boxes, verbose=False
-#             )
-#         else:
-#             coverage_loc, set_size_loc = None, None
-#         if self.obj_conformalizer is not None:
-#             coverage_obj, set_size_obj = self.obj_conformalizer.evaluate(
-#                 preds, conf_boxes, verbose=False
-#             )
-#         else:
-#             coverage_obj, set_size_obj = None, None
-#         if self.cls_conformalizer is not None:
-#             coverage_cls, set_size_cls = evaluate_cls_conformalizer(
-#                 preds, conf_cls, self.cls_conformalizer, verbose=False
-#             )
-#         else:
-#             coverage_cls, set_size_cls = None, None
-#         global_coverage = compute_global_coverage(
-#             preds=preds,
-#             conf_boxes=conf_boxes,
-#             conf_cls=conf_cls,
-#             confidence=self.obj_conformalizer is not None,
-#             cls=self.cls_conformalizer is not None,
-#             localization=self.loc_conformalizer is not None,
-#             loss=(
-#                 self.loc_conformalizer.loss
-#                 if self.loc_conformalizer is not None
-#                 else None
-#             ),
-#         )
-#         if verbose:
-#             if self.obj_conformalizer is not None:
-#                 print("Confidence:")
-#                 print(f"\t Coverage: {torch.mean(coverage_obj):.2f}")
-#                 print(f"\t Mean Set Size: {torch.mean(set_size_obj):.2f}")
-#             if self.loc_conformalizer is not None:
-#                 print("Localization:")
-#                 print(f"\t Coverage: {torch.mean(coverage_loc):.2f}")
-#                 print(f"\t Mean Set Size: {torch.mean(set_size_loc):.2f}")
-#             if self.cls_conformalizer is not None:
-#                 print("Classification:")
-#                 print(f"\t Coverage: {torch.mean(coverage_cls):.2f}")
-#                 print(f"\t Mean Set Size: {torch.mean(set_size_cls):.2f}")
-#             if (
-#                 sum(x is not None for x in [coverage_obj, coverage_loc, coverage_cls])
-#                 > 1
-#             ):
-#                 print("Global:")
-#                 print(f"\t Coverage: {torch.mean(global_coverage):.2f}")
-
-#         return (
-#             coverage_obj,
-#             coverage_loc,
-#             coverage_cls,
-#             set_size_obj,
-#             set_size_loc,
-#             set_size_cls,
-#             global_coverage,
-#         )
+        return results
 
 
 ###################################################################
@@ -1449,505 +1238,7 @@ class OOOOOODConformalizer(Conformalizer):
 ###################################################################
 
 
-class SeqLocalizationRiskConformalizer(RiskConformalizer):
-    """
-    A class that performs risk conformalization for localization tasks.
-    """
-
-    ACCEPTED_LOSSES = {
-        "pixelwise": PixelWiseRecallLoss,
-        "boxwise": BoxWiseRecallLoss,
-        "classboxwise": ClassBoxWiseRecallLoss,
-    }
-
-    def __init__(
-        self,
-        guarantee_level: str = "image",  # options include "image" and "box"
-        prediction_set: str = "additive",
-        loss: Optional[str] = None,
-        optimizer: str = "binary_search",
-    ):
-        """
-        Initialize the LocalizationRiskConformalizer.
-
-        Parameters:
-        - prediction_set (str): The type of prediction set to use. Must be one of ["additive", "multiplicative", "adaptative"].
-        - loss (str): The type of loss to use. Must be one of ["pixelwise", "boxwise"].
-        - optimizer (str): The type of optimizer to use. Must be one of ["binary_search", "gaussianprocess", "gpr", "kriging"].
-        """
-        super().__init__()
-
-        self.guarantee_level = guarantee_level
-
-        if loss not in self.ACCEPTED_LOSSES:
-            raise ValueError(
-                f"loss {loss} not accepted, must be one of {self.ACCEPTED_LOSSES.keys()}"
-            )
-        self.loss_name = loss
-        self.loss = self.ACCEPTED_LOSSES[loss]()
-
-        if prediction_set not in ["additive", "multiplicative", "adaptative"]:
-            raise ValueError(f"prediction_set {prediction_set} not accepted")
-        self.prediction_set = prediction_set
-        self.lbd = None
-        if optimizer == "binary_search":
-            self.optimizer = BinarySearchOptimizer()
-        elif optimizer in ["gaussianprocess", "gpr", "kriging"]:
-            self.optimizer = GaussianProcessOptimizer()
-        else:
-            raise ValueError(f"optimizer {optimizer} not accepted")
-
-    def _get_risk_function(
-        self,
-        preds: ODPredictions,
-        alpha: float,
-        objectness_threshold: float,
-        override_B=None,
-        conf_cls=None,
-        **kwargs,
-    ) -> Callable[[float], torch.Tensor]:
-        """
-        Get the risk function for risk conformalization.
-
-        Parameters:
-        - preds (ODPredictions): The object detection predictions.
-        - alpha (float): The significance level.
-        - objectness_threshold (float): The threshold for objectness confidence.
-
-        Returns:
-        - risk_function (Callable[[float], float]): The risk function.
-        """
-        pred_boxes_filtered = list(
-            [
-                (
-                    x[y >= objectness_threshold]
-                    if len(x[y >= objectness_threshold]) > 0
-                    else x[None, y.argmax()]
-                )
-                for x, y in zip(preds.pred_boxes, preds.confidence)
-            ]
-        )
-
-        def risk_function(lbd: float) -> torch.Tensor:
-            """
-            Compute the risk given a lambda value.
-
-            Parameters:
-            - lbd (float): The lambda value.
-
-            Returns:
-            - corrected_risk (float): The corrected risk.
-            """
-            conf_boxes = apply_margins(
-                pred_boxes_filtered, [lbd, lbd, lbd, lbd], mode=self.prediction_set
-            )
-            if self.guarantee_level == "box":
-                if self.loss_name == "classboxwise":
-                    risk = compute_risk_cls_box_level(
-                        conf_boxes,
-                        conf_cls,
-                        preds.true_boxes,
-                        preds.true_cls,
-                        loss=self.loss,
-                    )
-                else:
-                    risk = compute_risk_box_level(
-                        conf_boxes,
-                        preds.true_boxes,
-                        loss=self.loss,
-                    )
-            elif self.guarantee_level == "image":
-                risk = compute_risk_image_level(
-                    conf_boxes,
-                    preds.true_boxes,
-                    loss=self.loss,
-                )
-
-            n = len(preds)
-            corrected_risk = self._correct_risk(
-                risk=risk,
-                n=n,
-                B=override_B if override_B is not None else self.loss.upper_bound,
-            )
-            return corrected_risk
-
-        return risk_function
-
-    def _correct_risk(self, risk: torch.Tensor, n: int, B: float) -> torch.Tensor:
-        """
-        Correct the risk using the number of predictions and the upper bound.
-
-        Parameters:
-        - risk (torch.Tensor): The risk tensor.
-        - n (int): The number of predictions.
-        - B (float): The upper bound.
-
-        Returns:
-        - corrected_risk (torch.Tensor): The corrected risk tensor.
-        """
-        return (n / (n + 1)) * torch.mean(risk) + B / (n + 1)
-
-    def calibrate(
-        self,
-        preds: ODPredictions,
-        alpha: float = 0.1,
-        steps: int = 13,
-        bounds: List[float] = [0, 1000],
-        verbose: bool = True,
-        confidence_threshold: Union[float, None] = None,
-        override_B=None,
-        conf_cls=None,
-    ) -> float:
-        """
-        Calibrate the conformalizer.
-
-        Parameters:
-        - preds (ODPredictions): The object detection predictions.
-        - alpha (float): The significance level.
-        - steps (int): The number of steps for optimization.
-        - bounds (List[float]): The bounds for optimization.
-        - verbose (bool): Whether to print the optimization progress.
-        - confidence_threshold (float): The threshold for objectness confidence.
-
-        Returns:
-        - lbd (float): The calibrated lambda value.
-        """
-        if self.lbd is not None:
-            print("Replacing previously computed lambda")
-        if preds.confidence_threshold is None:
-            if confidence_threshold is None:
-                raise ValueError(
-                    "confidence_threshold must be set in the predictions or in the conformalizer"
-                )
-            else:
-                preds.confidence_threshold = confidence_threshold
-
-        risk_function = self._get_risk_function(
-            preds=preds,
-            alpha=alpha,
-            objectness_threshold=preds.confidence_threshold,
-            override_B=override_B,
-            conf_cls=conf_cls,
-        )
-
-        lbd = self.optimizer.optimize(
-            objective_function=risk_function,
-            alpha=alpha,
-            bounds=bounds,
-            steps=steps,
-            verbose=verbose,
-        )
-        self.lbd = lbd
-        return lbd
-
-    def conformalize(self, preds: ODPredictions) -> List[List[float]]:
-        """
-        Conformalize the object detection predictions.
-
-        Parameters:
-        - preds (ODPredictions): The object detection predictions.
-
-        Returns:
-        - conf_boxes (List[List[float]]): The conformalized bounding boxes.
-        """
-        if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before conformalizing.")
-        conf_boxes = apply_margins(
-            preds.pred_boxes, [self.lbd] * 4, mode=self.prediction_set
-        )
-        preds.confidence_threshold = preds.confidence_threshold
-        return conf_boxes
-
-    def evaluate(
-        self,
-        preds: ODPredictions,
-        conf_boxes: List[List[float]],
-        conf_cls=None,
-        verbose: bool = True,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Evaluate the conformalized predictions.
-
-        Parameters:
-        - preds (ODPredictions): The object detection predictions.
-        - conf_boxes (List[List[float]]): The conformalized bounding boxes.
-        - verbose (bool): Whether to print the evaluation results.
-
-        Returns:
-        - safety (torch.Tensor): The safety scores.
-        - set_sizes (torch.Tensor): The set sizes.
-        """
-        if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before evaluating.")
-        if conf_boxes is None:
-            raise ValueError("Predictions must be conformalized before evaluating.")
-        true_boxes = preds.true_boxes
-        conf_boxes = list(
-            [
-                (
-                    x[y >= preds.confidence_threshold]
-                    if len(x[y >= preds.confidence_threshold]) > 0
-                    else x[None, y.argmax()]
-                )
-                for x, y in zip(conf_boxes, preds.confidence)
-            ]
-        )
-
-        if self.loss_name == "classboxwise":
-            risk = compute_risk_cls_box_level(
-                conf_boxes,
-                conf_cls,
-                preds.true_boxes,
-                preds.true_cls,
-                loss=self.loss,
-            )
-        else:
-            risk = compute_risk_box_level(
-                conf_boxes,
-                preds.true_boxes,
-                loss=self.loss,
-            )
-        safety = 1 - risk
-
-        def compute_set_size(boxes: List[List[float]]) -> torch.Tensor:
-            set_sizes = []
-            for image_boxes in boxes:
-                for box in image_boxes:
-                    set_size = (box[2] - box[0]) * (box[3] - box[1])
-                    set_size = set_size**0.5
-                    set_sizes.append(set_size)
-            set_sizes = torch.stack(set_sizes).ravel()
-            return set_sizes
-
-        set_sizes = compute_set_size(conf_boxes)
-        if verbose:
-            print(f"Safety = {safety}")
-            print(f"Average set size = {torch.mean(set_sizes)}")
-        return safety, set_sizes
-
-
-class SeqODRiskConformalizer(ODConformalizer, RiskConformalizer):
-
-    def __init__(
-        self,
-        guarantee_level: str = "image",  # options include "image" or "box"
-        localization_method: Union[LocalizationRiskConformalizer, str, None] = None,
-        objectness_method: Union[ObjectnessConformalizer, str, None] = None,
-        classification_method: Union[ClassificationConformalizer, str, None] = None,
-        confidence_threshold: Optional[float] = None,
-        multiple_testing_correction: str = "bonferroni",
-        **kwargs,
-    ):
-        self.guarantee_level = guarantee_level
-
-        if isinstance(localization_method, str):
-            self.localization_method = localization_method
-            self.loc_conformalizer = SeqLocalizationRiskConformalizer(
-                loss=localization_method
-            )
-        elif isinstance(localization_method, SeqLocalizationRiskConformalizer):
-            self.loc_conformalizer = localization_method
-            self.localization_method = localization_method.method
-        else:
-            self.loc_conformalizer = None
-            self.localization_method = None
-
-        if isinstance(objectness_method, str):
-            self.objectness_method = objectness_method
-            self.obj_conformalizer = ObjectnessConformalizer(method=objectness_method)
-        elif isinstance(objectness_method, ObjectnessConformalizer):
-            self.obj_conformalizer = objectness_method
-            self.objectness_method = objectness_method.method
-        else:
-            self.obj_conformalizer = None
-            self.objectness_method = None
-
-        if isinstance(classification_method, str):
-            self.classification_method = classification_method
-            self.cls_conformalizer = ClassificationConformalizer(
-                method=classification_method
-            )
-        elif isinstance(classification_method, ClassificationConformalizer):
-            self.cls_conformalizer = classification_method
-            self.classification_method = classification_method.method
-        else:
-            self.cls_conformalizer = None
-            self.classification_method = None
-
-        self.multiple_testing_correction = multiple_testing_correction
-        self.confidence_threshold = confidence_threshold
-        if self.confidence_threshold is not None and self.obj_conformalizer is not None:
-            # TODO: replace by warnings
-            print(
-                "Warning: confidence_threshold is ignored if objectness_method is not None"
-            )
-
-    def calibrate(
-        self, preds: ODPredictions, alpha: float = 0.1, verbose: bool = True
-    ) -> Tuple[
-        Optional[Sequence[float]], Optional[torch.Tensor], Optional[torch.Tensor]
-    ]:
-
-        if self.multiple_testing_correction == "bonferroni":
-            if (
-                self.loc_conformalizer is not None
-                and self.cls_conformalizer is not None
-            ):
-                real_alpha_cls = alpha * 0.7
-                real_alpha_loc = alpha * 0.3
-                real_alpha = alpha * 0.3
-            else:
-                real_alpha = 0.5 * alpha
-                real_alpha_cls = alpha
-                real_alpha_loc = alpha
-        elif self.multiple_testing_correction == "none":
-            real_alpha = alpha
-        else:
-            raise ValueError(
-                f"multiple_testing_correction {self.multiple_testing_correction} not accepted, should be one of {self.MULTIPLE_TESTING_CORRECTIONS}"
-            )
-
-        if self.obj_conformalizer is not None:
-            quantile_obj_confidence_minus = self.obj_conformalizer.calibrate(
-                preds,
-                alpha=real_alpha,  # real_alpha,
-                verbose=verbose,
-                override_B=True,
-            )
-            minus_conf_threshold = 1 - quantile_obj_confidence_minus
-            quantile_obj_confidence = self.obj_conformalizer.calibrate(
-                preds,
-                alpha=real_alpha,  # real_alpha,
-                verbose=verbose,
-            )
-            confidence_threshold = 1 - quantile_obj_confidence
-            preds.confidence_threshold = minus_conf_threshold
-        else:
-            quantile_obj_confidence = 1 - self.confidence_threshold
-            confidence_threshold = self.confidence_threshold
-            preds.confidence_threshold = confidence_threshold
-
-        if self.loc_conformalizer is not None:
-            quantile_localization = self.loc_conformalizer.calibrate(
-                preds, alpha=real_alpha_loc, verbose=verbose  # real_alpha,
-            )
-        else:
-            quantile_localization = None
-        if self.cls_conformalizer is not None:
-            cls_preds = get_classif_preds_from_od_preds(preds)
-            quantile_classif, score_cls = self.cls_conformalizer.calibrate(
-                cls_preds, alpha=real_alpha_cls, verbose=verbose  # real_alpha,
-            )
-        else:
-            quantile_classif, score_cls = None, None
-
-        preds.confidence_threshold = confidence_threshold
-
-        if verbose:
-            print(f"Quantiles")
-            if self.obj_conformalizer is not None:
-                print(f"Confidence: {quantile_obj_confidence}")
-            if self.loc_conformalizer is not None:
-                print(f"Localization: {quantile_localization}")
-            if self.cls_conformalizer is not None:
-                print(f"Classification: {quantile_classif}")
-
-        # TODO: do this better, here we want to allow exclusion of objectness for metrics
-
-        # TODO: future move to dictionary for better handling
-        return quantile_localization, quantile_obj_confidence, quantile_classif
-
-    def evaluate(
-        self,
-        preds: ODPredictions,
-        conf_boxes: list,
-        conf_cls: list,
-        verbose: bool = True,
-    ):
-        """
-        Evaluate the conformalizers.
-
-        Parameters:
-        - preds: The ODPredictions object containing the predictions.
-        - conf_boxes: The conformalized bounding boxes.
-        - conf_cls: The conformalized classification scores.
-        - verbose: Whether to print the evaluation results.
-        """
-        if self.loc_conformalizer is not None:
-            coverage_loc, set_size_loc = self.loc_conformalizer.evaluate(
-                preds, conf_boxes, verbose=False
-            )
-        else:
-            coverage_loc, set_size_loc = None, None
-        if self.obj_conformalizer is not None:
-            coverage_obj, set_size_obj = self.obj_conformalizer.evaluate(
-                preds, conf_boxes, verbose=False
-            )
-        else:
-            coverage_obj, set_size_obj = None, None
-        if self.cls_conformalizer is not None:
-            coverage_cls, set_size_cls = evaluate_cls_conformalizer(
-                preds, conf_cls, self.cls_conformalizer, verbose=False
-            )
-        else:
-            coverage_cls, set_size_cls = None, None
-        global_coverage = compute_global_coverage(
-            preds=preds,
-            conf_boxes=conf_boxes,
-            conf_cls=conf_cls,
-            confidence=False,
-            cls=self.cls_conformalizer is not None,
-            localization=self.loc_conformalizer is not None,
-            loss=(
-                self.loc_conformalizer.loss
-                if self.loc_conformalizer is not None
-                else None
-            ),
-        )
-        if verbose:
-            if (
-                self.obj_conformalizer is not None
-                and coverage_obj is not None
-                and set_size_obj is not None
-            ):
-                print("Confidence:")
-                print(f"\t Coverage: {torch.mean(coverage_obj):.2f}")
-                print(f"\t Mean Set Size: {torch.mean(set_size_obj):.2f}")
-            if (
-                self.loc_conformalizer is not None
-                and coverage_loc is not None
-                and set_size_loc is not None
-            ):
-                print("Localization:")
-                print(f"\t Coverage: {torch.mean(coverage_loc):.2f}")
-                print(f"\t Mean Set Size: {torch.mean(set_size_loc):.2f}")
-            if (
-                self.cls_conformalizer is not None
-                and coverage_cls is not None
-                and set_size_cls is not None
-            ):
-                print("Classification:")
-                print(f"\t Coverage: {torch.mean(coverage_cls):.2f}")
-                print(f"\t Mean Set Size: {torch.mean(set_size_cls):.2f}")
-            if (
-                sum(x is not None for x in [coverage_obj, coverage_loc, coverage_cls])
-                > 1
-            ):
-                print("Global:")
-                print(f"\t Coverage: {torch.mean(global_coverage):.2f}")
-
-        return (
-            coverage_obj,
-            coverage_loc,
-            coverage_cls,
-            set_size_obj,
-            set_size_loc,
-            set_size_cls,
-            global_coverage,
-        )
-
-
-class SeqGlobalODRiskConformalizer(ODRiskConformalizer):
+class SeqGlobalODRiskConformalizer(ODConformalizer):
 
     def __init__(
         self,
