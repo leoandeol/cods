@@ -1,6 +1,9 @@
 import os
 import pickle
+from typing import Optional
+
 import torch
+
 from cods.base.data import Predictions
 
 
@@ -14,6 +17,7 @@ class Model:
         device="cuda",
     ):
         self.model_name = model_name
+        self.model = None  # TODO: add model loading
         self.pretrained = pretrained
         self.weights = weights
         self.device = device
@@ -55,7 +59,7 @@ class Model:
         dataset_name: str,
         split_name: str,
         task_name: str,
-    ) -> Predictions:
+    ) -> Optional[Predictions]:
         """Load predictions if they exist, else return None
 
         Args:

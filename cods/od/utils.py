@@ -34,13 +34,22 @@ def get_classif_preds_from_od_preds(preds: ODPredictions) -> ClassificationPredi
         for j, true_cls_box in enumerate(true_cls_img):
             pred_cls_box = preds.pred_cls[i][matching[i][j]]
             pred_cls_img.append(pred_cls_box)
-        if len(pred_cls_img) == 0:
-            pred_cls_img = torch.zeros((0)).cuda()
+        # TODO: fix this behavior
+        if len(pred_cls_img) == 0 or torch.stack(pred_cls_img).shape[1] == 0:
+            # TODO: Document this choice
+            # pred_cls_img = torch.zeros((0)).cuda()
+            if len(true_cls_img) == 0:
+                continue
+            else:
+                # raise ValueError("Warning: len(pred_cls_img) == 0")
+                pred_cls_img = torch.zeros((len(true_cls_img), 91)).cuda()
         else:
             pred_cls_img = torch.stack(pred_cls_img)
         true_cls.append(true_cls_img)
         pred_cls.append(pred_cls_img)
-
+    # pred_cls = list([x.squeeze() for x in pred_cls])
+    # pred_cls = list([x if len(x.shape) >= 2 else x.unsqueeze(0) for x in pred_cls])
+    # print([x.shape for x in pred_cls if len(x.shape) > 2])
     pred_cls = torch.cat(pred_cls)
     true_cls = torch.cat(true_cls).cuda()
 
@@ -340,7 +349,10 @@ def matching_by_iou(preds, verbose=False):
         conf_thr = 0
     # filter pred_boxes with low objectness
     preds_boxes = list(
-        [x[y >= conf_thr] for x, y in zip(preds.pred_boxes, preds.confidence)]
+        [
+            x[y >= conf_thr] if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
+            for x, y in zip(preds.pred_boxes, preds.confidence)
+        ]
     )
     for pred_boxes, true_boxes in tqdm(
         zip(preds_boxes, preds.true_boxes), disable=not verbose
@@ -350,15 +362,15 @@ def matching_by_iou(preds, verbose=False):
             ious = []
             for pred_box in pred_boxes:
                 # TODO replace with hausdorff distance ?
-                # iou = f_iou(true_box, pred_box)
+                iou = f_iou(true_box, pred_box)
                 # TODO: test
-                iou = assymetric_hausdorff_distance(true_box, pred_box)
+                # iou = -assymetric_hausdorff_distance(true_box, pred_box)
                 iou = iou.cpu().numpy() if isinstance(iou, torch.Tensor) else iou
                 ious.append(iou)  # .cpu().numpy())
             if len(pred_boxes) == 0:
                 matching.append([])
                 continue
-            matching.append(np.argmin(ious))  # np.argmax(ious))
+            matching.append(np.argmax(ious))  # np.argmax(ious))
         all_matching.append(matching)
     preds.matching = all_matching
     return all_matching

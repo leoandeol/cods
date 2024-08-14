@@ -71,7 +71,12 @@ class ODModel(Model):
             if preds is not None:
                 if verbose:
                     print("Predictions already exist, loading them...")
-                return preds
+                if isinstance(preds, ODPredictions):
+                    return preds
+                else:
+                    raise ValueError(
+                        "Predictions file exists but is not of type ODPredictions"
+                    )
             elif verbose:
                 print("Predictions do not exist, building them...")
         else:
