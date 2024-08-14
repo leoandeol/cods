@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 
 class Optimizer:
-    def optimize(self, objective_function: Callable, alpha: int, **kwargs) -> float:
+    def optimize(self, objective_function: Callable, alpha: float, **kwargs) -> float:
         raise NotImplementedError("Optimizer is an abstract class")
 
 
@@ -20,7 +20,7 @@ class BinarySearchOptimizer(Optimizer):
         self,
         objective_function: Callable,
         alpha: float,
-        bounds: Union[Tuple, List[Tuple]],
+        bounds: Union[Tuple, List, List[Tuple]],
         steps: int,
         epsilon=1e-5,
         verbose=True,

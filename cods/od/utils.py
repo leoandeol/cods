@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import torch
@@ -133,7 +133,7 @@ def evaluate_cls_conformalizer(
     conf_cls: List[List[torch.Tensor]],
     conformalizer: Union[ClassificationConformalizer, ClassificationToleranceRegion],
     verbose: bool = False,
-) -> torch.Tensor:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Evaluate the performance of a classification conformalizer.
 
@@ -189,7 +189,7 @@ def evaluate_cls_conformalizer(
     return covs, set_sizes
 
 
-def mesh_func(x1, y1, x2, y2, pbs):
+def mesh_func(x1: int, y1: int, x2: int, y2: int, pbs: torch.Tensor) -> torch.Tensor:
     """
     Compute mesh function.
 
@@ -215,7 +215,7 @@ def mesh_func(x1, y1, x2, y2, pbs):
         yy.reshape((1, -1)) <= (pbs[:, 3, None])
     )
 
-    Z = torch.any(outxx & outyy, axis=0).reshape((x2 - x1 + 1, y2 - y1 + 1))
+    Z = torch.any(outxx & outyy, dim=0).reshape((x2 - x1 + 1, y2 - y1 + 1))
     return Z
 
 
@@ -261,7 +261,7 @@ def get_covered_areas_of_gt_max(pred_boxes, true_boxes):
 
         p_areas = []
         for pb in pred_boxes:
-            Z = mesh_func(x1, y1, x2, y2, [pb])
+            Z = mesh_func(x1, y1, x2, y2, pb[None, ...])
 
             p_area = Z.sum() / ((x2 - x1 + 1) * (y2 - y1 + 1))
             p_areas.append(p_area)
@@ -376,27 +376,31 @@ def matching_by_iou(preds, verbose=False):
     return all_matching
 
 
-def apply_margins(pred_boxes, Qs, mode="additive"):
+def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
     n = len(pred_boxes)
-    new_boxes = [None] * n
-    # print(Qs)
+    new_boxes = []
     Qst = torch.FloatTensor([Qs]).cuda()
     for i in range(n):
-        # print(pred_boxes[i].shape, Qst.shape)
         if mode == "additive":
-            new_boxes[i] = pred_boxes[i] + torch.mul(
+            new_box = pred_boxes[i] + torch.mul(
                 torch.FloatTensor([[-1, -1, 1, 1]]).cuda(), Qst
             )
         elif mode == "multiplicative":
             w = pred_boxes[i][:, 2] - pred_boxes[i][:, 0]
             h = pred_boxes[i][:, 3] - pred_boxes[i][:, 1]
-            new_boxes[i] = pred_boxes[i] + torch.mul(
-                torch.stack((-w, -h, w, h), axis=-1), Qst
+            new_box = pred_boxes[i] + torch.mul(
+                torch.FloatTensor([[-w, -h, w, h]]).cuda(), Qst
             )
+        # TODO: implement
+        elif mode == "adaptive":
+            raise NotImplementedError("adaptive mode not implemented yet")
+        new_boxes.append(new_box)
     return new_boxes
 
 
-def compute_risk_box_level(conf_boxes, true_boxes, loss):
+def compute_risk_box_level(
+    conf_boxes, true_boxes, loss, return_list: bool = False
+) -> torch.Tensor:
     """
     Input : conformal and true boxes of a all images
     """
@@ -409,53 +413,54 @@ def compute_risk_box_level(conf_boxes, true_boxes, loss):
             loss_value = loss(cbs, [tbs[j]])
             losses.append(loss_value)
     losses = torch.stack(losses).ravel()
-    return torch.mean(losses)
-
-
-def compute_risk_cls_box_level(conf_boxes, conf_cls, true_boxes, true_cls, loss):
-    """
-    Input : conformal and true boxes of a all images
-    """
-    # filter out boxes with low objectness
-    losses = []
-    for i in range(len(true_boxes)):
-        tbs = true_boxes[i]
-        cbs = conf_boxes[i]
-        ccs = conf_cls[i]
-        tcs = true_cls[i]
-        for j in range(len(tbs)):
-            loss_value = loss(cbs, [ccs[j]], [tbs[j]], [tcs[j]])
-            losses.append(loss_value)
-    losses = torch.stack(losses).ravel()
-    return torch.mean(losses)
-
-
-def compute_risk_cls_image_level(conf_boxes, conf_cls, true_boxes, true_cls, loss):
-    """
-    Input : conformal and true boxes of a all images
-    """
-    # filter out boxes with low objectness
-    losses = []
-    for i in range(len(true_boxes)):
-        tbs = true_boxes[i]
-        cbs = conf_boxes[i]
-        ccs = conf_cls[i]
-        tcs = true_cls[i]
-        loss_value = loss(cbs, ccs, tbs, tcs)
-        losses.append(loss_value)
-    losses = torch.stack(losses).ravel()
-    return torch.mean(losses)
+    return losses if return_list else torch.mean(losses)
 
 
 def compute_risk_image_level(
-    conf_boxes,
-    true_boxes,
-    loss,
-):
+    conf_boxes, true_boxes, loss, return_list: bool = False
+) -> torch.Tensor:
     losses = torch.zeros(len(true_boxes))
     for i in range(len(true_boxes)):
         tbs = true_boxes[i]
         cbs = conf_boxes[i]
         loss_value = loss(cbs, tbs)
         losses[i] = loss_value
-    return torch.mean(losses)
+    return losses if return_list else torch.mean(losses)
+
+
+# TODO: standby, unused currently, not compatible with theory
+
+
+# def compute_risk_cls_box_level(conf_boxes, conf_cls, true_boxes, true_cls, loss):
+#     """
+#     Input : conformal and true boxes of a all images
+#     """
+#     # filter out boxes with low objectness
+#     losses = []
+#     for i in range(len(true_boxes)):
+#         tbs = true_boxes[i]
+#         cbs = conf_boxes[i]
+#         ccs = conf_cls[i]
+#         tcs = true_cls[i]
+#         for j in range(len(tbs)):
+#             loss_value = loss(cbs, [ccs[j]], [tbs[j]], [tcs[j]])
+#             losses.append(loss_value)
+#     losses = torch.stack(losses).ravel()
+#     return torch.mean(losses)
+
+
+# def compute_risk_cls_image_level(conf_boxes, conf_cls, true_boxes, true_cls, loss):
+#     """
+#     Input : conformal and true boxes of a all images
+#     """
+#     # filter out boxes with low objectness
+#     losses = []
+#     for i in range(len(true_boxes)):
+#         tbs = true_boxes[i]
+#         cbs = conf_boxes[i]
+#         ccs = conf_cls[i]
+#         tcs = true_cls[i]
+#         loss_value = loss(cbs, ccs, tbs, tcs)
+#         losses.append(loss_value)
+#     losses = torch.stack(losses).ravel()
+#     return torch.mean(losses)
