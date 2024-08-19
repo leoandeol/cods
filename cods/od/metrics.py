@@ -46,14 +46,19 @@ def compute_global_coverage(
     conf_cls = conformalized_predictiond.conf_cls
     if conf_cls is None and cls is True:
         cls = False
-        logger.warning("No conformal classes provided, skipping classification")
+        logger.warning(
+            "No conformal classes provided, skipping classification"
+        )
 
     covs = []
     for i in tqdm.tqdm(range(len(predictions))):
         if confidence:
             conf_loss = (
                 0
-                if (predictions.confidence[i] >= predictions.confidence_threshold).sum()
+                if (
+                    predictions.confidence[i]
+                    >= predictions.confidence_threshold
+                ).sum()
                 >= len(predictions.true_boxes[i])
                 else 1
             )
@@ -74,7 +79,8 @@ def compute_global_coverage(
                 # ]
                 # Tensor style
                 conf_boxes_i = conf_boxes[i][
-                    predictions.confidence[i] >= predictions.confidence_threshold
+                    predictions.confidence[i]
+                    >= predictions.confidence_threshold
                 ]
                 if loss is None:
                     true_box = predictions.true_boxes[i][j]
@@ -89,7 +95,9 @@ def compute_global_coverage(
                             loc_loss = 0
                             break
                 else:
-                    loc_loss = loss(conf_boxes_i, [predictions.true_boxes[i][j]]).item()
+                    loc_loss = loss(
+                        conf_boxes_i, [predictions.true_boxes[i][j]]
+                    ).item()
             else:
                 loc_loss = 0
 
@@ -103,7 +111,9 @@ def compute_global_coverage(
     return covs
 
 
-def getStretch(od_predictions: ODPredictions, conf_boxes: list) -> torch.Tensor:
+def getStretch(
+    od_predictions: ODPredictions, conf_boxes: list
+) -> torch.Tensor:
     """
     Get the stretch of object detection predictions.
 
@@ -229,7 +239,9 @@ def getAveragePrecision(
         total_recalls.append(np.mean(tmp_recalls))
         total_precisions.append(np.mean(tmp_precisions))
 
-    AP = np.trapz(x=list(reversed(total_recalls)), y=list(reversed(total_precisions)))
+    AP = np.trapz(
+        x=list(reversed(total_recalls)), y=list(reversed(total_precisions))
+    )
     return AP, total_recalls, total_precisions, threshes_objectness
 
 
@@ -299,10 +311,13 @@ def unroll_metrics(
     )
     if verbose:
         print(f"Average Precision: {AP_vanilla}")
-    AP_conf, total_recalls_conf, total_precisions_conf, threshes_objectness_conf = (
-        getAveragePrecision(
-            od_predictions, conf_boxes, verbose=True, iou_threshold=iou_threshold
-        )
+    (
+        AP_conf,
+        total_recalls_conf,
+        total_precisions_conf,
+        threshes_objectness_conf,
+    ) = getAveragePrecision(
+        od_predictions, conf_boxes, verbose=True, iou_threshold=iou_threshold
     )
     if verbose:
         print(f"(Conformal) Average Precision: {AP_conf}")

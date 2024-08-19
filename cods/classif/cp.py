@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Tuple
 
 import torch
 
@@ -39,10 +39,16 @@ class ClassificationConformalizer(Conformalizer):
         alpha: float = 0.1,
         verbose: bool = True,
         lbd_minus: bool = False,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         self._n_classes = preds.n_classes
         if self._score_function is None:
-            self._score_function = self.ACCEPTED_METHODS[self.method](self._n_classes)
+            self._score_function = self.ACCEPTED_METHODS[self.method](
+                self._n_classes
+            )
+        elif not isinstance(self._score_function, ClassifNCScore):
+            raise ValueError(
+                f"method '{self.method}' not accepted, must be one of {self.ACCEPTED_METHODS} or a ClassifNCScore"
+            )
         scores = []
 
         n = 0
@@ -79,7 +85,13 @@ class ClassificationConformalizer(Conformalizer):
 
     def conformalize(self, preds: ClassificationPredictions) -> list:
         if self._quantile is None:
-            raise ValueError("Conformalizer must be calibrated before conformalizing.")
+            raise ValueError(
+                "Conformalizer must be calibrated before conformalizing."
+            )
+        if self._score_function is None:
+            raise ValueError(
+                "Conformalizer must be calibrated before conformalizing."
+            )
 
         conf_cls = []
         for pred_cls in preds.pred_cls:
@@ -92,11 +104,17 @@ class ClassificationConformalizer(Conformalizer):
 
         return conf_cls
 
-    def evaluate(self, preds: ClassificationPredictions, conf_cls: list, verbose=True):
+    def evaluate(
+        self, preds: ClassificationPredictions, conf_cls: list, verbose=True
+    ):
         if self._quantile is None:
-            raise ValueError("Conformalizer must be calibrated before evaluating.")
+            raise ValueError(
+                "Conformalizer must be calibrated before evaluating."
+            )
         if conf_cls is None:
-            raise ValueError("Predictions must be conformalized before evaluating.")
+            raise ValueError(
+                "Predictions must be conformalized before evaluating."
+            )
         losses = []
         set_sizes = []
         for i, true_cls_i in enumerate(preds.true_cls):

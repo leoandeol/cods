@@ -1,8 +1,14 @@
+from typing import List, Optional
+
 import numpy as np
 import torch
 
 from cods.base.loss import Loss
-from cods.od.utils import get_covered_areas_of_gt_max, get_covered_areas_of_gt_union
+from cods.od.data import ODConformalizedPredictions, ODPredictions
+from cods.od.utils import (
+    get_covered_areas_of_gt_max,
+    get_covered_areas_of_gt_union,
+)
 
 
 # Object Detection Loss, many are wrappers of Segmentation losses
@@ -20,7 +26,11 @@ class ODLoss(Loss):
         super().__init__()
         self.upper_bound = upper_bound
 
-    def __call__(self, **kwargs):
+    def __call__(
+        self,
+        predictions: ODPredictions,
+        conformalized_predictions: ODConformalizedPredictions,
+    ) -> torch.Tensor:
         """
         Call the Object Detection Loss.
 
@@ -31,10 +41,15 @@ class ODLoss(Loss):
 
 
 # LAC STYLE
-class ObjectnessLoss(Loss):
-    def __init__(self, upper_bound: int = 1, **kwargs):
+class ConfidenceLoss(Loss):
+    def __init__(
+        self,
+        upper_bound: int = 1,
+        other_losses: Optional[List[Loss]] = None,
+        **kwargs,
+    ):
         """
-        Initialize the Objectness Loss.
+        Initialize the Confidence Loss.
 
         Parameters:
         - upper_bound (int): The upper bound of the loss.
@@ -45,25 +60,37 @@ class ObjectnessLoss(Loss):
         super().__init__()
         self.upper_bound = upper_bound
 
-    # TODO: keep the same argument as with OD
     def __call__(
-        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+        self,
+        predictions: ODPredictions,
+        conformalized_predictions: ODConformalizedPredictions,
     ) -> torch.Tensor:
         """
-        Call the Objectness Loss.
+        Call the Confidence Loss.
 
         Parameters:
-        - conf_boxes (torch.Tensor): The conformal boxes, filtered by confidence.
-        - true_boxes (torch.Tensor): The true boxes.
+        - predictions (ODPredictions): The predictions.
+        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
 
         Returns:
         - torch.Tensor: The loss value.
         """
 
-        return (
-            torch.zeros(1).cuda()
-            if len(conf_boxes) >= len(true_boxes)
-            else torch.ones(1).cuda()
+        conf_boxes = conformalized_predictions.conf_boxes
+        true_boxes = predictions.true_boxes
+
+        return max(
+            [
+                (
+                    torch.zeros(1).cuda()
+                    if len(conf_boxes) >= len(true_boxes)
+                    else torch.ones(1).cuda()
+                )
+            ]
+            + [
+                loss(predictions, conformalized_predictions)
+                for loss in self.other_losses
+            ]
         )
 
 
@@ -85,23 +112,18 @@ class ClassificationLossWrapper(Loss):
 
     def __call__(
         self,
-        conf_clss: torch.Tensor,
-        true_clss: torch.Tensor,
+        predictions: ODPredictions,
+        conformalized_predictions: ODConformalizedPredictions,
     ) -> torch.Tensor:
-        """
-        Call the Classification Loss Wrapper.
-
-        Parameters:
-        - conf_cls (torch.Tensor): The conformal classes.
-        - true_cls (torch.Tensor): The true classes.
-
-        Returns:
-        - torch.Tensor: The loss value.
-        """
-        losses = []
-        for i in range(len(conf_clss)):
-            losses.append(self.classification_loss(conf_clss[i], true_clss[i]))
-        return torch.mean(torch.stack(losses))
+        """ """
+        return self.classification_loss(
+            predictions.true_cls, conformalized_predictions.conf_cls
+        )
+        # raise NotImplementedError("ClassificationLossWrapper is not implemented yet")
+        # losses = []
+        # for i in range(len(conf_clss)):
+        #     losses.append(self.classification_loss(conf_clss[i], true_clss[i]))
+        # return torch.mean(torch.stack(losses))
 
 
 # MaximumLoss : maximum of a list of losses with a list of parameters
@@ -123,7 +145,9 @@ class MaximumLoss(Loss):
         self.losses = losses
 
     def __call__(
-        self, *conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+        self,
+        predictions: ODPredictions,
+        conformalized_predictions: ODConformalizedPredictions,
     ) -> torch.Tensor:
         """
         Call the Maximum Loss.
@@ -131,6 +155,8 @@ class MaximumLoss(Loss):
         Returns:
         - torch.Tensor: The loss value.
         """
+        conf_boxes = conformalized_predictions.conf_boxes
+        true_boxes = predictions.true_boxes
         return max([loss(conf_boxes, true_boxes) for loss in self.losses])
 
 
@@ -149,7 +175,9 @@ class HausdorffSignedDistanceLoss(ODLoss):
         self.upper_bound = 1
         self.beta = beta
 
-    def __call__(self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor) -> float:
+    def __call__(
+        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+    ) -> float:
         """
         Call the Hausdorff Signed Distance Loss.
 
@@ -194,7 +222,11 @@ class ClassBoxWiseRecallLoss(ODLoss):
         )
 
     def __call__(
-        self, conf_boxes: torch.Tensor, conf_cls, true_boxes: torch.Tensor, true_cls
+        self,
+        conf_boxes: torch.Tensor,
+        conf_cls,
+        true_boxes: torch.Tensor,
+        true_cls,
     ) -> torch.Tensor:
         """
         Call the Box-wise Recall Loss.
@@ -248,7 +280,9 @@ class BoxWiseRecallLoss(ODLoss):
         )
 
     def __call__(
-        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+        self,
+        predictions: ODPredictions,
+        conformalized_predictions: ODConformalizedPredictions,
     ) -> torch.Tensor:
         """
         Call the Box-wise Recall Loss.
@@ -260,6 +294,8 @@ class BoxWiseRecallLoss(ODLoss):
         Returns:
         - float: The loss value.
         """
+        true_boxes = predictions.true_boxes
+        conf_boxes = conformalized_predictions.conf_boxes
         if len(true_boxes) == 0:
             return torch.zeros(1).cuda()
         elif len(conf_boxes) == 0:
@@ -295,7 +331,9 @@ class PixelWiseRecallLoss(ODLoss):
         )
 
     def __call__(
-        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+        self,
+        predictions: ODPredictions,
+        conformalized_predictions: ODConformalizedPredictions,
     ) -> torch.Tensor:
         """
         Call the Pixel-wise Recall Loss.
@@ -307,6 +345,8 @@ class PixelWiseRecallLoss(ODLoss):
         Returns:
         - torch.Tensor: The loss value.
         """
+        true_boxes = predictions.true_boxes
+        conf_boxes = conformalized_predictions.conf_boxes
         if len(true_boxes) == 0:
             return torch.zeros(1).cuda()
         elif len(conf_boxes) == 0:
@@ -327,7 +367,9 @@ class NumberPredictionsGapLoss(ODLoss):
         """
         self.upper_bound = 1
 
-    def __call__(self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor) -> float:
+    def __call__(
+        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+    ) -> float:
         """
         Call the Number Predictions Gap Loss.
 
@@ -338,6 +380,8 @@ class NumberPredictionsGapLoss(ODLoss):
         Returns:
         - float: The loss value.
         """
-        raise NotImplementedError("NumberPredictionsGapLoss is not implemented yet")
+        raise NotImplementedError(
+            "NumberPredictionsGapLoss is not implemented yet"
+        )
         loss = (len(true_boxes) - len(conf_boxes)) / max(len(true_boxes), 1)
         return min(loss, 1)

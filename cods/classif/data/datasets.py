@@ -23,7 +23,7 @@ class ClassificationDataset(ImageDataset):
         path: str,
         transforms: Callable = None,
         idx_to_cls: Dict[int, str] = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(path, **kwargs)
         self._path = path
@@ -63,7 +63,9 @@ class ImageNetDataset(ClassificationDataset):
                     T.Resize(256),
                     T.CenterCrop(224),
                     T.ToTensor(),
-                    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    T.Normalize(
+                        mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                    ),
                 ]
             )
         super().__init__(

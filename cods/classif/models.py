@@ -38,7 +38,9 @@ class ClassificationModel(Model):
         **kwargs,
     ):
         preds = self._load_preds_if_exists(
-            dataset_name=dataset_name, split_name=split_name, task_name="classification"
+            dataset_name=dataset_name,
+            split_name=split_name,
+            task_name="classification",
         )
         if preds is not None:
             if verbose:

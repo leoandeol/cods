@@ -55,7 +55,8 @@ def binom_inv_cdf(Rhat, n, delta):
         return 1.0
 
     return torch.tensor(
-        brentq(f_bin, 1e-10, 1 - 1e-10, maxiter=1000, xtol=1e-4), dtype=torch.float
+        brentq(f_bin, 1e-10, 1 - 1e-10, maxiter=1000, xtol=1e-4),
+        dtype=torch.float,
     ).cuda()
 
 
@@ -136,5 +137,8 @@ class CombiningToleranceRegions(ToleranceRegion):
 
     def evaluate(self, preds, verbose=True):
         return list(
-            [tregion.evaluate(preds, verbose=verbose) for tregion in self.tregions]
+            [
+                tregion.evaluate(preds, verbose=verbose)
+                for tregion in self.tregions
+            ]
         )

@@ -51,7 +51,10 @@ class ConformalizedPredictions:
     """Abstract class for results"""
 
     def __init__(
-        self, predictions_id: int, parameters_id: int, unique_id: Optional[int] = None
+        self,
+        predictions_id: int,
+        parameters_id: int,
+        unique_id: Optional[int] = None,
     ):
         """
         Initializes a new instance of the Data class.
@@ -70,7 +73,9 @@ class ConformalizedPredictions:
 class Results:
     """Abstract class for results"""
 
-    def __init__(self, predictions_id: int, parameters_id: int, conformalized_id: int):
+    def __init__(
+        self, predictions_id: int, parameters_id: int, conformalized_id: int
+    ):
         """
         Initializes a new instance of the Data class.
 

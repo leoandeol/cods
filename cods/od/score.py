@@ -70,7 +70,9 @@ class ODNCScore(NCScore):
         """
         raise NotImplementedError("ODNCScore is an abstract class.")
 
-    def get_set(self, pred_boxes: torch.Tensor, quantile: float) -> torch.Tensor:
+    def get_set(
+        self, pred_boxes: torch.Tensor, quantile: float
+    ) -> torch.Tensor:
         """
         Returns the set of boxes based on predicted boxes and quantile.
 
@@ -133,24 +135,32 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         matching_scores = []
         scores = []
         if len(pred_boxes) == 0:
-            print("Warning: no predicted boxes found. It should not happen too often")
+            print(
+                "Warning: no predicted boxes found. It should not happen too often"
+            )
         for pred_box in pred_boxes:
             score_x1 = pred_box[0] - true_box[0]
             score_y1 = pred_box[1] - true_box[1]
             score_x2 = true_box[2] - pred_box[2]
             score_y2 = true_box[3] - pred_box[3]
-            score = torch.stack((score_x1, score_y1, score_x2, score_y2), axis=-1)
+            score = torch.stack(
+                (score_x1, score_y1, score_x2, score_y2), axis=-1
+            )
             scores.append(score)
             max_score = torch.max(score).item()
             matching_scores.append(max_score)
         if len(matching_scores) == 0:
-            print("Warning: no matching boxes found. It should not happen too often")
+            print(
+                "Warning: no matching boxes found. It should not happen too often"
+            )
             return torch.ones(4).cuda() * self.image_shape
         else:
             idx = np.argmin(matching_scores).item()
             return scores[idx]
 
-    def apply_margins(self, pred_boxes: torch.Tensor, quantile: float) -> torch.Tensor:
+    def apply_margins(
+        self, pred_boxes: torch.Tensor, quantile: float
+    ) -> torch.Tensor:
         """
         Applies margins to the predicted boxes based on quantile.
 
@@ -201,7 +211,9 @@ class UnionAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         """
         raise NotImplementedError("Not implemented yet. Use Min instead.")
 
-    def apply_margins(self, pred_boxes: torch.Tensor, quantile: float) -> torch.Tensor:
+    def apply_margins(
+        self, pred_boxes: torch.Tensor, quantile: float
+    ) -> torch.Tensor:
         """
         Applies margins to the predicted boxes based on quantile.
 
@@ -272,7 +284,9 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
             idx = np.argmin(areas).item()
             return scores[idx]
 
-    def apply_margins(self, pred_boxes: torch.Tensor, quantile: float) -> torch.Tensor:
+    def apply_margins(
+        self, pred_boxes: torch.Tensor, quantile: float
+    ) -> torch.Tensor:
         """
         Applies margins to the predicted boxes based on quantile.
 
@@ -325,7 +339,9 @@ class UnionMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         """
         raise NotImplementedError("Not implemented yet. Use Min instead.")
 
-    def apply_margins(self, pred_boxes: torch.Tensor, quantile: float) -> torch.Tensor:
+    def apply_margins(
+        self, pred_boxes: torch.Tensor, quantile: float
+    ) -> torch.Tensor:
         """
         Applies margins to the predicted boxes based on quantile.
 

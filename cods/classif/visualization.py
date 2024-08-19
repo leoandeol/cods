@@ -26,7 +26,9 @@ def plot_predictions(
         pred_cls = preds.pred_cls[idx_pred].argmax().item()
         pred_cls_name = preds.idx_to_cls[pred_cls]
         if conf_cls is None:
-            curr_ax.set_title(f"True: {true_cls_name},\n Pred: {pred_cls_name}")
+            curr_ax.set_title(
+                f"True: {true_cls_name},\n Pred: {pred_cls_name}"
+            )
         else:
             conf_cls_name = list(
                 [preds.idx_to_cls[x.item()] for x in conf_cls[idx_pred]]

@@ -58,19 +58,34 @@ def plot_preds(
         x1, y1, x2, y2 = box
         ax.add_patch(
             plt.Rectangle(
-                (x1, y1), x2 - x1, y2 - y1, fill=False, edgecolor=color, linewidth=2
+                (x1, y1),
+                x2 - x1,
+                y2 - y1,
+                fill=False,
+                edgecolor=color,
+                linewidth=2,
             )
         )
         if isinstance(proba, int) or len(proba.shape) == 0:
             text = f"{DETRModel.COCO_CLASSES[proba]}" if proba >= 0 else "conf"
             ax.text(
-                x2 - 30, y2, text, fontsize=15, bbox=dict(facecolor=color, alpha=0.5)
+                x2 - 30,
+                y2,
+                text,
+                fontsize=15,
+                bbox=dict(facecolor=color, alpha=0.5),
             )
         else:
             cl = proba.argmax()
             text = f"{DETRModel.COCO_CLASSES[cl]}: {proba[cl]:0.2f}"
 
-            ax.text(x1, y1, text, fontsize=15, bbox=dict(facecolor=color, alpha=0.5))
+            ax.text(
+                x1,
+                y1,
+                text,
+                fontsize=15,
+                bbox=dict(facecolor=color, alpha=0.5),
+            )
 
     ax = plt.gca()
     for box, cl in zip(true_boxes, true_cls):

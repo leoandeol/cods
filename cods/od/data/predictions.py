@@ -2,7 +2,12 @@ from typing import Any, List, Optional, Union
 
 import torch
 
-from cods.base.data import ConformalizedPredictions, Parameters, Predictions, Results
+from cods.base.data import (
+    ConformalizedPredictions,
+    Parameters,
+    Predictions,
+    Results,
+)
 
 
 class ODPredictions(Predictions):
@@ -146,7 +151,8 @@ class ODConformalizedPredictions(ConformalizedPredictions):
             conf_cls (torch.Tensor): The conformal prediction sets for class labels of each box.
         """
         super().__init__(
-            predictions_id=predictions.unique_id, parameters_id=parameters.unique_id
+            predictions_id=predictions.unique_id,
+            parameters_id=parameters.unique_id,
         )
         self.preds = predictions
         self.conf_boxes = conf_boxes

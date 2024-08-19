@@ -17,7 +17,9 @@ class ClassificationToleranceRegion(ToleranceRegion):
         preprocess="softmax",
         optimizer_args={},
     ):
-        super().__init__(inequality=inequality, optimizer=optimizer, optimizer_args={})
+        super().__init__(
+            inequality=inequality, optimizer=optimizer, optimizer_args={}
+        )
         self.ACCEPTED_LOSSES = CLASSIFICATION_LOSSES
         self.lbd = None
         if loss not in self.ACCEPTED_LOSSES:
@@ -125,10 +127,15 @@ class ClassificationToleranceRegion(ToleranceRegion):
         )
 
     def conformalize(
-        self, predictions: ClassificationPredictions, verbose: bool = True, **kwargs
+        self,
+        predictions: ClassificationPredictions,
+        verbose: bool = True,
+        **kwargs,
     ) -> list:
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before conformalizing.")
+            raise ValueError(
+                "Conformalizer must be calibrated before conformalizing."
+            )
         conf_cls = []
         for pred_cls in predictions.pred_cls:
             pred_cls = self.f_preprocess(pred_cls, -1)
@@ -138,10 +145,16 @@ class ClassificationToleranceRegion(ToleranceRegion):
         return conf_cls
 
     def evaluate(
-        self, preds: ClassificationPredictions, conf_cls: list, verbose=True, **kwargs
+        self,
+        preds: ClassificationPredictions,
+        conf_cls: list,
+        verbose=True,
+        **kwargs,
     ):
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before evaluating.")
+            raise ValueError(
+                "Conformalizer must be calibrated before evaluating."
+            )
         losses = []
         set_sizes = []
         for i, true_cls in enumerate(preds.true_cls):

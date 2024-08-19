@@ -40,9 +40,7 @@ class Model:
             path (str): path to file
         """
         path = f"{self.save_dir_path}/{self.model_name}/{predictions.dataset_name}"
-        path = (
-            f"{path}/{predictions.split_name}/predictions_{predictions.task_name}.pkl"
-        )
+        path = f"{path}/{predictions.split_name}/predictions_{predictions.task_name}.pkl"
         # create directory if it doesn't exist
         dir_path = os.path.dirname(path)
         if not os.path.exists(dir_path):

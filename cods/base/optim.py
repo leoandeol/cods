@@ -7,7 +7,9 @@ from tqdm import tqdm
 
 
 class Optimizer:
-    def optimize(self, objective_function: Callable, alpha: float, **kwargs) -> float:
+    def optimize(
+        self, objective_function: Callable, alpha: float, **kwargs
+    ) -> float:
         raise NotImplementedError("Optimizer is an abstract class")
 
 
@@ -30,7 +32,9 @@ class BinarySearchOptimizer(Optimizer):
         epsilon:
         objective_function: function of one parameter lbd (use partials), which includes the correction part
         """
-        if not isinstance(bounds[0], list) and not isinstance(bounds[0], tuple):
+        if not isinstance(bounds[0], list) and not isinstance(
+            bounds[0], tuple
+        ):
             bounds = [bounds]
 
         lowers = []
@@ -87,7 +91,7 @@ class GaussianProcessOptimizer(Optimizer):
         self,
         objective_function: Callable,
         alpha: float,
-        bounds: Union[Tuple, List[Tuple]],
+        bounds: Union[Tuple, List, List[Tuple]],
         steps: int,
         epsilon=1e-5,
         verbose=True,
@@ -106,7 +110,8 @@ class GaussianProcessOptimizer(Optimizer):
             fun_opti,
             (
                 [bounds]
-                if not isinstance(bounds[0], list) and not isinstance(bounds[0], tuple)
+                if not isinstance(bounds[0], list)
+                and not isinstance(bounds[0], tuple)
                 else bounds
             ),
             n_calls=steps,

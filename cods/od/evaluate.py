@@ -70,7 +70,6 @@ class Benchmark:
         self.configs = configs
 
     def run(self, threads=1):
-
         torch.set_grad_enabled(False)
         if threads > 1:
             raise NotImplementedError("Multithreading not implemented yet")
@@ -83,7 +82,9 @@ class Benchmark:
         # model_name = config["model"]
 
         # Load dataset
-        dataset = MSCOCODataset(root="/datasets/shared_datasets/coco/", split="val")
+        dataset = MSCOCODataset(
+            root="/datasets/shared_datasets/coco/", split="val"
+        )
         data_cal, data_val = dataset.random_split(0.5, shuffled=False)
 
         # Load model
@@ -150,12 +151,16 @@ class Benchmark:
                     preds_cal, alpha=alpha, delta=delta, verbose=verbose
                 )
             else:
-                conformalizer.calibrate(preds_cal, alpha=alpha, verbose=verbose)
+                conformalizer.calibrate(
+                    preds_cal, alpha=alpha, verbose=verbose
+                )
             conf_boxes, conf_cls = conformalizer.conformalize(preds_val)
             metrics = conformalizer.evaluate(
                 preds_val, conf_boxes, conf_cls, verbose=verbose
             )
-            all_metrics[f"{conformalizer.__class__.__name__}-{method}"] = metrics
+            all_metrics[f"{conformalizer.__class__.__name__}-{method}"] = (
+                metrics
+            )
             unroll_metrics(
                 val_preds=preds_val, conf_boxes=conf_boxes, conf_cls=conf_cls
             )

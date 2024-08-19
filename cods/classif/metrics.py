@@ -35,7 +35,9 @@ from cods.classif.loss import ClassificationLoss, CLASSIFICATION_LOSSES
 
 
 def get_coverage(
-    preds: ClassificationPredictions, conf_cls: torch.Tensor, verbose: bool = True
+    preds: ClassificationPredictions,
+    conf_cls: torch.Tensor,
+    verbose: bool = True,
 ):
     """
     Computes the coverage of the conformal prediction set.

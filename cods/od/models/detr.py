@@ -175,7 +175,9 @@ class DETRModel(ODModel):
                 "facebookresearch/detr", model_name, pretrained=pretrained
             )
         else:
-            raise NotImplementedError("Only pretrained models are available for now")
+            raise NotImplementedError(
+                "Only pretrained models are available for now"
+            )
         self.device = device
         self.model.eval()
         self.model.to(device)
@@ -184,7 +186,9 @@ class DETRModel(ODModel):
                 T.Resize(800),
                 T.ToTensor(),
                 ResizeChannels(3),
-                T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                T.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),
             ]
         )
 
@@ -316,7 +320,9 @@ class DETRModel(ODModel):
         images = [self.transform(image) for image in images]
         images = list([image.to(self.device) for image in images])
         outputs = self.model(images)
-        pred_boxes, confidences, pred_cls = self.postprocess(outputs, img_shapes)
+        pred_boxes, confidences, pred_cls = self.postprocess(
+            outputs, img_shapes
+        )
         true_boxes = list(
             [
                 torch.LongTensor(

@@ -81,7 +81,9 @@ class ODModel(Model):
                 print("Predictions do not exist, building them...")
         else:
             if verbose:
-                print("Force recompute is set to True, building predictions...")
+                print(
+                    "Force recompute is set to True, building predictions..."
+                )
 
         dataloader = torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
@@ -99,7 +101,6 @@ class ODModel(Model):
         all_pred_cls = []
         with torch.no_grad():
             for i, batch in pbar:
-
                 res = self.predict_batch(batch)
 
                 image_paths = res["image_paths"]
@@ -123,8 +124,12 @@ class ODModel(Model):
         all_image_paths = list(
             [path for arr_path in all_image_paths for path in arr_path]
         )
-        all_true_boxes = list([box for arr_box in all_true_boxes for box in arr_box])
-        all_pred_boxes = list([box for arr_box in all_pred_boxes for box in arr_box])
+        all_true_boxes = list(
+            [box for arr_box in all_true_boxes for box in arr_box]
+        )
+        all_pred_boxes = list(
+            [box for arr_box in all_pred_boxes for box in arr_box]
+        )
         all_confidences = list(
             [
                 confidence
@@ -132,7 +137,9 @@ class ODModel(Model):
                 for confidence in arr_confidence
             ]
         )
-        all_true_cls = list([cls for arr_cls in all_true_cls for cls in arr_cls])
+        all_true_cls = list(
+            [cls for arr_cls in all_true_cls for cls in arr_cls]
+        )
         all_pred_cls = list(
             [proba for arr_proba in all_pred_cls for proba in arr_proba]
         )
@@ -150,7 +157,9 @@ class ODModel(Model):
         self._save_preds(preds)
         return preds
 
-    def _filter_preds(self, pred_boxes, pred_cls, confidences, iou_threshold=0.8):
+    def _filter_preds(
+        self, pred_boxes, pred_cls, confidences, iou_threshold=0.8
+    ):
         """
         Filters the predicted bounding boxes based on the confidence scores and IoU threshold.
 

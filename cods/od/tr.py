@@ -23,7 +23,10 @@ class LocalizationToleranceRegion(ToleranceRegion):
     Tolerance region for object localization tasks.
     """
 
-    ACCEPTED_LOSSES = {"pixelwise": PixelWiseRecallLoss, "boxwise": BoxWiseRecallLoss}
+    ACCEPTED_LOSSES = {
+        "pixelwise": PixelWiseRecallLoss,
+        "boxwise": BoxWiseRecallLoss,
+    }
 
     def __init__(
         self,
@@ -93,7 +96,9 @@ class LocalizationToleranceRegion(ToleranceRegion):
 
         def risk_function(lbd):
             conf_boxes = apply_margins(
-                pred_boxes_filtered, [lbd, lbd, lbd, lbd], mode=self.prediction_set
+                pred_boxes_filtered,
+                [lbd, lbd, lbd, lbd],
+                mode=self.prediction_set,
             )
             risk = compute_risk_box_level(
                 conf_boxes,
@@ -196,7 +201,9 @@ class LocalizationToleranceRegion(ToleranceRegion):
             list: The conformalized bounding boxes.
         """
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before conformalizing.")
+            raise ValueError(
+                "Conformalizer must be calibrated before conformalizing."
+            )
         conf_boxes = apply_margins(
             preds.pred_boxes, [self.lbd] * 4, mode=self.prediction_set
         )
@@ -217,9 +224,13 @@ class LocalizationToleranceRegion(ToleranceRegion):
             Tuple[float, torch.Tensor]: The safety and set sizes.
         """
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before evaluating.")
+            raise ValueError(
+                "Conformalizer must be calibrated before evaluating."
+            )
         if preds.conf_boxes is None:
-            raise ValueError("Predictions must be conformalized before evaluating.")
+            raise ValueError(
+                "Predictions must be conformalized before evaluating."
+            )
 
         conf_boxes = list(
             [
@@ -363,7 +374,9 @@ class ConfidenceToleranceRegion(ToleranceRegion):
 
         def risk_function(lbd: float) -> float:
             risk = []
-            for true_boxes, confidence in zip(preds.true_boxes, preds.confidence):
+            for true_boxes, confidence in zip(
+                preds.true_boxes, preds.confidence
+            ):
                 score = self.loss(len(true_boxes), confidence, lbd)
                 risk.append(score)
             risk = torch.stack(risk).ravel()
@@ -414,12 +427,18 @@ class ConfidenceToleranceRegion(ToleranceRegion):
             float: The confidence threshold.
         """
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before conformalizing.")
+            raise ValueError(
+                "Conformalizer must be calibrated before conformalizing."
+            )
         preds.confidence_threshold = 1 - self.lbd
         return preds.confidence_threshold
 
     def evaluate(
-        self, preds: ODPredictions, conf_boxes: list, verbose: bool = True, **kwargs
+        self,
+        preds: ODPredictions,
+        conf_boxes: list,
+        verbose: bool = True,
+        **kwargs,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Evaluate the tolerance region.
@@ -433,15 +452,20 @@ class ConfidenceToleranceRegion(ToleranceRegion):
             Tuple[torch.Tensor, torch.Tensor]: The coverage and set sizes.
         """
         if self.lbd is None:
-            raise ValueError("Tolerance Region must be calibrated before evaluating.")
+            raise ValueError(
+                "Tolerance Region must be calibrated before evaluating."
+            )
         if preds.confidence_threshold is None:
-            raise ValueError("Predictions must be conformalized before evaluating.")
+            raise ValueError(
+                "Predictions must be conformalized before evaluating."
+            )
         coverage = []
         set_sizes = []
         for true_boxes, confidence in zip(preds.true_boxes, preds.confidence):
             cov = (
                 torch.ones(1).float().cuda()
-                if len(true_boxes) <= (confidence >= preds.confidence_threshold).sum()
+                if len(true_boxes)
+                <= (confidence >= preds.confidence_threshold).sum()
                 else torch.zeros(1).float().cuda()
             )
             set_size = (confidence >= preds.confidence_threshold).float().sum()
@@ -461,9 +485,15 @@ class ODToleranceRegion(ToleranceRegion):
 
     def __init__(
         self,
-        localization_loss: Union[None, str, LocalizationToleranceRegion] = "boxwise",
-        confidence_loss: Union[None, str, ConfidenceToleranceRegion] = "box_number",
-        classification_loss: Union[None, str, ClassificationToleranceRegion] = "lac",
+        localization_loss: Union[
+            None, str, LocalizationToleranceRegion
+        ] = "boxwise",
+        confidence_loss: Union[
+            None, str, ConfidenceToleranceRegion
+        ] = "box_number",
+        classification_loss: Union[
+            None, str, ClassificationToleranceRegion
+        ] = "lac",
         inequality="binomial_inverse_cdf",
         margins=1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
         prediction_set="additive",
@@ -519,7 +549,10 @@ class ODToleranceRegion(ToleranceRegion):
 
         self.multiple_testing_correction = multiple_testing_correction
         self.confidence_threshold = confidence_threshold
-        if self.confidence_threshold is not None and self.obj_conformalizer is not None:
+        if (
+            self.confidence_threshold is not None
+            and self.obj_conformalizer is not None
+        ):
             # TODO: replace by warnings
             print(
                 "Warning: confidence_threshold is ignored if objectness_method is not None"
@@ -624,7 +657,9 @@ class ODToleranceRegion(ToleranceRegion):
             conf_cls = None
         return conf_boxes, conf_cls
 
-    def evaluate(self, preds: ODPredictions, conf_boxes, conf_cls, verbose=True):
+    def evaluate(
+        self, preds: ODPredictions, conf_boxes, conf_cls, verbose=True
+    ):
         if self.loc_conformalizer is not None:
             coverage_loc, set_size_loc = self.loc_conformalizer.evaluate(
                 preds, conf_boxes, verbose=False

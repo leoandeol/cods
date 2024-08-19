@@ -44,7 +44,9 @@ class MSCOCODataset(Dataset):
 
         # extract images ids
         if image_ids is None:
-            self.image_ids = [image["id"] for image in self.annotations_json["images"]]
+            self.image_ids = [
+                image["id"] for image in self.annotations_json["images"]
+            ]
         else:
             self.image_ids = image_ids
         self.image_files = {
@@ -55,10 +57,14 @@ class MSCOCODataset(Dataset):
         self.annotations = self.annotations_json["annotations"]
 
         # rebuild annotations as a dictionary with the image_id as index and value as the set of annotations that are on this image
-        self.reindexed_annotations = {image_id: [] for image_id in self.image_ids}
+        self.reindexed_annotations = {
+            image_id: [] for image_id in self.image_ids
+        }
         for annotation in self.annotations:
             if annotation["image_id"] in self.image_ids:
-                self.reindexed_annotations[annotation["image_id"]].append(annotation)
+                self.reindexed_annotations[annotation["image_id"]].append(
+                    annotation
+                )
 
         self.transforms = transforms
 
@@ -107,7 +113,11 @@ class MSCOCODataset(Dataset):
 
     # split dataset in two dataset randomly
     def random_split(
-        self, proportion, shuffle=True, n_calib_test: Optional[int] = None, **kwargs
+        self,
+        proportion,
+        shuffle=True,
+        n_calib_test: Optional[int] = None,
+        **kwargs,
     ):
         if shuffle:
             self.shuffle()

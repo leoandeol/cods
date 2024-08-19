@@ -1,4 +1,7 @@
+from logging import getLogger
 from typing import Dict, List, Tuple, Union
+
+logger = getLogger("cods")
 
 import numpy as np
 import torch
@@ -10,7 +13,9 @@ from cods.classif.tr import ClassificationToleranceRegion
 from cods.od.data import ODPredictions
 
 
-def get_classif_preds_from_od_preds(preds: ODPredictions) -> ClassificationPredictions:
+def get_classif_preds_from_od_preds(
+    preds: ODPredictions,
+) -> ClassificationPredictions:
     """
     Convert object detection predictions to classification predictions.
 
@@ -20,12 +25,15 @@ def get_classif_preds_from_od_preds(preds: ODPredictions) -> ClassificationPredi
     Returns:
         ClassificationPredictions: Classification predictions.
     """
+    logger.error("Currently only handling object level guarantees")
     dataset_name = preds.dataset_name
     split_name = preds.split_name
     image_paths = preds.image_paths
     idx_to_cls = None
 
-    matching = matching_by_iou(preds)
+    if preds.matching is None:
+        raise ValueError("Warning: preds.matching is None")
+    matching = preds.matching
 
     true_cls = []
     pred_cls = []
@@ -50,7 +58,7 @@ def get_classif_preds_from_od_preds(preds: ODPredictions) -> ClassificationPredi
     # pred_cls = list([x.squeeze() for x in pred_cls])
     # pred_cls = list([x if len(x.shape) >= 2 else x.unsqueeze(0) for x in pred_cls])
     # print([x.shape for x in pred_cls if len(x.shape) > 2])
-    pred_cls = torch.cat(pred_cls)
+    pred_cls = pred_cls
     true_cls = torch.cat(true_cls).cuda()
 
     obj = ClassificationPredictions(
@@ -81,7 +89,9 @@ def flatten_conf_cls(conf_cls: List[List[torch.Tensor]]) -> List[torch.Tensor]:
 
 def get_conf_cls_for_od(
     od_preds: ODPredictions,
-    conformalizer: Union[ClassificationConformalizer, ClassificationToleranceRegion],
+    conformalizer: Union[
+        ClassificationConformalizer, ClassificationToleranceRegion
+    ],
 ) -> List[List[torch.Tensor]]:
     """
     Get confidence scores for object detection predictions.
@@ -93,10 +103,10 @@ def get_conf_cls_for_od(
     Returns:
         List[List[torch.Tensor]]: Confidence scores for each object detection prediction.
     """
+    logger.error("Currently only handling object level guarantees")
     if od_preds.matching is None:
-        matching = matching_by_iou(od_preds)
-    else:
-        matching = od_preds.matching
+        raise ValueError("Warning: od_preds.matching is None")
+    matching = od_preds.matching
     conf_cls = []
     for i, true_cls_img in enumerate(od_preds.true_cls):
         pre_pred_cls_img = od_preds.pred_cls[i]
@@ -131,7 +141,9 @@ def get_conf_cls_for_od(
 def evaluate_cls_conformalizer(
     od_preds: ODPredictions,
     conf_cls: List[List[torch.Tensor]],
-    conformalizer: Union[ClassificationConformalizer, ClassificationToleranceRegion],
+    conformalizer: Union[
+        ClassificationConformalizer, ClassificationToleranceRegion
+    ],
     verbose: bool = False,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
@@ -146,6 +158,9 @@ def evaluate_cls_conformalizer(
     Returns:
         torch.Tensor: Coverage and set size for each object detection prediction.
     """
+    logger.error("Currently only handling object level guarantees")
+    if od_preds.matching is None:
+        raise ValueError("Warning: od_preds.matching is None")
     covs = []
     set_sizes = []
     for i, true_cls_img in enumerate(od_preds.true_cls):
@@ -189,7 +204,9 @@ def evaluate_cls_conformalizer(
     return covs, set_sizes
 
 
-def mesh_func(x1: int, y1: int, x2: int, y2: int, pbs: torch.Tensor) -> torch.Tensor:
+def mesh_func(
+    x1: int, y1: int, x2: int, y2: int, pbs: torch.Tensor
+) -> torch.Tensor:
     """
     Compute mesh function.
 
@@ -318,17 +335,16 @@ def f_iou(boxA, boxB):
     return iou
 
 
-def matching_by_iou(preds, verbose=False):
-    """
-    Perform matching between ground truth and predicted bounding boxes based on IoU.
-
-    Args:
-        preds: Object detection predictions.
-        verbose (bool, optional): Whether to print verbose output. Defaults to False.
-
-    Returns:
-        List[List[int]]: Matching indices.
-    """
+def match_predictions_to_true_boxes(
+    preds,
+    distance_function=None,
+    overload_confidence_threshold=None,
+    verbose=False,
+):
+    """ """
+    if verbose and distance_function is None:
+        # defaulting to assymetric hausdorff distance
+        print("Using assymetric hausdorff distance")
 
     def assymetric_hausdorff_distance(true_box, pred_box):
         up_distance = pred_box[1] - true_box[1]
@@ -339,18 +355,24 @@ def matching_by_iou(preds, verbose=False):
         right_distance = true_box[2] - pred_box[2]
 
         # Return the maximum signed distance
-        max_distance = max(up_distance, down_distance, left_distance, right_distance)
+        max_distance = max(
+            up_distance, down_distance, left_distance, right_distance
+        )
         return max_distance
 
     all_matching = []
-    if preds.confidence_threshold is not None:
+    if overload_confidence_threshold is not None:
+        conf_thr = overload_confidence_threshold
+    elif preds.confidence_threshold is not None:
         conf_thr = preds.confidence_threshold
     else:
         conf_thr = 0
     # filter pred_boxes with low objectness
     preds_boxes = list(
         [
-            x[y >= conf_thr] if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
+            x[y >= conf_thr]
+            if len(x[y >= conf_thr]) > 0
+            else x[None, y.argmax()]
             for x, y in zip(preds.pred_boxes, preds.confidence)
         ]
     )
@@ -359,18 +381,23 @@ def matching_by_iou(preds, verbose=False):
     ):
         matching = []
         for true_box in true_boxes:
-            ious = []
+            distances = []
             for pred_box in pred_boxes:
                 # TODO replace with hausdorff distance ?
-                iou = f_iou(true_box, pred_box)
+                # iou = f_iou(true_box, pred_box)
                 # TODO: test
-                # iou = -assymetric_hausdorff_distance(true_box, pred_box)
-                iou = iou.cpu().numpy() if isinstance(iou, torch.Tensor) else iou
-                ious.append(iou)  # .cpu().numpy())
+                dist = assymetric_hausdorff_distance(true_box, pred_box)
+                dist = (
+                    dist.cpu().numpy()
+                    if isinstance(dist, torch.Tensor)
+                    else dist
+                )
+                distances.append(dist)  # .cpu().numpy())
             if len(pred_boxes) == 0:
                 matching.append([])
                 continue
-            matching.append(np.argmax(ious))  # np.argmax(ious))
+            # TODO: replace this by possible a set of matches
+            matching.append(np.argmin(dist))  # np.argmax(ious))
         all_matching.append(matching)
     preds.matching = all_matching
     return all_matching
