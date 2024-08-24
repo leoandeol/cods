@@ -38,8 +38,9 @@ fix = true
 [tool.ruff.lint]
 ignore = []
 # Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-select = ["ALL"]
+#TODO too much currently disabled
+#fixable = ["ALL"]
+#select = ["ALL"]
 # Disable fix for unused imports (`F401`).
 unfixable = ["F401"]
 

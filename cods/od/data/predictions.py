@@ -11,10 +11,10 @@ from cods.base.data import (
 
 
 class ODPredictions(Predictions):
-    """
-    Class representing predictions for object detection tasks.
+    """Class representing predictions for object detection tasks.
 
     Args:
+    ----
         id (int): Unique ID of the predictions.
         dataset_name (str): Name of the dataset.
         split_name (str): Name of the data split.
@@ -26,6 +26,7 @@ class ODPredictions(Predictions):
         pred_cls: List of predicted class labels.
 
     Attributes:
+    ----------
         image_paths: List of image paths.
         true_boxes: List of true bounding boxes.
         pred_boxes: List of predicted bounding boxes.
@@ -38,8 +39,10 @@ class ODPredictions(Predictions):
         confidence_threshold: Confidence threshold.
 
     Methods:
+    -------
         __len__: Returns the number of image paths.
         __str__: Returns a string representation of the ODPredictions object.
+
     """
 
     def __init__(
@@ -83,9 +86,7 @@ class ODPredictions(Predictions):
 
 
 class ODParameters(Parameters):
-    """
-    Class representing parameters for object detection tasks.
-    """
+    """Class representing parameters for object detection tasks."""
 
     def __init__(
         self,
@@ -101,10 +102,10 @@ class ODParameters(Parameters):
         predictions_id: int,
         unique_id: Optional[int] = None,
     ):
-        """
-        Initializes a new instance of the ODParameters class.
+        """Initializes a new instance of the ODParameters class.
 
-        Parameters:
+        Parameters
+        ----------
             global_alpha (float): The global alpha (the sum of the non-None alphas).
             alpha_confidence (float): The alpha for confidence.
             alpha_localization (float): The alpha for localization.
@@ -116,6 +117,7 @@ class ODParameters(Parameters):
             confidence_threshold (float): The confidence threshold.
             predictions_id (int): The unique ID of the predictions.
             unique_id (int): The unique ID of the parameters.
+
         """
         super().__init__(predictions_id, unique_id)
         self.global_alpha = global_alpha
@@ -130,9 +132,7 @@ class ODParameters(Parameters):
 
 
 class ODConformalizedPredictions(ConformalizedPredictions):
-    """
-    Class representing conformalized predictions for object detection tasks.
-    """
+    """Class representing conformalized predictions for object detection tasks."""
 
     def __init__(
         self,
@@ -141,14 +141,15 @@ class ODConformalizedPredictions(ConformalizedPredictions):
         conf_boxes: Optional[torch.Tensor],
         conf_cls: Optional[torch.Tensor],
     ):
-        """
-        Initializes a new instance of the ODResults class.
+        """Initializes a new instance of the ODResults class.
 
-        Parameters:
+        Parameters
+        ----------
             predictions (ODPredictions): The object detection predictions.
             parameters (ODParameters): The conformalizers parameters.
-            conf_boxes (torch.Tensor): The conformal boxes.
+            conf_boxes (torch.Tensor): The conformal boxes, after filtering.
             conf_cls (torch.Tensor): The conformal prediction sets for class labels of each box.
+
         """
         super().__init__(
             predictions_id=predictions.unique_id,
@@ -160,9 +161,7 @@ class ODConformalizedPredictions(ConformalizedPredictions):
 
 
 class ODResults(Results):
-    """
-    Class representing results for object detection tasks.
-    """
+    """Class representing results for object detection tasks."""
 
     def __init__(
         self,
@@ -177,10 +176,10 @@ class ODResults(Results):
         classification_coverages: Optional[torch.Tensor | List[float]],
         global_coverage: Optional[torch.Tensor | float] = None,
     ):
-        """
-        Initializes a new instance of the ODResults class.
+        """Initializes a new instance of the ODResults class.
 
-        Parameters:
+        Parameters
+        ----------
             predictions (ODPredictions): The object detection predictions.
             parameters (ODParameters): The conformalizers parameters.
             conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
@@ -190,6 +189,7 @@ class ODResults(Results):
             localization_coverages (torch.Tensor): The localization coverages.
             classification_set_sizes (torch.Tensor): The classification set sizes.
             classification_coverages (torch.Tensor): The classification coverages.
+
         """
         super().__init__(
             predictions_id=predictions.unique_id,

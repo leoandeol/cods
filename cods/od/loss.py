@@ -14,204 +14,240 @@ from cods.od.utils import (
 # Object Detection Loss, many are wrappers of Segmentation losses
 class ODLoss(Loss):
     def __init__(self, upper_bound: int, **kwargs):
-        """
-        Initialize the Object Detection Loss.
+        """Initialize the Object Detection Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - upper_bound (int): The upper bound of the loss.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         super().__init__()
         self.upper_bound = upper_bound
 
     def __call__(
         self,
-        predictions: ODPredictions,
-        conformalized_predictions: ODConformalizedPredictions,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        Call the Object Detection Loss.
+        """Call the Object Detection Loss.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         raise NotImplementedError("ODLoss is an abstract class.")
 
 
 # LAC STYLE
-class ConfidenceLoss(Loss):
+class ConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
         other_losses: Optional[List[Loss]] = None,
         **kwargs,
     ):
-        """
-        Initialize the Confidence Loss.
+        """Initialize the Confidence Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - upper_bound (int): The upper bound of the loss.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         super().__init__()
         self.upper_bound = upper_bound
 
     def __call__(
         self,
-        predictions: ODPredictions,
-        conformalized_predictions: ODConformalizedPredictions,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        Call the Confidence Loss.
+        """Call the Confidence Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - predictions (ODPredictions): The predictions.
         - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
 
-        Returns:
+        Returns
+        -------
         - torch.Tensor: The loss value.
+
         """
-
-        conf_boxes = conformalized_predictions.conf_boxes
-        true_boxes = predictions.true_boxes
-
         return max(
             [
                 (
                     torch.zeros(1).cuda()
                     if len(conf_boxes) >= len(true_boxes)
                     else torch.ones(1).cuda()
-                )
+                ),
             ]
             + [
-                loss(predictions, conformalized_predictions)
+                loss(true_boxes, true_cls, conf_boxes, conf_cls)
                 for loss in self.other_losses
-            ]
+            ],
         )
+
+
+from cods.classif.loss import ClassificationLoss
+
+
+class LACLoss(ClassificationLoss):
+    def __init__(self):
+        super().__init__()
+        self.upper_bound = 1
+
+    def __call__(
+        self,
+        conf_cls,
+        true_cls,
+    ) -> torch.Tensor:
+        """ """
+        return torch.logical_not(torch.isin(true_cls, conf_cls)).float()
 
 
 # IMAGE WISE VS BOX WISE GUARANTEE
 # wrapping classification loss, by converting the predictions from the od to the classification format
 class ClassificationLossWrapper(Loss):
     def __init__(self, classification_loss, **kwargs):
-        """
-        Initialize the Classification Loss Wrapper.
+        """Initialize the Classification Loss Wrapper.
 
-        Parameters:
+        Parameters
+        ----------
         - classification_loss (Loss): The classification loss.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         super().__init__()
         self.classification_loss = classification_loss
 
     def __call__(
         self,
-        predictions: ODPredictions,
-        conformalized_predictions: ODConformalizedPredictions,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
     ) -> torch.Tensor:
         """ """
-        return self.classification_loss(
-            predictions.true_cls, conformalized_predictions.conf_cls
-        )
-        # raise NotImplementedError("ClassificationLossWrapper is not implemented yet")
-        # losses = []
-        # for i in range(len(conf_clss)):
-        #     losses.append(self.classification_loss(conf_clss[i], true_clss[i]))
-        # return torch.mean(torch.stack(losses))
+        losses = []
+        for i in range(len(conf_cls)):
+            losses.append(self.classification_loss(conf_cls[i], true_cls[i]))
+        return torch.mean(torch.stack(losses))
 
 
-# MaximumLoss : maximum of a list of losses with a list of parameters
+# # MaximumLoss : maximum of a list of losses with a list of parameters
 
 
-# maximum of risk =!= of losses
-class MaximumLoss(Loss):
-    def __init__(self, *losses):
-        """
-        Initialize the Maximum Loss.
+# # maximum of risk =!= of losses
+# class MaximumLoss(Loss):
+#     def __init__(self, *losses):
+#         """Initialize the Maximum Loss.
 
-        Parameters:
-        - losses (list): The list of losses.
+#         Parameters
+#         ----------
+#         - losses (list): The list of losses.
 
-        Returns:
-        - None
-        """
-        super().__init__()
-        self.losses = losses
+#         Returns
+#         -------
+#         - None
 
-    def __call__(
-        self,
-        predictions: ODPredictions,
-        conformalized_predictions: ODConformalizedPredictions,
-    ) -> torch.Tensor:
-        """
-        Call the Maximum Loss.
+#         """
+#         super().__init__()
+#         self.losses = losses
 
-        Returns:
-        - torch.Tensor: The loss value.
-        """
-        conf_boxes = conformalized_predictions.conf_boxes
-        true_boxes = predictions.true_boxes
-        return max([loss(conf_boxes, true_boxes) for loss in self.losses])
+#     def __call__(
+#         self,
+#         predictions: ODPredictions,
+#         conformalized_predictions: ODConformalizedPredictions,
+#     ) -> torch.Tensor:
+#         """Call the Maximum Loss.
+
+#         Returns
+#         -------
+#         - torch.Tensor: The loss value.
+
+#         """
+#         conf_boxes = conformalized_predictions.conf_boxes
+#         true_boxes = predictions.true_boxes
+#         return max([loss(conf_boxes, true_boxes) for loss in self.losses])
 
 
-# Todo: formulate in classical conformal sense!
+# TODO: formulate in classical conformal sense!
 class HausdorffSignedDistanceLoss(ODLoss):
     def __init__(self, beta: float = 0.25):
-        """
-        Initialize the Hausdorff Signed Distance Loss.
+        """Initialize the Hausdorff Signed Distance Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - beta (float): The beta value.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         self.upper_bound = 1
         self.beta = beta
 
     def __call__(
-        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+        self,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
     ) -> float:
-        """
-        Call the Hausdorff Signed Distance Loss.
+        """Call the Hausdorff Signed Distance Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - conf_boxes (torch.Tensor): The conformal boxes.
         - true_boxes (torch.Tensor): The true boxes.
 
-        Returns:
+        Returns
+        -------
         - float: The loss value.
+
         """
         if len(true_boxes) == 0:
             return 0
-        elif len(conf_boxes) == 0:
+        if len(conf_boxes) == 0:
             return 1
-        else:
-            areas = get_covered_areas_of_gt_union(conf_boxes, true_boxes)
-            is_not_covered = (
-                torch.FloatTensor(areas) < 0.999
-            )  # because doubt on the computation of the overlap, check formula TODO
-            miscoverage = torch.mean(is_not_covered)
-            loss = 1 if miscoverage > self.beta else 0
-            return loss
+        areas = get_covered_areas_of_gt_union(conf_boxes, true_boxes)
+        is_not_covered = (
+            torch.FloatTensor(areas) < 0.999
+        )  # because doubt on the computation of the overlap, check formula TODO
+        miscoverage = torch.mean(is_not_covered)
+        loss = 1 if miscoverage > self.beta else 0
+        return loss
 
 
 class ClassBoxWiseRecallLoss(ODLoss):
     def __init__(self, union_of_boxes: bool = True):
-        """
-        Initialize the Box-wise Recall Loss.
+        """Initialize the Box-wise Recall Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - union_of_boxes (bool): Whether to use the union of boxes.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         self.upper_bound = 1
         self.union_of_boxes = union_of_boxes
@@ -223,165 +259,183 @@ class ClassBoxWiseRecallLoss(ODLoss):
 
     def __call__(
         self,
-        conf_boxes: torch.Tensor,
-        conf_cls,
         true_boxes: torch.Tensor,
         true_cls,
+        conf_boxes: torch.Tensor,
+        conf_cls,
     ) -> torch.Tensor:
-        """
-        Call the Box-wise Recall Loss.
+        """Call the Box-wise Recall Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - conf_boxes (torch.Tensor): The conformal boxes.
         - true_boxes (torch.Tensor): The true boxes.
 
-        Returns:
+        Returns
+        -------
         - float: The loss value.
+
         """
         if len(true_boxes) == 0:
             return torch.zeros(1).cuda()
-        elif len(conf_boxes) == 0:
+        if len(conf_boxes) == 0:
             return torch.ones(1).cuda()
-        else:
-            areas = self.get_covered_areas(conf_boxes, true_boxes)
-            is_not_covered_loc = (
-                areas < 0.999
-            )  # because doubt on the computation of the overlap, check formula TODO
-            is_not_covered_cls = torch.tensor(
-                [tc not in cc for (tc, cc) in zip(true_cls, conf_cls)],
-                dtype=torch.float,
-            ).cuda()
-            is_not_covered = torch.logical_or(
-                is_not_covered_loc, is_not_covered_cls
-            ).float()
-            miscoverage = torch.zeros(1).cuda() + torch.mean(
-                is_not_covered
-            )  # TODO: bugfix
-            return miscoverage
+        areas = self.get_covered_areas(conf_boxes, true_boxes)
+        is_not_covered_loc = (
+            areas < 0.999
+        )  # because doubt on the computation of the overlap, check formula TODO
+        is_not_covered_cls = torch.tensor(
+            [tc not in cc for (tc, cc) in zip(true_cls, conf_cls)],
+            dtype=torch.float,
+        ).cuda()
+        is_not_covered = torch.logical_or(
+            is_not_covered_loc,
+            is_not_covered_cls,
+        ).float()
+        miscoverage = torch.zeros(1).cuda() + torch.mean(
+            is_not_covered,
+        )  # TODO: bugfix
+        return miscoverage
 
 
 class BoxWiseRecallLoss(ODLoss):
-    def __init__(self, union_of_boxes: bool = True):
-        """
-        Initialize the Box-wise Recall Loss.
+    """Box-wise recall loss: 1 - mean(areas of the union of the boxes),
 
-        Parameters:
+    This loss function calculates the recall loss based on the areas of the union of the predicted and true bounding boxes.
+    The recall loss is defined as 1 minus the mean of the areas of the union of the boxes.
+    """
+
+    def __init__(self, union_of_boxes: bool = True):
+        """Initialize the Box-wise Recall Loss.
+
+        Parameters
+        ----------
         - union_of_boxes (bool): Whether to use the union of boxes.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         self.upper_bound = 1
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            get_covered_areas_of_gt_union
-            if union_of_boxes
-            else get_covered_areas_of_gt_max
-        )
+        self.get_covered_areas = get_covered_areas_of_gt_union
+        if not union_of_boxes:
+            raise NotImplementedError(
+                "Box-wise Recall Loss only supports union of boxes.",
+            )
 
     def __call__(
         self,
-        predictions: ODPredictions,
-        conformalized_predictions: ODConformalizedPredictions,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        Call the Box-wise Recall Loss.
+        """Call the Box-wise Recall Loss.
 
-        Parameters:
-        - conf_boxes (torch.Tensor): The conformal boxes.
-        - true_boxes (torch.Tensor): The true boxes.
+        Parameters
+        ----------
+        - predictions (ODPredictions): The predictions.
+        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
 
-        Returns:
+        Returns
+        -------
         - float: The loss value.
+
         """
-        true_boxes = predictions.true_boxes
-        conf_boxes = conformalized_predictions.conf_boxes
         if len(true_boxes) == 0:
             return torch.zeros(1).cuda()
-        elif len(conf_boxes) == 0:
+        if len(conf_boxes) == 0:
             return torch.ones(1).cuda()
-        else:
-            areas = self.get_covered_areas(conf_boxes, true_boxes)
-            is_not_covered = (
-                areas < 0.999
-            ).float()  # because doubt on the computation of the overlap, check formula TODO
-            miscoverage = torch.zeros(1).cuda() + torch.mean(
-                is_not_covered
-            )  # TODO: tmp for bugfix
-            return miscoverage
+        areas = self.get_covered_areas(conf_boxes, true_boxes)
+        is_not_covered = (
+            areas < 0.999
+        ).float()  # because doubt on the computation of the overlap, check formula TODO
+        miscoverage = torch.zeros(1).cuda() + torch.mean(
+            is_not_covered,
+        )  # TODO: tmp for bugfix
+        return miscoverage
 
 
 class PixelWiseRecallLoss(ODLoss):
     def __init__(self, union_of_boxes: bool = True):
-        """
-        Initialize the Pixel-wise Recall Loss.
+        """Initialize the Pixel-wise Recall Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - union_of_boxes (bool): Whether to use the union of boxes.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         self.upper_bound = 1
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            get_covered_areas_of_gt_union
-            if union_of_boxes
-            else get_covered_areas_of_gt_max
-        )
+        self.get_covered_areas = get_covered_areas_of_gt_union
+        if not union_of_boxes:
+            raise NotImplementedError(
+                "Pixel-wise Recall Loss only supports union of boxes.",
+            )
 
     def __call__(
         self,
-        predictions: ODPredictions,
-        conformalized_predictions: ODConformalizedPredictions,
+        true_boxes: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """
-        Call the Pixel-wise Recall Loss.
+        """Call the Pixel-wise Recall Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - conf_boxes (torch.Tensor): The conformal boxes.
         - true_boxes (torch.Tensor): The true boxes.
 
-        Returns:
+        Returns
+        -------
         - torch.Tensor: The loss value.
+
         """
-        true_boxes = predictions.true_boxes
-        conf_boxes = conformalized_predictions.conf_boxes
         if len(true_boxes) == 0:
             return torch.zeros(1).cuda()
-        elif len(conf_boxes) == 0:
+        if len(conf_boxes) == 0:
             return torch.ones(1).cuda()
-        else:
-            areas = self.get_covered_areas(conf_boxes, true_boxes)
-            loss = torch.ones(1).cuda() - torch.mean(areas)
-            return loss
+        areas = self.get_covered_areas(conf_boxes, true_boxes)
+        loss = torch.ones(1).cuda() - torch.mean(areas)
+        return loss
 
 
 class NumberPredictionsGapLoss(ODLoss):
     def __init__(self):
-        """
-        Initialize the Number Predictions Gap Loss.
+        """Initialize the Number Predictions Gap Loss.
 
-        Returns:
+        Returns
+        -------
         - None
+
         """
         self.upper_bound = 1
 
     def __call__(
-        self, conf_boxes: torch.Tensor, true_boxes: torch.Tensor
+        self,
+        conf_boxes: torch.Tensor,
+        true_boxes: torch.Tensor,
     ) -> float:
-        """
-        Call the Number Predictions Gap Loss.
+        """Call the Number Predictions Gap Loss.
 
-        Parameters:
+        Parameters
+        ----------
         - conf_boxes (torch.Tensor): The conformal boxes.
         - true_boxes (torch.Tensor): The true boxes.
 
-        Returns:
+        Returns
+        -------
         - float: The loss value.
+
         """
         raise NotImplementedError(
-            "NumberPredictionsGapLoss is not implemented yet"
+            "NumberPredictionsGapLoss is not implemented yet",
         )
         loss = (len(true_boxes) - len(conf_boxes)) / max(len(true_boxes), 1)
         return min(loss, 1)
