@@ -91,15 +91,15 @@ class ODParameters(Parameters):
     def __init__(
         self,
         global_alpha: float,
-        alpha_confidence: Optional[float],
-        alpha_localization: Optional[float],
-        alpha_classification: Optional[float],
-        lambda_confidence_plus: Optional[float],
-        lambda_confidence_minus: Optional[float],
-        lambda_localization: Optional[float],
-        lambda_classification: Optional[float],
         confidence_threshold: float,
         predictions_id: int,
+        alpha_confidence: Optional[float] = None,
+        alpha_localization: Optional[float] = None,
+        alpha_classification: Optional[float] = None,
+        lambda_confidence_plus: Optional[float] = None,
+        lambda_confidence_minus: Optional[float] = None,
+        lambda_localization: Optional[float] = None,
+        lambda_classification: Optional[float] = None,
         unique_id: Optional[int] = None,
     ):
         """Initializes a new instance of the ODParameters class.
@@ -138,8 +138,8 @@ class ODConformalizedPredictions(ConformalizedPredictions):
         self,
         predictions: ODPredictions,
         parameters: ODParameters,
-        conf_boxes: Optional[torch.Tensor],
-        conf_cls: Optional[torch.Tensor],
+        conf_boxes: Optional[torch.Tensor] = None,
+        conf_cls: Optional[torch.Tensor] = None,
     ):
         """Initializes a new instance of the ODResults class.
 
@@ -168,12 +168,12 @@ class ODResults(Results):
         predictions: ODPredictions,
         parameters: Parameters,
         conformalized_predictions: ODConformalizedPredictions,
-        confidence_set_sizes: Optional[torch.Tensor | List[float]],
-        confidence_coverages: Optional[torch.Tensor | List[float]],
-        localization_set_sizes: Optional[torch.Tensor | List[float]],
-        localization_coverages: Optional[torch.Tensor | List[float]],
-        classification_set_sizes: Optional[torch.Tensor | List[float]],
-        classification_coverages: Optional[torch.Tensor | List[float]],
+        confidence_set_sizes: Optional[torch.Tensor | List[float]] = None,
+        confidence_coverages: Optional[torch.Tensor | List[float]] = None,
+        localization_set_sizes: Optional[torch.Tensor | List[float]] = None,
+        localization_coverages: Optional[torch.Tensor | List[float]] = None,
+        classification_set_sizes: Optional[torch.Tensor | List[float]] = None,
+        classification_coverages: Optional[torch.Tensor | List[float]] = None,
         global_coverage: Optional[torch.Tensor | float] = None,
     ):
         """Initializes a new instance of the ODResults class.
@@ -189,6 +189,7 @@ class ODResults(Results):
             localization_coverages (torch.Tensor): The localization coverages.
             classification_set_sizes (torch.Tensor): The classification set sizes.
             classification_coverages (torch.Tensor): The classification coverages.
+            global_coverage (torch.Tensor | float): The global coverage.
 
         """
         super().__init__(

@@ -28,11 +28,11 @@ from cods.od.data import (
 )
 from cods.od.loss import (
     BoxWiseRecallLoss,
-    ClassBoxWiseRecallLoss,
+    # ClassBoxWiseRecallLoss,
     ClassificationLossWrapper,
     ConfidenceLoss,
     LACLoss,
-    MaximumLoss,
+    # MaximumLoss,
     ODLoss,
     PixelWiseRecallLoss,
 )
@@ -50,19 +50,16 @@ from cods.od.utils import (
     # compute_risk_cls_image_level,
     compute_risk_image_level,
     compute_risk_object_level,
-    evaluate_cls_conformalizer,
-    get_classif_preds_from_od_preds,
-    get_conf_cls_for_od,
+    # evaluate_cls_conformalizer,
+    # get_classif_predictions_from_od_predictions,
+    # get_conf_cls_for_od,
     match_predictions_to_true_boxes,
 )
 
 """
 TODO:
-* Something is unfinished with the compute risk function using old parameters.
-However new losses take the whole predictions rather than individual ones. To rethink
-* Classification Wrapper
-* Maximum Loss
-* Rewrite Localization loss so they take into account the matching
+* rewrite the matching to be more efficient
+* check nms is done correctly and add bayesod
 """
 
 ################ BASIC BRICS #####################
@@ -202,7 +199,7 @@ class LocalizationConformalizer(Conformalizer):
 
     # def calibrate(
     #     self,
-    #     preds: ODPredictions,
+    #     predictions: ODPredictions,
     #     alpha: float = 0.1,
     #     confidence_threshold: Union[float, None] = None,
     #     verbose: bool = True,
@@ -211,7 +208,7 @@ class LocalizationConformalizer(Conformalizer):
     #     Calibrates the conformalizer using the given predictions.
 
     #     Args:
-    #         preds (ODPredictions): The object detection predictions.
+    #         predictions (ODPredictions): The object detection predictions.
     #         alpha (float): The significance level for the calibration.
     #         confidence_threshold (float, optional): The confidence threshold for the predictions. If not provided, it must be set in the predictions or in the conformalizer.
     #         verbose (bool): Whether to display progress information.
@@ -221,32 +218,32 @@ class LocalizationConformalizer(Conformalizer):
     #     """
     #     if self._score_function is None:
     #         self._score_function = self.accepted_methods[self.method]()
-    #     if preds.confidence_threshold is None:
+    #     if predictions.confidence_threshold is None:
     #         if confidence_threshold is None:
     #             raise ValueError(
     #                 "confidence_threshold must be set in the predictions or in the conformalizer"
     #             )
     #         else:
-    #             preds.confidence_threshold = confidence_threshold
-    #     self.confidence_threshold = preds.confidence_threshold
+    #             predictions.confidence_threshold = confidence_threshold
+    #     self.confidence_threshold = predictions.confidence_threshold
 
     #     if self.scores is None:
     #         # compute all non-conformity scores for each four axes
     #         scores = []
     #         for i, true_box_img in tqdm(
-    #             enumerate(preds.true_boxes), disable=not verbose
+    #             enumerate(predictions.true_boxes), disable=not verbose
     #         ):
     #             for j, true_box in enumerate(true_box_img):
-    #                 confidences = preds.confidence[i]
+    #                 confidences = predictions.confidence[i]
     #                 pred_boxes = (
-    #                     preds.pred_boxes[i][confidences >= preds.confidence_threshold]
+    #                     predictions.pred_boxes[i][confidences >= predictions.confidence_threshold]
     #                     if len(
-    #                         preds.pred_boxes[i][
-    #                             confidences >= preds.confidence_threshold
+    #                         predictions.pred_boxes[i][
+    #                             confidences >= predictions.confidence_threshold
     #                         ]
     #                     )
     #                     > 0
-    #                     else preds.pred_boxes[i][confidences.argmax()]
+    #                     else predictions.pred_boxes[i][confidences.argmax()]
     #                 )
     #                 score = self._score_function(pred_boxes, true_box)
     #                 scores.append(score)
@@ -348,7 +345,11 @@ class LocalizationConformalizer(Conformalizer):
                 [lbd, lbd, lbd, lbd],
                 mode=self.prediction_set,
             )
-            tmp_parameters = ODParameters(global_alpha=alpha)
+            tmp_parameters = ODParameters(
+                global_alpha=alpha,
+                confidence_threshold=confidence_threshold,
+                predictions_id=predictions.unique_id,
+            )
             tmp_conformalized_predictions = ODConformalizedPredictions(
                 predictions=predictions,
                 parameters=tmp_parameters,
@@ -406,7 +407,7 @@ class LocalizationConformalizer(Conformalizer):
 
         Parameters
         ----------
-        - preds (ODPredictions): The object detection predictions.
+        - predictions (ODPredictions): The object detection predictions.
         - alpha (float): The significance level.
         - steps (int): The number of steps for optimization.
         - bounds (List[float]): The bounds for optimization.
@@ -617,7 +618,7 @@ class ConfidenceConformalizer(Conformalizer):
 
         Parameters
         ----------
-        - preds (ODPredictions): The object detection predictions.
+        - predictions (ODPredictions): The object detection predictions.
         - alpha (float): The significance level.
         - objectness_threshold (float): The threshold for objectness confidence.
 
@@ -639,6 +640,13 @@ class ConfidenceConformalizer(Conformalizer):
             - corrected_risk (float): The corrected risk.
 
             """
+            # TODO(leoandeol): super costly and probably redundant
+            # URGENT: fix this : store values of distances in matching so it's instantaneous to redo
+            match_predictions_to_true_boxes(
+                predictions,
+                verbose=True,
+                overload_confidence_threshold=1 - lbd,
+            )
             conf_boxes = list(
                 [
                     x[y >= 1 - lbd]
@@ -662,11 +670,15 @@ class ConfidenceConformalizer(Conformalizer):
             # Second, prediction sets for classification with always everything
             n_classes = len(predictions.pred_cls[0][0].squeeze())
             conf_cls = [
-                [[torch.arange(len(n_classes))] for true_cls_i_j in true_cls_i]
+                [[torch.arange(n_classes)] for true_cls_i_j in true_cls_i]
                 for true_cls_i in predictions.true_cls
             ]
 
-            tmp_parameters = ODParameters(global_alpha=alpha)
+            tmp_parameters = ODParameters(
+                global_alpha=alpha,
+                confidence_threshold=1 - lbd,
+                predictions_id=predictions.unique_id,
+            )
             tmp_conformalized_predictions = ODConformalizedPredictions(
                 predictions=predictions,
                 parameters=tmp_parameters,
@@ -713,7 +725,7 @@ class ConfidenceConformalizer(Conformalizer):
 
     def calibrate(
         self,
-        preds: ODPredictions,
+        predictions: ODPredictions,
         alpha: float = 0.1,
         steps: int = 13,
         bounds: List[float] = [0, 1000],
@@ -724,9 +736,9 @@ class ConfidenceConformalizer(Conformalizer):
             logger.info("Replacing previously computed λ")
 
         objective_function = self._get_objective_function(
-            preds=preds,
+            predictions=predictions,
             alpha=alpha,
-            objectness_threshold=preds.confidence_threshold,
+            objectness_threshold=predictions.confidence_threshold,
             overload_B=0,
         )
 
@@ -739,9 +751,9 @@ class ConfidenceConformalizer(Conformalizer):
         )
 
         objective_function = self._get_objective_function(
-            preds=preds,
+            predictions=predictions,
             alpha=alpha,
-            objectness_threshold=preds.confidence_threshold,
+            objectness_threshold=predictions.confidence_threshold,
         )
 
         lambda_plus = self.optimizer.optimize(
@@ -755,12 +767,12 @@ class ConfidenceConformalizer(Conformalizer):
         self.lambda_minus = lambda_minus
         return lambda_minus, lambda_plus
 
-    def conformalize(self, preds: ODPredictions) -> float:
+    def conformalize(self, predictions: ODPredictions) -> float:
         """Conformalize the object detection predictions.
 
         Parameters
         ----------
-        - preds (ODPredictions): The object detection predictions.
+        - predictions (ODPredictions): The object detection predictions.
 
         Returns
         -------
@@ -771,7 +783,7 @@ class ConfidenceConformalizer(Conformalizer):
             raise ValueError(
                 "Conformalizer must be calibrated before conformalizing.",
             )
-        preds.confidence_threshold = 1 - self.lbd
+        predictions.confidence_threshold = 1 - self.lbd
         return 1 - self.lbd
 
     def evaluate(
@@ -900,7 +912,11 @@ class ODClassificationConformalizer(ClassificationConformalizer):
                 return conf_cls
 
             conf_cls = get_conf_cls()
-            tmp_parameters = ODParameters(global_alpha=alpha)
+            tmp_parameters = ODParameters(
+                global_alpha=alpha,
+                confidence_threshold=confidence_threshold,
+                predictions_id=predictions.unique_id,
+            )
             tmp_conformalized_predictions = ODConformalizedPredictions(
                 predictions=predictions,
                 parameters=tmp_parameters,
@@ -1253,10 +1269,10 @@ class ODConformalizer(Conformalizer):
     def calibrate(
         self,
         predictions: ODPredictions,
-        global_alpha: Optional[float],
-        alpha_confidence: Optional[float],
-        alpha_localization: Optional[float],
-        alpha_classification: Optional[float],
+        global_alpha: Optional[float] = None,
+        alpha_confidence: Optional[float] = None,
+        alpha_localization: Optional[float] = None,
+        alpha_classification: Optional[float] = None,
         verbose: bool = True,
     ) -> ODParameters:
         """Calibrates the conformalizers and returns the calibration results.
@@ -1693,7 +1709,7 @@ class SeqGlobalODConformalizer(ODConformalizer):
 
     def calibrate(
         self,
-        preds: ODPredictions,
+        predictions: ODPredictions,
         alpha: float = 0.1,
         verbose: bool = True,
     ) -> Tuple[Sequence[float], float, float]:
@@ -1716,7 +1732,7 @@ class SeqGlobalODConformalizer(ODConformalizer):
         # Confidence
 
         quantile_obj_confidence_minus = self.obj_conformalizer.calibrate(
-            preds,
+            predictions,
             alpha=real_alpha * 0.5,
             verbose=verbose,
             override_B=True,
@@ -1728,12 +1744,12 @@ class SeqGlobalODConformalizer(ODConformalizer):
             quantile_obj_confidence_minus,
         )
         quantile_obj_confidence = self.obj_conformalizer.calibrate(
-            preds,
+            predictions,
             alpha=real_alpha * 0.5,
             verbose=verbose,
         )
         confidence_threshold = 1 - quantile_obj_confidence
-        preds.confidence_threshold = minus_conf_threshold
+        predictions.confidence_threshold = minus_conf_threshold
         logger.info(
             "Plus confidence threshold",
             confidence_threshold,
@@ -1743,42 +1759,46 @@ class SeqGlobalODConformalizer(ODConformalizer):
         # Classif
         if self.fix_cls:
             # lbd minus
-            cls_preds = get_classif_preds_from_od_preds(preds)
+            cls_predictions = get_classif_predictions_from_od_predictions(
+                predictions
+            )
             quantile_classif, score_cls_min = self.cls_conformalizer.calibrate(
-                cls_preds,
+                cls_predictions,
                 alpha=real_alpha * 0.5,
                 verbose=verbose,
                 lbd_minus=True,
             )
-            conf_cls = get_conf_cls_for_od(preds, self.cls_conformalizer)
+            conf_cls = get_conf_cls_for_od(predictions, self.cls_conformalizer)
             # for the real lbd+
             quantile_classif, score_cls_plus = (
                 self.cls_conformalizer.calibrate(
-                    cls_preds,
+                    cls_predictions,
                     alpha=real_alpha * 0.5,
                     verbose=verbose,
                 )
             )
         else:
-            cls_preds = get_classif_preds_from_od_preds(preds)
+            cls_predictions = get_classif_predictions_from_od_predictions(
+                predictions
+            )
             quantile_classif, score_cls = self.cls_conformalizer.calibrate(
-                cls_preds,
+                cls_predictions,
                 alpha=real_alpha * 0.5,
                 verbose=verbose,
             )
-            conf_cls = get_conf_cls_for_od(preds, self.cls_conformalizer)
+            conf_cls = get_conf_cls_for_od(predictions, self.cls_conformalizer)
             score_cls_min, score_cls_plus = score_cls, score_cls
 
         # Localization
 
         quantile_localization = self.loc_conformalizer.calibrate(
-            preds,
+            predictions,
             conf_cls=conf_cls,
             alpha=real_alpha,
             verbose=verbose,
         )
 
-        preds.confidence_threshold = confidence_threshold
+        predictions.confidence_threshold = confidence_threshold
 
         if verbose:
             logger.info("Quantiles")
@@ -1800,7 +1820,7 @@ class SeqGlobalODConformalizer(ODConformalizer):
 
     def evaluate(
         self,
-        preds: ODPredictions,
+        predictions: ODPredictions,
         conf_boxes: list,
         conf_cls: list,
         verbose: bool = True,
@@ -1809,7 +1829,7 @@ class SeqGlobalODConformalizer(ODConformalizer):
 
         Parameters
         ----------
-        - preds: The ODPredictions object containing the predictions.
+        - predictions: The ODPredictions object containing the predictions.
         - conf_boxes: The conformalized bounding boxes.
         - conf_cls: The conformalized classification scores.
         - verbose: Whether to print the evaluation results.
@@ -1817,7 +1837,7 @@ class SeqGlobalODConformalizer(ODConformalizer):
         """
         if self.loc_conformalizer is not None:
             coverage_loc, set_size_loc = self.loc_conformalizer.evaluate(
-                preds,
+                predictions,
                 conf_boxes,
                 conf_cls=conf_cls,
                 verbose=False,
@@ -1826,7 +1846,7 @@ class SeqGlobalODConformalizer(ODConformalizer):
             coverage_loc, set_size_loc = None, None
         if self.obj_conformalizer is not None:
             coverage_obj, set_size_obj = self.obj_conformalizer.evaluate(
-                preds,
+                predictions,
                 conf_boxes,
                 verbose=False,
             )
@@ -1834,7 +1854,7 @@ class SeqGlobalODConformalizer(ODConformalizer):
             coverage_obj, set_size_obj = None, None
         if self.cls_conformalizer is not None:
             coverage_cls, set_size_cls = evaluate_cls_conformalizer(
-                preds,
+                predictions,
                 conf_cls,
                 self.cls_conformalizer,
                 verbose=False,
@@ -1845,7 +1865,7 @@ class SeqGlobalODConformalizer(ODConformalizer):
         if self.loc_conformalizer.loss_name == "classboxwise":
             loss = BoxWiseRecallLoss()
         global_coverage = compute_global_coverage(
-            preds=preds,
+            predictions=predictions,
             conf_boxes=conf_boxes,
             conf_cls=conf_cls,
             confidence=self.obj_conformalizer is not None,
@@ -1939,12 +1959,12 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                 f"optimizer {optimizer} not accepted in multidim, currently only gpr and mc",
             )
 
-    def _get_risk_function(self, preds, alpha, **kwargs):
+    def _get_risk_function(self, predictions, alpha, **kwargs):
         """Returns the risk function for optimization.
 
         Args:
         ----
-            preds (ODPredictions): The object detection predictions.
+            predictions (ODPredictions): The object detection predictions.
             alpha (float): The significance level.
 
         Returns:
@@ -1962,7 +1982,9 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                         if len(x[y >= 1 - lbd_obj]) > 0
                         else x[None, y.argmax()]
                     )
-                    for x, y in zip(preds.pred_boxes, preds.confidence)
+                    for x, y in zip(
+                        predictions.pred_boxes, predictions.confidence
+                    )
                 ],
             )
             conf_boxes = apply_margins(
@@ -1972,10 +1994,10 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             )
             risk = compute_risk_object_level(
                 conf_boxes,
-                preds.true_boxes,
+                predictions.true_boxes,
                 loss=self.loss,
             )
-            n = len(preds)
+            n = len(predictions)
             corrected_risk = self._correct_risk(
                 risk=risk,
                 n=n,
@@ -2003,7 +2025,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
 
     def calibrate(
         self,
-        preds: ODPredictions,
+        predictions: ODPredictions,
         alpha: float = 0.1,
         steps: int = 13,
         bounds: list = [(0, 500), (0.0, 1.0)],
@@ -2013,7 +2035,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
 
         Args:
         ----
-            preds (ODPredictions): The object detection predictions.
+            predictions (ODPredictions): The object detection predictions.
             alpha (float): The significance level.
             steps (int): The number of optimization steps.
             bounds (list): The bounds for the optimization variables.
@@ -2031,7 +2053,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         if self.lbd is not None:
             logger.info("Replacing previously computed lambda")
         risk_function = self._get_risk_function(
-            preds=preds,
+            predictions=predictions,
             alpha=alpha,
         )
 
@@ -2045,12 +2067,12 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         self.lbd = lbd
         return lbd
 
-    def conformalize(self, preds: ODPredictions):
+    def conformalize(self, predictions: ODPredictions):
         """Conformalizes the predictions using the calibrated lambda values.
 
         Args:
         ----
-            preds (ODPredictions): The object detection predictions.
+            predictions (ODPredictions): The object detection predictions.
 
         Returns:
         -------
@@ -2066,17 +2088,17 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                 "Conformalizer must be calibrated before conformalizing.",
             )
         conf_boxes = apply_margins(
-            preds.pred_boxes,
+            predictions.pred_boxes,
             [self.lbd[0]] * 4,
             mode=self.prediction_set,
         )
-        preds.confidence_threshold = 1 - self.lbd[1]
-        preds.conf_boxes = conf_boxes
+        predictions.confidence_threshold = 1 - self.lbd[1]
+        predictions.conf_boxes = conf_boxes
         return conf_boxes
 
     def evaluate(
         self,
-        preds: ODPredictions,
+        predictions: ODPredictions,
         conf_boxes: list,
         verbose: bool = True,
     ):
@@ -2084,7 +2106,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
 
         Args:
         ----
-            preds (ODPredictions): The object detection predictions.
+            predictions (ODPredictions): The object detection predictions.
             conf_boxes (list): The conformalized bounding boxes.
             verbose (bool): Whether to print verbose output.
 
@@ -2101,25 +2123,27 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             raise ValueError(
                 "Conformalizer must be calibrated before evaluating.",
             )
-        if preds.conf_boxes is None:
+        if predictions.conf_boxes is None:
             raise ValueError(
                 "Predictions must be conformalized before evaluating.",
             )
         coverage_obj = []
         set_size_obj = []
-        for true_boxes, confidence in zip(preds.true_boxes, preds.confidence):
+        for true_boxes, confidence in zip(
+            predictions.true_boxes, predictions.confidence
+        ):
             cov = (
                 1
                 if len(true_boxes)
-                <= (confidence >= preds.confidence_threshold).sum()
+                <= (confidence >= predictions.confidence_threshold).sum()
                 else 0
             )
-            set_size = (confidence >= preds.confidence_threshold).sum()
+            set_size = (confidence >= predictions.confidence_threshold).sum()
             set_size_obj.append(set_size)
             coverage_obj.append(cov)
         if verbose:
             logger.info(
-                f"Confidence Treshold {preds.confidence_threshold}, Coverage = {torch.mean(coverage_obj)}, Median set size = {torch.mean(set_size_obj)}",
+                f"Confidence Treshold {predictions.confidence_threshold}, Coverage = {torch.mean(coverage_obj)}, Median set size = {torch.mean(set_size_obj)}",
             )
 
         coverage_loc = []
@@ -2135,15 +2159,15 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             return set_sizes
 
         conf_boxes = conf_boxes
-        true_boxes = preds.true_boxes
+        true_boxes = predictions.true_boxes
         conf_boxes = list(
             [
                 (
-                    x[y >= preds.confidence_threshold]
-                    if len(x[y >= preds.confidence_threshold]) > 0
+                    x[y >= predictions.confidence_threshold]
+                    if len(x[y >= predictions.confidence_threshold]) > 0
                     else x[None, y.argmax()]
                 )
-                for x, y in zip(conf_boxes, preds.confidence)
+                for x, y in zip(conf_boxes, predictions.confidence)
             ],
         )
         set_size_loc = compute_set_size(conf_boxes)
@@ -2157,7 +2181,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             logger.info(f"Safety = {safety}")
             logger.info(f"Average set size = {torch.mean(set_size_loc)}")
         global_coverage = compute_global_coverage(
-            preds=preds,
+            predictions=predictions,
             also_conf=True,
             also_cls=False,
             loss=self.loss,

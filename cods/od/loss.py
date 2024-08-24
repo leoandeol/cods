@@ -6,7 +6,7 @@ import torch
 from cods.base.loss import Loss
 from cods.od.data import ODConformalizedPredictions, ODPredictions
 from cods.od.utils import (
-    get_covered_areas_of_gt_max,
+    # get_covered_areas_of_gt_max,
     get_covered_areas_of_gt_union,
 )
 
@@ -64,8 +64,8 @@ class ConfidenceLoss(ODLoss):
         - None
 
         """
-        super().__init__()
-        self.upper_bound = upper_bound
+        super().__init__(upper_bound=upper_bound)
+        self.other_losses = other_losses if other_losses is not None else []
 
     def __call__(
         self,
@@ -106,8 +106,7 @@ from cods.classif.loss import ClassificationLoss
 
 class LACLoss(ClassificationLoss):
     def __init__(self):
-        super().__init__()
-        self.upper_bound = 1
+        super().__init__(upper_bound=1)
 
     def __call__(
         self,
@@ -120,7 +119,7 @@ class LACLoss(ClassificationLoss):
 
 # IMAGE WISE VS BOX WISE GUARANTEE
 # wrapping classification loss, by converting the predictions from the od to the classification format
-class ClassificationLossWrapper(Loss):
+class ClassificationLossWrapper(ODLoss):
     def __init__(self, classification_loss, **kwargs):
         """Initialize the Classification Loss Wrapper.
 
@@ -133,8 +132,8 @@ class ClassificationLossWrapper(Loss):
         - None
 
         """
-        super().__init__()
         self.classification_loss = classification_loss
+        super().__init__(upper_bound=classification_loss.upper_bound)
 
     def __call__(
         self,
@@ -201,7 +200,7 @@ class HausdorffSignedDistanceLoss(ODLoss):
         - None
 
         """
-        self.upper_bound = 1
+        super().__init__(upper_bound=1)
         self.beta = beta
 
     def __call__(
@@ -249,13 +248,17 @@ class ClassBoxWiseRecallLoss(ODLoss):
         - None
 
         """
-        self.upper_bound = 1
+        super().__init__(upper_bound=1)
         self.union_of_boxes = union_of_boxes
         self.get_covered_areas = (
             get_covered_areas_of_gt_union
-            if union_of_boxes
-            else get_covered_areas_of_gt_max
+            # if union_of_boxes
+            # else get_covered_areas_of_gt_max
         )
+        if not union_of_boxes:
+            raise NotImplementedError(
+                "Box-wise Recall Loss only supports union of boxes.",
+            )
 
     def __call__(
         self,
@@ -317,7 +320,7 @@ class BoxWiseRecallLoss(ODLoss):
         - None
 
         """
-        self.upper_bound = 1
+        super().__init__(upper_bound=1)
         self.union_of_boxes = union_of_boxes
         self.get_covered_areas = get_covered_areas_of_gt_union
         if not union_of_boxes:
@@ -371,7 +374,7 @@ class PixelWiseRecallLoss(ODLoss):
         - None
 
         """
-        self.upper_bound = 1
+        super().__init__(upper_bound=1)
         self.union_of_boxes = union_of_boxes
         self.get_covered_areas = get_covered_areas_of_gt_union
         if not union_of_boxes:
