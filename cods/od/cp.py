@@ -5,7 +5,8 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 from cods.classif.data.predictions import ClassificationPredictions
 
 logger = logging.getLogger("cods")
-FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+# FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+FORMAT = "[%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
 logging.basicConfig(format=FORMAT)
 
 import torch
@@ -197,6 +198,8 @@ class LocalizationConformalizer(Conformalizer):
                 f"optimizer {optimizer} not accepted, must be one of {self.OPTIMIZERS.keys()} or an instance of Optimizer",
             )
 
+        self.lambda_localization = None
+
     # def calibrate(
     #     self,
     #     predictions: ODPredictions,
@@ -350,11 +353,20 @@ class LocalizationConformalizer(Conformalizer):
                 confidence_threshold=confidence_threshold,
                 predictions_id=predictions.unique_id,
             )
+            # TODO: rethink this, why do we regenerate it everytime, make it default somehwo
+            n_classes = len(predictions.pred_cls[0][0].squeeze())
+            conf_cls = [
+                [
+                    torch.arange(n_classes)[None, ...].cuda()
+                    for pred_cls_i_j in pred_cls_i
+                ]
+                for pred_cls_i in predictions.pred_cls
+            ]
             tmp_conformalized_predictions = ODConformalizedPredictions(
                 predictions=predictions,
                 parameters=tmp_parameters,
                 conf_boxes=conf_boxes,
-                conf_cls=None,
+                conf_cls=conf_cls,
             )
             # TODO(leoandeol): classwise risk ????
             risk = self.risk_function(
@@ -494,11 +506,11 @@ class LocalizationConformalizer(Conformalizer):
             and parameters.lambda_localization is not None
         ):
             if verbose:
-                logger.info("Using lambda for localization from parameters")
+                logger.info("Using λ for localization from parameters")
             lambda_localization = parameters.lambda_localization
         else:
             if verbose:
-                logger.info("loggingUsing previous λ for localization")
+                logger.info("Using previous λ for localization")
             lambda_localization = self.lambda_localization
         if isinstance(lambda_localization, list):
             if len(lambda_localization) == 4:
@@ -644,7 +656,7 @@ class ConfidenceConformalizer(Conformalizer):
             # URGENT: fix this : store values of distances in matching so it's instantaneous to redo
             match_predictions_to_true_boxes(
                 predictions,
-                verbose=True,
+                verbose=False,
                 overload_confidence_threshold=1 - lbd,
             )
             # for matching we always provide the full conf_boxes list
@@ -663,19 +675,28 @@ class ConfidenceConformalizer(Conformalizer):
             # TODO(leoandeol): cleanify this
             # First enlarge bounding boxes to the max size
             # TODO(leoandeol): this is hardcoded, we should get input image size somewhere
+            conf_boxes = predictions.pred_boxes
             conf_boxes = apply_margins(
-                predictions.pred_boxes,
+                conf_boxes,
                 [500, 500, 500, 500],
                 mode="additive",
             )
             # Second, prediction sets for classification with always everything
             n_classes = len(predictions.pred_cls[0][0].squeeze())
+            # conf_cls = [
+            #     [
+            #         torch.arange(n_classes)[None, ...].cuda()
+            #         for j, true_cls_i_j in enumerate(true_cls_i)
+            #         if (len(predictions.matching[i][j]) > 0)
+            #     ]
+            #     for i, true_cls_i in enumerate(predictions.true_cls)
+            # ] # filtering is done when computing the risk, not needed here
             conf_cls = [
                 [
-                    torch.arange(n_classes)[None, ...]
-                    for true_cls_i_j in true_cls_i
+                    torch.arange(n_classes)[None, ...].cuda()
+                    for j, pred_cls_i_j in enumerate(pred_cls_i)
                 ]
-                for true_cls_i in predictions.true_cls
+                for i, pred_cls_i in enumerate(predictions.pred_cls)
             ]
 
             tmp_parameters = ODParameters(
@@ -783,12 +804,12 @@ class ConfidenceConformalizer(Conformalizer):
         - conf_boxes (List[List[float]]): The conformalized bounding boxes.
 
         """
-        if self.lbd is None:
+        if self.lambda_minus is None or self.lambda_plus is None:
             raise ValueError(
                 "Conformalizer must be calibrated before conformalizing.",
             )
-        predictions.confidence_threshold = 1 - self.lbd
-        return 1 - self.lbd
+        predictions.confidence_threshold = 1 - self.lambda_plus
+        return 1 - self.lambda_plus
 
     def evaluate(
         self,
@@ -842,6 +863,10 @@ class ODClassificationConformalizer(ClassificationConformalizer):
 
     BACKENDS = ["auto", "cp", "crc"]
     GUARANTEE_LEVELS = ["image", "object"]
+    OPTIMIZERS = {
+        "binary_search": BinarySearchOptimizer,
+        "gaussian_process": GaussianProcessOptimizer,
+    }
 
     def __init__(
         self,
@@ -849,6 +874,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         preprocess="softmax",
         backend="auto",
         guarantee_level="image",
+        optimizer="binary_search",
         **kwargs,
     ):
         """ """
@@ -868,14 +894,21 @@ class ODClassificationConformalizer(ClassificationConformalizer):
                 f"backend {backend} not accepted, must be one of {self.BACKENDS}",
             )
         if backend == "auto":
-            self.backend = "cp"
-            logger.info("Defaulting to CP backend")
-        if backend == "crc":
+            self.backend = "crc"
+            logger.info("Defaulting to CRC backend")
+        if backend == "cp":
             raise NotImplementedError("CRC backend is not supported yet")
 
         self.backend = backend
         self._backend_loss = LACLoss()
         self.loss = ClassificationLossWrapper(self._backend_loss)
+        self.lambda_classification = None
+
+        if optimizer not in self.OPTIMIZERS:
+            raise ValueError(
+                f"optimizer {optimizer} not accepted, must be one of {self.OPTIMIZERS}",
+            )
+        self.optimizer = self.OPTIMIZERS[optimizer]()
 
     def _get_objective_function(
         self,
@@ -898,20 +931,14 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             corrected_risk (float): The corrected risk.
 
             """
-            logger.warning(
-                "Currently considering that there is only one matching prediction to each true box for classification pruposes. To add later how to aggregate if multiple preidctions matched."
-            )
 
             def get_conf_cls():
                 conf_cls = []
-                for i, true_cls in enumerate(predictions.true_cls):
+                for i, pred_cls_i in enumerate(predictions.pred_cls):
                     conf_cls_i = []
-                    for j, true_cls_i in enumerate(true_cls):
-                        matched = predictions.matching[i][j][0]
-                        conf_cls_i_j = predictions.pred_cls[i][matched]
-                        conf_cls_i_j = conf_cls_i_j[conf_cls_i_j >= 1 - lbd]
+                    for j, pred_cls_i_j in enumerate(pred_cls_i):
+                        conf_cls_i_j = torch.where(pred_cls_i_j >= 1 - lbd)[0]
                         conf_cls_i.append(conf_cls_i_j)
-                    conf_cls_i = torch.stack(conf_cls_i)
                     conf_cls.append(conf_cls_i)
                 return conf_cls
 
@@ -924,7 +951,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             tmp_conformalized_predictions = ODConformalizedPredictions(
                 predictions=predictions,
                 parameters=tmp_parameters,
-                conf_boxes=None,
+                conf_boxes=predictions.pred_boxes,  # TODO: what to do here ?
                 conf_cls=conf_cls,
             )
             # TODO(leoandeol): classwise risk ????
@@ -970,7 +997,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         predictions: ODPredictions,
         alpha: float,
         bounds: List[float] = [0, 1],
-        steps: int = 13,
+        steps: int = 40,
         verbose: bool = True,
         overload_confidence_threshold: Optional[float] = None,
     ) -> torch.Tensor:
@@ -991,6 +1018,9 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             )
             confidence_threshold = overload_confidence_threshold
 
+        logger.warning(
+            "Currently considering that there is only one matching prediction to each true box for classification pruposes. To add later how to aggregate if multiple preidctions matched."
+        )
         objective_function = self._get_objective_function(
             predictions=predictions,
             alpha=alpha,
@@ -1003,28 +1033,28 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             bounds=bounds,
             steps=steps,
             verbose=verbose,
+            epsilon=1e-10,
         )
 
         if verbose:
             logger.info(
-                f"Calibrated λ for localization: {lambda_classification}",
+                f"Calibrated λ for classification: {lambda_classification}",
             )
 
         self.lambda_classification = lambda_classification
         return lambda_classification
 
     def conformalize(self, predictions: ODPredictions) -> List:
-        # TODO: add od parameters
+        # TODO: add od parameters to function signature
+        # NO MATCHING HERE
         def get_conf_cls():
             conf_cls = []
-            for i, true_cls in enumerate(predictions.true_cls):
+            for i, pred_cls_i in enumerate(predictions.pred_cls):
                 conf_cls_i = []
-                for j, true_cls_i in enumerate(true_cls):
-                    matched = predictions.matching[i][j][0]
-                    conf_cls_i_j = predictions.pred_cls[i][matched]
-                    conf_cls_i_j = conf_cls_i_j[
-                        conf_cls_i_j >= 1 - self.lambda_classification
-                    ]
+                for j, pred_cls_i_j in enumerate(pred_cls_i):
+                    conf_cls_i_j = torch.where(
+                        pred_cls_i_j >= 1 - self.lambda_classification
+                    )[0]
                     conf_cls_i.append(conf_cls_i_j)
                 conf_cls_i = torch.stack(conf_cls_i)
                 conf_cls.append(conf_cls_i)
@@ -1234,6 +1264,7 @@ class ODConformalizer(Conformalizer):
         if isinstance(classification_method, str):
             self.classification_method = classification_method
             self.classification_conformalizer = ODClassificationConformalizer(
+                guarantee_level=guarantee_level,
                 loss=classification_method,
             )
         elif isinstance(classification_method, ODClassificationConformalizer):
@@ -1405,7 +1436,9 @@ class ODConformalizer(Conformalizer):
             # Unique to Confidence due to dependence
             logger.info("Setting Confidence Threshold of Predictions")
             self.confidence_conformalizer.conformalize(predictions)
-            self.confidence_threshold = predictions.confidence_threshold
+            self.confidence_threshold = (
+                1 - lambda_confidence_plus
+            )  # predictions.confidence_threshold
 
             optimistic_confidence_threshold = 1 - lambda_confidence_minus
 
@@ -1444,7 +1477,7 @@ class ODConformalizer(Conformalizer):
 
             if verbose:
                 logger.info(
-                    "Calibrated Localization λ : {lambda_localization}",
+                    f"Calibrated Localization λ : {lambda_localization}",
                 )
 
         # Classification
@@ -1462,7 +1495,7 @@ class ODConformalizer(Conformalizer):
 
             if verbose:
                 logger.info(
-                    "Calibrated Classification λ : {lambda_classification}",
+                    f"Calibrated Classification λ : {lambda_classification}",
                 )
 
         result = ODParameters(
@@ -1523,7 +1556,7 @@ class ODConformalizer(Conformalizer):
                 logger.info("Conformalizing Confidence")
             self.confidence_conformalizer.conformalize(
                 predictions,
-                parameters=parameters,
+                # TODO: parameters=parameters,
             )
         elif parameters is not None:
             if verbose:
@@ -1539,7 +1572,7 @@ class ODConformalizer(Conformalizer):
                 logger.info("Conformalizing Localization")
             conf_boxes = self.localization_conformalizer.conformalize(
                 predictions,
-                parameters=parameters,
+                # TODO:parameters=parameters,
             )
         else:
             conf_boxes = None
@@ -1549,7 +1582,7 @@ class ODConformalizer(Conformalizer):
                 logger.info("Conformalizing Classification")
             conf_cls = self.classification_conformalizer.conformalize(
                 predictions,
-                parameters=parameters,
+                # parameters=parameters,
             )
         else:
             conf_cls = None

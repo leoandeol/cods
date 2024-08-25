@@ -265,6 +265,9 @@ def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
     """
     areas = []
     for tb, pbs in zip(true_boxes, pred_boxes):
+        if len(pbs) == 0:
+            areas.append(torch.tensor(0).float().cuda())
+            continue
         x1, y1, x2, y2 = tb
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
 
@@ -373,8 +376,6 @@ def match_predictions_to_true_boxes(
         up_distance = pred_box[1] - true_box[1]
         down_distance = true_box[3] - pred_box[3]
         left_distance = pred_box[0] - true_box[0]
-
-        # ... rest of the code ...
         right_distance = true_box[2] - pred_box[2]
 
         # Return the maximum signed distance
@@ -394,7 +395,9 @@ def match_predictions_to_true_boxes(
         conf_thr = 0
     # filter pred_boxes with low objectness
     preds_boxes = [
-        x[y >= conf_thr] if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
+        x[
+            y >= conf_thr
+        ]  # if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
         for x, y in zip(preds.pred_boxes, preds.confidence)
     ]
     for pred_boxes, true_boxes in tqdm(
@@ -404,6 +407,7 @@ def match_predictions_to_true_boxes(
         matching = []
         for true_box in true_boxes:
             distances = []
+            # print("new gt")
             for pred_box in pred_boxes:
                 # TODO replace with hausdorff distance ?
                 # iou = f_iou(true_box, pred_box)
@@ -414,14 +418,17 @@ def match_predictions_to_true_boxes(
                     if isinstance(dist, torch.Tensor)
                     else dist
                 )
+                # print(dist)
                 distances.append(dist)  # .cpu().numpy())
             if len(pred_boxes) == 0:
                 matching.append([])
                 continue
             # TODO: replace this by possible a set of matches
             # TODO: must always be an array
-            matching.append([np.argmin(dist)])  # np.argmax(ious))
+            matching.append([np.argmin(distances)])  # np.argmax(ious))
+            # print(matching[-1])
         all_matching.append(matching)
+        # break
     preds.matching = all_matching
     return all_matching
 
@@ -431,6 +438,9 @@ def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
     new_boxes = []
     Qst = torch.FloatTensor([Qs]).cuda()
     for i in range(n):
+        if len(pred_boxes[i]) == 0:
+            new_boxes.append(torch.tensor([]).float().cuda())
+            continue
         if mode == "additive":
             new_box = pred_boxes[i] + torch.mul(
                 torch.FloatTensor([[-1, -1, 1, 1]]).cuda(),
@@ -465,27 +475,30 @@ def compute_risk_object_level(
     conf_cls = conformalized_predictions.conf_cls
     for i in range(len(true_boxes)):
         true_boxes_i = true_boxes[i]
-        true_cls_i = true_cls[i]
+        true_cls_i = true_cls[
+            i
+        ].cuda()  # TODO: why the cuda for cls and not boxes
         conf_boxes_i = conf_boxes[i]
         conf_cls_i = conf_cls[i]
+        matching_i = predictions.matching[i]
         for j in range(len(true_boxes_i)):
-            matching_i = predictions.matching[i]
-            if len(matching_i) == 0:
-                matched_conf_boxes_i = torch.tensor([]).cuda()
-                matched_conf_cls_i = torch.tensor([]).cuda()
+            matching_i_j = matching_i[j]
+            if len(matching_i_j) == 0:
+                matched_conf_boxes_i_j = torch.tensor([]).float().cuda()
+                matched_conf_cls_i_j = torch.tensor([]).float().cuda()
                 # Unsure above
             else:
-                matched_conf_boxes_i = torch.stack(
+                matched_conf_boxes_i_j = torch.stack(
                     [conf_boxes_i[m] for m in matching_i[j]],
                 )
-                matched_conf_cls_i = torch.stack(
+                matched_conf_cls_i_j = torch.stack(
                     [conf_cls_i[m] for m in matching_i[j]],
                 )
             loss_value = loss(
                 [true_boxes_i[j]],
-                [true_cls_i[j]],
-                [matched_conf_boxes_i],
-                [matched_conf_cls_i],
+                [true_cls_i[j].cuda()],
+                [matched_conf_boxes_i_j],
+                [matched_conf_cls_i_j],
             )
             losses.append(loss_value)
     losses = torch.stack(losses).ravel()
@@ -518,7 +531,9 @@ def compute_risk_image_level(
 
     for i in range(len(true_boxes)):
         true_boxes_i = true_boxes[i]
-        true_cls_i = true_cls[i]
+        true_cls_i = true_cls[
+            i
+        ].cuda()  # TODO: why the cuda for cls and not boxes
         conf_boxes_i = conf_boxes[i]
         conf_cls_i = conf_cls[i]
         # for j in range(len(true_boxes_i)):
@@ -526,21 +541,26 @@ def compute_risk_image_level(
         matched_conf_boxes_i = list(
             [
                 torch.stack([conf_boxes_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().cuda()
                 for j in range(len(true_boxes_i))
             ],
         )
         matched_conf_cls_i = list(
             [
                 torch.stack([conf_cls_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().cuda()
                 for j in range(len(true_boxes_i))
             ],
         )
         loss_value = loss(
             true_boxes_i,
-            true_cls_i,
+            true_cls_i,  # .cuda(),  # TODO: why the cuda for cls and not boxes
             matched_conf_boxes_i,
             matched_conf_cls_i,
         )
         # loss_value_i = aggregator_func(losses_i)
         losses.append(loss_value)
+    losses = torch.stack(losses).ravel()
     return losses if return_list else torch.mean(losses)

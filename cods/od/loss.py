@@ -1,3 +1,4 @@
+from logging import getLogger
 from typing import List, Optional
 
 import numpy as np
@@ -9,6 +10,8 @@ from cods.od.utils import (
     # get_covered_areas_of_gt_max,
     get_covered_areas_of_gt_union,
 )
+
+logger = getLogger("cods")
 
 
 # Object Detection Loss, many are wrappers of Segmentation losses
@@ -114,7 +117,12 @@ class LACLoss(ClassificationLoss):
         true_cls,
     ) -> torch.Tensor:
         """ """
-        return torch.logical_not(torch.isin(true_cls, conf_cls)).float()
+        # if len(conf_cls) == 0:
+        #    logger.warning(f"conf_cls is empty : {conf_cls}")
+        loss = torch.logical_not(torch.isin(true_cls, conf_cls)).float()
+        # if loss == 0:
+        #    logger.info(f"true_cls: {true_cls}, conf_cls: {conf_cls}")
+        return loss
 
 
 # IMAGE WISE VS BOX WISE GUARANTEE
@@ -144,8 +152,16 @@ class ClassificationLossWrapper(ODLoss):
     ) -> torch.Tensor:
         """ """
         losses = []
+        if len(true_cls) == 0:
+            logger.warning(f"true_cls is empty : {true_cls}")
+            return torch.zeros(1).cuda()
+        if len(conf_cls) == 0:
+            logger.warning(f"conf_cls is empty : {conf_cls}")
+            return torch.ones(1).cuda()
         for i in range(len(conf_cls)):
-            losses.append(self.classification_loss(conf_cls[i], true_cls[i]))
+            loss = self.classification_loss(conf_cls[i], true_cls[i])
+            # print(f"loss: {loss}")
+            losses.append(loss)
         return torch.mean(torch.stack(losses))
 
 
