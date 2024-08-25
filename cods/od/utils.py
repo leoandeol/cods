@@ -470,17 +470,22 @@ def compute_risk_object_level(
         conf_cls_i = conf_cls[i]
         for j in range(len(true_boxes_i)):
             matching_i = predictions.matching[i]
-            matched_conf_boxes_i = list(
-                [conf_boxes_i[m] for m in matching_i[j]],
-            )
-            matched_conf_cls_i = list(
-                [conf_cls_i[m] for m in matching_i[j]],
-            )
+            if len(matching_i) == 0:
+                matched_conf_boxes_i = torch.tensor([]).cuda()
+                matched_conf_cls_i = torch.tensor([]).cuda()
+                # Unsure above
+            else:
+                matched_conf_boxes_i = torch.stack(
+                    [conf_boxes_i[m] for m in matching_i[j]],
+                )
+                matched_conf_cls_i = torch.stack(
+                    [conf_cls_i[m] for m in matching_i[j]],
+                )
             loss_value = loss(
-                true_boxes_i[j],
-                true_cls_i[j],
-                matched_conf_boxes_i,
-                matched_conf_cls_i,
+                [true_boxes_i[j]],
+                [true_cls_i[j]],
+                [matched_conf_boxes_i],
+                [matched_conf_cls_i],
             )
             losses.append(loss_value)
     losses = torch.stack(losses).ravel()
@@ -520,13 +525,13 @@ def compute_risk_image_level(
         matching_i = predictions.matching[i]
         matched_conf_boxes_i = list(
             [
-                list([conf_boxes_i[m] for m in matching_i[j]])
+                torch.stack([conf_boxes_i[m] for m in matching_i[j]])
                 for j in range(len(true_boxes_i))
             ],
         )
         matched_conf_cls_i = list(
             [
-                list([conf_cls_i[m] for m in matching_i[j]])
+                torch.stack([conf_cls_i[m] for m in matching_i[j]])
                 for j in range(len(true_boxes_i))
             ],
         )

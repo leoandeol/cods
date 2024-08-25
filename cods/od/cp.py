@@ -647,30 +647,34 @@ class ConfidenceConformalizer(Conformalizer):
                 verbose=True,
                 overload_confidence_threshold=1 - lbd,
             )
-            conf_boxes = list(
-                [
-                    x[y >= 1 - lbd]
-                    # rippity rip to my trick
-                    # if len(x[y >= 1 - lbd]) > 0
-                    # else x[None, y.argmax()]
-                    for x, y in zip(
-                        predictions.pred_boxes,
-                        predictions.confidence,
-                    )
-                ],
-            )
+            # for matching we always provide the full conf_boxes list
+            # conf_boxes = list(
+            #     [
+            #         x[y >= 1 - lbd]
+            #         # rippity rip to my trick
+            #         # if len(x[y >= 1 - lbd]) > 0
+            #         # else x[None, y.argmax()]
+            #         for x, y in zip(
+            #             predictions.pred_boxes,
+            #             predictions.confidence,
+            #         )
+            #     ],
+            # )
             # TODO(leoandeol): cleanify this
             # First enlarge bounding boxes to the max size
             # TODO(leoandeol): this is hardcoded, we should get input image size somewhere
             conf_boxes = apply_margins(
-                conf_boxes,
+                predictions.pred_boxes,
                 [500, 500, 500, 500],
                 mode="additive",
             )
             # Second, prediction sets for classification with always everything
             n_classes = len(predictions.pred_cls[0][0].squeeze())
             conf_cls = [
-                [[torch.arange(n_classes)] for true_cls_i_j in true_cls_i]
+                [
+                    torch.arange(n_classes)[None, ...]
+                    for true_cls_i_j in true_cls_i
+                ]
                 for true_cls_i in predictions.true_cls
             ]
 
@@ -728,7 +732,7 @@ class ConfidenceConformalizer(Conformalizer):
         predictions: ODPredictions,
         alpha: float = 0.1,
         steps: int = 13,
-        bounds: List[float] = [0, 1000],
+        bounds: List[float] = [0, 1],
         verbose: bool = True,
     ) -> Tuple[float, float]:
         """ """
