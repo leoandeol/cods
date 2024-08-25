@@ -571,9 +571,9 @@ class LocalizationConformalizer(Conformalizer):
             for image_boxes in boxes:
                 for box in image_boxes:
                     set_size = (box[2] - box[0]) * (box[3] - box[1])
-                    set_size = set_size**0.5
+                    set_size = torch.sqrt(set_size)
                     set_sizes.append(set_size)
-            set_sizes = torch.stack(set_sizes).squeeze()
+            set_sizes = torch.stack(set_sizes).squeeze().float()
             return set_sizes
 
         set_sizes = compute_set_size(conf_boxes)
@@ -611,13 +611,15 @@ class ConfidenceConformalizer(Conformalizer):
         elif guarantee_level == "image":
             self.risk_function = compute_risk_image_level
 
-        self.lbd = None
         if optimizer == "binary_search":
             self.optimizer = BinarySearchOptimizer()
         elif optimizer in ["gaussianprocess", "gpr", "kriging"]:
             self.optimizer = GaussianProcessOptimizer()
         else:
             raise ValueError(f"optimizer {optimizer} not accepted")
+
+        self.lambda_minus = None
+        self.lambda_plus = None
 
     def _get_objective_function(
         self,
@@ -757,7 +759,7 @@ class ConfidenceConformalizer(Conformalizer):
         verbose: bool = True,
     ) -> Tuple[float, float]:
         """ """
-        if self.lbd is not None:
+        if self.lambda_plus is not None:
             logger.info("Replacing previously computed λ")
 
         objective_function = self._get_objective_function(
@@ -832,7 +834,7 @@ class ConfidenceConformalizer(Conformalizer):
         - set_sizes (torch.Tensor): The set sizes.
 
         """
-        if self.lbd is None:
+        if self.lambda_plus is None:
             raise ValueError(
                 "Conformalizer must be calibrated before evaluating.",
             )
@@ -848,7 +850,7 @@ class ConfidenceConformalizer(Conformalizer):
             set_sizes = []
             for image_boxes in boxes:
                 set_sizes.append(len(image_boxes))
-            set_sizes = torch.stack(set_sizes).ravel()
+            set_sizes = torch.tensor(set_sizes).squeeze().float()
             return set_sizes
 
         set_sizes = compute_set_size(conformalized_predictions.conf_boxes)
@@ -1056,7 +1058,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
                         pred_cls_i_j >= 1 - self.lambda_classification
                     )[0]
                     conf_cls_i.append(conf_cls_i_j)
-                conf_cls_i = torch.stack(conf_cls_i)
+                # not all same size : conf_cls_i = torch.stack(conf_cls_i)
                 conf_cls.append(conf_cls_i)
             return conf_cls
 
@@ -1084,10 +1086,10 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             for conf_cls_i in conf_cls:
                 for conf_cls_i_j in conf_cls_i:
                     set_sizes.append(len(conf_cls_i_j))
-            set_sizes = torch.stack(set_sizes).squeeze()
+            set_sizes = torch.tensor(set_sizes).squeeze().float()
             return set_sizes
 
-        set_sizes = compute_set_size(predictions.conf_cls)
+        set_sizes = compute_set_size(conformalized_predictions.conf_cls)
         if verbose:
             logger.info(f"Risk = {torch.mean(losses)}")
             logger.info(f"Average set size = {torch.mean(set_sizes)}")
@@ -1541,8 +1543,12 @@ class ODConformalizer(Conformalizer):
             if verbose:
                 logger.info("Using provided parameters for conformalization")
             if parameters.predictions_id != predictions.unique_id:
-                raise ValueError(
-                    "The parameters have been computed on another set of predictions.",
+                # That's normal, we conformalize on another dataset
+                # raise ValueError(
+                #     "The parameters have been computed on another set of predictions.",
+                # )
+                logger.info(
+                    "The parameters have been computed on another set of predictions."
                 )
             parameters_unique_id = parameters.unique_id
         else:
@@ -1587,9 +1593,15 @@ class ODConformalizer(Conformalizer):
         else:
             conf_cls = None
 
+        if parameters is None:
+            # TODO: rethink this
+            raise ValueError(
+                "Parameters must be provided for conformalization"
+            )
+
         results = ODConformalizedPredictions(
-            predictions_id=predictions.unique_id,
-            parameters_id=parameters_unique_id,
+            predictions=predictions,
+            parameters=parameters,
             conf_boxes=conf_boxes,
             conf_cls=conf_cls,
         )
@@ -1604,19 +1616,12 @@ class ODConformalizer(Conformalizer):
         include_confidence_in_global: bool,
         verbose: bool = True,
     ) -> ODResults:
-        if self.localization_conformalizer is not None:
-            if verbose:
-                logger.info("Evaluating Localization Conformalizer")
-            coverage_loc, set_size_loc = (
-                self.localization_conformalizer.evaluate(
-                    predictions,
-                    parameters,
-                    conformalized_predictions,
-                    verbose=False,
-                )
+        if predictions.matching is None:
+            match_predictions_to_true_boxes(
+                predictions,
+                verbose=False,
+                # TODO: overload_confidence_threshold=parameters.confidence_threshold,
             )
-        else:
-            coverage_loc, set_size_loc = None, None
         if self.confidence_conformalizer is not None:
             if verbose:
                 logger.info("Evaluating Confidence Conformalizer")
@@ -1630,6 +1635,19 @@ class ODConformalizer(Conformalizer):
             )
         else:
             coverage_obj, set_size_obj = None, None
+        if self.localization_conformalizer is not None:
+            if verbose:
+                logger.info("Evaluating Localization Conformalizer")
+            coverage_loc, set_size_loc = (
+                self.localization_conformalizer.evaluate(
+                    predictions,
+                    parameters,
+                    conformalized_predictions,
+                    verbose=False,
+                )
+            )
+        else:
+            coverage_loc, set_size_loc = None, None
         if self.classification_conformalizer is not None:
             if verbose:
                 logger.info("Evaluating Classification Conformalizer")
@@ -1653,8 +1671,8 @@ class ODConformalizer(Conformalizer):
                 if include_confidence_in_global
                 else False
             ),
-            cls=self.cls_conformalizer is not None,
-            localization=self.loc_conformalizer is not None,
+            cls=self.classification_conformalizer is not None,
+            localization=self.localization_conformalizer is not None,
         )
 
         # TODO: Use parameters to compare distance to ideal coverage and other things
@@ -1664,40 +1682,43 @@ class ODConformalizer(Conformalizer):
             logger.info("Evaluation Results:")
             if self.confidence_conformalizer is not None:
                 logger.info("\t Confidence:")
-                logger.info(f"\t\t Coverage: {torch.mean(coverage_obj):.2f}")
+                logger.info(f"\t\t Risk: {torch.mean(coverage_obj):.2f}")
                 logger.info(
                     f"\t\t Mean Set Size: {torch.mean(set_size_obj):.2f}",
                 )
             if self.localization_conformalizer is not None:
                 logger.info("\t Localization:")
-                logger.info(f"\t\t Coverage: {torch.mean(coverage_loc):.2f}")
+                logger.info(f"\t\t Risk: {torch.mean(coverage_loc):.2f}")
                 logger.info(
                     f"\t\t Mean Set Size: {torch.mean(set_size_loc):.2f}",
                 )
             if self.classification_conformalizer is not None:
                 logger.info("\t Classification:")
-                logger.info(f"\t\t Coverage: {torch.mean(coverage_cls):.2f}")
+                logger.info(f"\t\t Risk: {torch.mean(coverage_cls):.2f}")
                 logger.info(
                     f"\t\t Mean Set Size: {torch.mean(set_size_cls):.2f}",
                 )
             if global_coverage is not None:
                 logger.info("\t Global:")
                 logger.info(
-                    f"\t\t Coverage: {torch.mean(global_coverage):.2f}",
+                    f"\t\t Risk: {torch.mean(global_coverage):.2f}",
                 )
 
+        # TODO: Coverage is not the right word
         results = ODResults(
             predictions=predictions,
             parameters=parameters,
             conformalized_predictions=conformalized_predictions,
-            coverage_cls=coverage_cls,
-            set_size_cls=set_size_cls,
-            coverage_obj=coverage_obj,
-            set_size_obj=set_size_obj,
-            coverage_loc=coverage_loc,
-            set_size_loc=set_size_loc,
+            confidence_set_sizes=set_size_obj,
+            confidence_coverages=coverage_obj,
+            localization_set_sizes=set_size_loc,
+            localization_coverages=coverage_loc,
+            classification_set_sizes=set_size_cls,
+            classification_coverages=coverage_cls,
             global_coverage=global_coverage,
         )
+
+        return results
 
         return results
 
@@ -2193,6 +2214,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                     set_size = set_size.item()
                     set_size = torch.sqrt(set_size)
                     set_sizes.append(set_size)
+            set_sizes = torch.stack(set_sizes)
             return set_sizes
 
         conf_boxes = conf_boxes

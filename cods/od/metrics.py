@@ -9,13 +9,18 @@ import torch
 import tqdm
 from numba import jit
 
-from cods.od.data import ODConformalizedPredictions, ODPredictions
+from cods.od.data import (
+    ODConformalizedPredictions,
+    ODParameters,
+    ODPredictions,
+)
 from cods.od.utils import f_iou
 
 
 def compute_global_coverage(
     predictions: ODPredictions,
-    conformalized_predictiond: ODConformalizedPredictions,
+    parameters: ODParameters,
+    conformalized_predictions: ODConformalizedPredictions,
     confidence: bool = True,
     cls: bool = True,
     localization: bool = True,
@@ -36,14 +41,14 @@ def compute_global_coverage(
         torch.Tensor: Global coverage tensor.
     """
 
-    conf_boxes = conformalized_predictiond.conf_boxes
+    conf_boxes = conformalized_predictions.conf_boxes
     if conf_boxes is None and (confidence is True or localization is True):
         localization = False
         confidence = False
         logger.warning(
             "No conformal boxes provided, skipping confidence and localization"
         )
-    conf_cls = conformalized_predictiond.conf_cls
+    conf_cls = conformalized_predictions.conf_cls
     if conf_cls is None and cls is True:
         cls = False
         logger.warning(

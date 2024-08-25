@@ -386,6 +386,9 @@ def match_predictions_to_true_boxes(
             right_distance,
         )
 
+    if distance_function is None:
+        distance_function = assymetric_hausdorff_distance
+
     all_matching = []
     if overload_confidence_threshold is not None:
         conf_thr = overload_confidence_threshold
@@ -412,7 +415,8 @@ def match_predictions_to_true_boxes(
                 # TODO replace with hausdorff distance ?
                 # iou = f_iou(true_box, pred_box)
                 # TODO: test
-                dist = assymetric_hausdorff_distance(true_box, pred_box)
+                dist = -f_iou(true_box, pred_box)
+                # dist = distance_function(true_box, pred_box)
                 dist = (
                     dist.cpu().numpy()
                     if isinstance(dist, torch.Tensor)
@@ -499,6 +503,12 @@ def compute_risk_object_level(
                 [true_cls_i[j].cuda()],
                 [matched_conf_boxes_i_j],
                 [matched_conf_cls_i_j],
+            )
+            # TODO: investigate why we need to do that
+            loss_value = (
+                loss_value
+                if len(loss_value.shape) > 0
+                else loss_value.unsqueeze(0)
             )
             losses.append(loss_value)
     losses = torch.stack(losses).ravel()

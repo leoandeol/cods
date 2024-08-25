@@ -119,7 +119,9 @@ class LACLoss(ClassificationLoss):
         """ """
         # if len(conf_cls) == 0:
         #    logger.warning(f"conf_cls is empty : {conf_cls}")
-        loss = torch.logical_not(torch.isin(true_cls, conf_cls)).float()
+        loss = (
+            torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
+        )
         # if loss == 0:
         #    logger.info(f"true_cls: {true_cls}, conf_cls: {conf_cls}")
         return loss
