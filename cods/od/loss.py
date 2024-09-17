@@ -1,11 +1,10 @@
 from logging import getLogger
 from typing import List, Optional
 
-import numpy as np
 import torch
 
 from cods.base.loss import Loss
-from cods.od.data import ODConformalizedPredictions, ODPredictions
+from cods.classif.loss import ClassificationLoss
 from cods.od.utils import (
     # get_covered_areas_of_gt_max,
     get_covered_areas_of_gt_union,
@@ -104,10 +103,87 @@ class ConfidenceLoss(ODLoss):
         )
 
 
-from cods.classif.loss import ClassificationLoss
+class ConfidenceBetterLoss(ODLoss):
+    def __init__(
+        self,
+        upper_bound: int = 1,
+        other_losses: Optional[List[Loss]] = None,
+        **kwargs,
+    ):
+        """Initialize the Confidence Loss.
+
+        Parameters
+        ----------
+        - upper_bound (int): The upper bound of the loss.
+
+        Returns
+        -------
+        - None
+
+        """
+        super().__init__(upper_bound=upper_bound)
+        self.other_losses = other_losses if other_losses is not None else []
+
+    def __call__(
+        self,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
+    ) -> torch.Tensor:
+        """Call the Confidence Loss.
+
+        Parameters
+        ----------
+        - predictions (ODPredictions): The predictions.
+        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+
+        Returns
+        -------
+        - torch.Tensor: The loss value.
+
+        """
+        losses = []
+        if len(true_boxes) == 0:
+            loss = torch.zeros(1).cuda()
+        elif len(conf_boxes) == 0:
+            loss = torch.ones(1).cuda()
+        else:
+            for i, true_boxes_i in enumerate(true_boxes):
+                true_boxes_i = true_boxes_i.cuda()
+                # search for closest box
+                distances = []
+                for conf_boxes_i in conf_boxes[i]:
+                    # TODO doesn"r work because of expansion fo boxes for localization
+                    center_true_x = (true_boxes_i[0] + true_boxes_i[2]) / 2
+                    center_true_y = (true_boxes_i[1] + true_boxes_i[3]) / 2
+                    center_conf_x = (conf_boxes_i[0] + conf_boxes_i[2]) / 2
+                    center_conf_y = (conf_boxes_i[1] + conf_boxes_i[3]) / 2
+                    distance = torch.sqrt(
+                        (center_true_x - center_conf_x) ** 2
+                        + (center_true_y - center_conf_y) ** 2
+                    )
+                    # TODO: improve distance
+                    distances.append(distance)
+                # print(f"distances: {distances}")
+                # TODO arbirtrary
+                loss_i = (
+                    torch.zeros(1).cuda()
+                    if torch.min(torch.stack(distances)) < 100
+                    else torch.ones(1).cuda()
+                )
+                losses.append(loss_i)
+            loss = torch.mean(torch.stack(losses))
+        return max(
+            [loss]
+            + [
+                loss(true_boxes, true_cls, conf_boxes, conf_cls)
+                for loss in self.other_losses
+            ],
+        )
 
 
-class LACLoss(ClassificationLoss):
+class ODBinaryClassificationLoss(ClassificationLoss):
     def __init__(self):
         super().__init__(upper_bound=1)
 
@@ -205,7 +281,7 @@ class ClassificationLossWrapper(ODLoss):
 
 
 # TODO: formulate in classical conformal sense!
-class HausdorffSignedDistanceLoss(ODLoss):
+class ThresholdedRecallLoss(ODLoss):
     def __init__(self, beta: float = 0.25):
         """Initialize the Hausdorff Signed Distance Loss.
 
@@ -403,8 +479,9 @@ class PixelWiseRecallLoss(ODLoss):
     def __call__(
         self,
         true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
         conf_boxes: torch.Tensor,
-        conf_cls: torch.Tensor,
+        conf_cls: torch.Tensor
     ) -> torch.Tensor:
         """Call the Pixel-wise Recall Loss.
 

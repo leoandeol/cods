@@ -1,11 +1,9 @@
-import tqdm
 import numpy as np
 import torch
 from torch import nn
 import torch.nn.functional as F
 import torchvision.transforms as T
 from cods.od.models import ODModel
-from cods.od.data import ODPredictions
 
 
 # TODO all models have a clear set of hyperparameters (dictionary) that can be controlled :

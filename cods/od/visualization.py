@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
-from cods.od.models.detr import DETRModel
 from PIL import Image
+
+from cods.od.data import ODConformalizedPredictions, ODPredictions
+from cods.od.models.detr import DETRModel
 
 
 def plot_preds(
-    preds,
+    predictions: ODPredictions,
+    conformalized_predictions: ODConformalizedPredictions,
     idx,
-    conf_boxes: list,
-    conf_cls: list,
     confidence_threshold=None,
     save_as=None,
 ):
@@ -22,16 +23,21 @@ def plot_preds(
         confidence_threshold (float, optional): Confidence threshold for filtering predictions. If not provided, the threshold from `preds` will be used. Defaults to None.
         save_as (str, optional): File path to save the plot. Defaults to None.
     """
-    img_path = preds.image_paths[idx]
-    pred_boxes = preds.pred_boxes[idx]
-    true_boxes = preds.true_boxes[idx]
-    conf_boxes = conf_boxes[idx]
-    true_cls = preds.true_cls[idx]
-    conf = preds.confidence[idx]
-    cls_probas = preds.pred_cls[idx]
+    img_path = predictions.image_paths[idx]
+    pred_boxes = predictions.pred_boxes[idx]
+    true_boxes = predictions.true_boxes[idx]
+    true_cls = predictions.true_cls[idx]
+    conf = predictions.confidence[idx]
+    cls_probas = predictions.pred_cls[idx]
 
-    if confidence_threshold is None and preds.confidence_threshold is not None:
-        confidence_threshold = preds.confidence_threshold
+    conf_boxes = conformalized_predictions.conf_boxes[idx]
+    conf_cls = conformalized_predictions.conf_cls[idx]
+
+    if (
+        confidence_threshold is None
+        and predictions.confidence_threshold is not None
+    ):
+        confidence_threshold = predictions.confidence_threshold
         print("Using confidence threshold from preds")
     else:
         raise ValueError("Confidence Threshold should be provided")
@@ -42,10 +48,12 @@ def plot_preds(
     cls_probas = cls_probas[keep]
 
     image = Image.open(img_path)
+    image_width, image_height = image.size
+    image.save("./test.png")
     plt.figure(figsize=(14, 14))
     plt.imshow(image)
 
-    def draw_rect(ax, box, color, proba):
+    def draw_rect(ax, box, color, proba, conf=False):
         """
         Draw a rectangle on the plot.
 
@@ -56,6 +64,12 @@ def plot_preds(
             proba (int or numpy.ndarray): Probability or probability distribution of the class.
         """
         x1, y1, x2, y2 = box
+        # correct coordinates to not go outside of bounds
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(image_width, x2)
+        y2 = min(image_height, y2)
+
         ax.add_patch(
             plt.Rectangle(
                 (x1, y1),
@@ -66,26 +80,54 @@ def plot_preds(
                 linewidth=2,
             )
         )
-        if isinstance(proba, int) or len(proba.shape) == 0:
-            text = f"{DETRModel.COCO_CLASSES[proba]}" if proba >= 0 else "conf"
-            ax.text(
-                x2 - 30,
-                y2,
-                text,
-                fontsize=15,
-                bbox=dict(facecolor=color, alpha=0.5),
-            )
+        if conf:
+            if len(proba) <= 3:
+                # Print up to the three labels of the prediction sets
+                text = ", ".join(
+                    [f"{DETRModel.COCO_CLASSES[cl]}" for cl in proba]
+                )
+                ax.text(
+                    x1,
+                    y1,
+                    text,
+                    fontsize=15,
+                    bbox=dict(facecolor=color, alpha=0.5),
+                )
+            else:
+                # Print nb of labels
+                text = f"{len(proba)} labels"
+                ax.text(
+                    x1,
+                    y1,
+                    text,
+                    fontsize=15,
+                    bbox=dict(facecolor=color, alpha=0.5),
+                )
         else:
-            cl = proba.argmax()
-            text = f"{DETRModel.COCO_CLASSES[cl]}: {proba[cl]:0.2f}"
+            if isinstance(proba, int) or len(proba.shape) == 0:
+                text = (
+                    f"{DETRModel.COCO_CLASSES[proba]}"
+                    if proba >= 0
+                    else "conf"
+                )
+                ax.text(
+                    x2 - 30,
+                    y2,
+                    text,
+                    fontsize=15,
+                    bbox=dict(facecolor=color, alpha=0.5),
+                )
+            else:
+                cl = proba.argmax()
+                text = f"{DETRModel.COCO_CLASSES[cl]}: {proba[cl]:0.2f}"
 
-            ax.text(
-                x1,
-                y1,
-                text,
-                fontsize=15,
-                bbox=dict(facecolor=color, alpha=0.5),
-            )
+                ax.text(
+                    x1,
+                    y1,
+                    text,
+                    fontsize=15,
+                    bbox=dict(facecolor=color, alpha=0.5),
+                )
 
     ax = plt.gca()
     for box, cl in zip(true_boxes, true_cls):
@@ -95,9 +137,9 @@ def plot_preds(
         box = box.detach().cpu().numpy()
         draw_rect(ax, box, "red", prob)
 
-    for box in conf_boxes:
+    for box, conf_cls_i in zip(conf_boxes, conf_cls):
         box = box.detach().cpu().numpy()
-        draw_rect(ax, box, "purple", -1)
+        draw_rect(ax, box, "purple", conf_cls_i, conf=True)
 
     plt.axis("off")
     if save_as is not None:
