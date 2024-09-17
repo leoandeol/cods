@@ -1,5 +1,5 @@
 from logging import getLogger
-from typing import Dict, List, Tuple, Union
+from typing import List
 
 logger = getLogger("cods")
 
@@ -7,10 +7,6 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from cods.classif.cp import ClassificationConformalizer
-from cods.classif.data import ClassificationPredictions
-from cods.classif.tr import ClassificationToleranceRegion
-from cods.od.data import ODPredictions
 
 # def get_classif_preds_from_od_preds(
 #     preds: ODPredictions,
@@ -361,33 +357,44 @@ def f_iou(boxA, boxB):
     return iou
 
 
+def assymetric_hausdorff_distance(true_box, pred_box):
+    up_distance = pred_box[1] - true_box[1]
+    down_distance = true_box[3] - pred_box[3]
+    left_distance = pred_box[0] - true_box[0]
+    right_distance = true_box[2] - pred_box[2]
+
+    # Return the maximum signed distance
+    return max(
+        up_distance,
+        down_distance,
+        left_distance,
+        right_distance,
+    )
+
+
 def match_predictions_to_true_boxes(
     preds,
-    distance_function=None,
+    distance_function,
     overload_confidence_threshold=None,
     verbose=False,
 ):
     """ """
+    dist_iou = lambda x, y: -f_iou(x, y)
+    DISTANCE_FUNCTIONS = {
+        "iou": dist_iou,
+        "hausdorff": assymetric_hausdorff_distance,
+    }
+
     if verbose and distance_function is None:
         # defaulting to assymetric hausdorff distance
         print("Using assymetric hausdorff distance")
 
-    def assymetric_hausdorff_distance(true_box, pred_box):
-        up_distance = pred_box[1] - true_box[1]
-        down_distance = true_box[3] - pred_box[3]
-        left_distance = pred_box[0] - true_box[0]
-        right_distance = true_box[2] - pred_box[2]
-
-        # Return the maximum signed distance
-        return max(
-            up_distance,
-            down_distance,
-            left_distance,
-            right_distance,
+    if distance_function not in DISTANCE_FUNCTIONS.keys():
+        raise ValueError(
+            f"Distance function {distance_function} not supported, must be one of {DISTANCE_FUNCTIONS.keys()}",
         )
 
-    if distance_function is None:
-        distance_function = assymetric_hausdorff_distance
+    f_dist = DISTANCE_FUNCTIONS[distance_function]
 
     all_matching = []
     if overload_confidence_threshold is not None:
@@ -415,8 +422,8 @@ def match_predictions_to_true_boxes(
                 # TODO replace with hausdorff distance ?
                 # iou = f_iou(true_box, pred_box)
                 # TODO: test
-                dist = -f_iou(true_box, pred_box)
-                # dist = distance_function(true_box, pred_box)
+                # dist = -f_iou(true_box, pred_box)
+                dist = f_dist(true_box, pred_box)
                 dist = (
                     dist.cpu().numpy()
                     if isinstance(dist, torch.Tensor)
