@@ -7,7 +7,6 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-
 # def get_classif_preds_from_od_preds(
 #     preds: ODPredictions,
 # ) -> ClassificationPredictions:
@@ -460,10 +459,14 @@ def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
         elif mode == "multiplicative":
             w = pred_boxes[i][:, 2] - pred_boxes[i][:, 0]
             h = pred_boxes[i][:, 3] - pred_boxes[i][:, 1]
-            new_box = pred_boxes[i] + torch.mul(
-                torch.FloatTensor([[-w, -h, w, h]]).cuda(),
+            margin = torch.mul(
+                torch.stack(
+                    (-w, -h, w, h),
+                    dim=-1,
+                ),
                 Qst,
             )
+            new_box = pred_boxes[i] + margin
         # TODO: implement
         elif mode == "adaptive":
             raise NotImplementedError("adaptive mode not implemented yet")
