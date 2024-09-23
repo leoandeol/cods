@@ -10,3 +10,5 @@ scikit-learn
 scikit-optimize
 timm
 pycocotools
+ipykernel
+python-dotenv
