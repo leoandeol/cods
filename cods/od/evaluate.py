@@ -140,7 +140,9 @@ class Benchmark:
             group=self.run_id,
         )
         wandb.log({"run_id": self.run_id})
-
+        
+        # Log detailed information about ongoing experiment (parameters)
+        logger.info(f"")
         # Load dataset
         if experiment["dataset"] not in self.DATASETS:
             raise NotImplementedError(
