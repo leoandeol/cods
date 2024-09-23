@@ -31,12 +31,13 @@ DEFAULT_CONFIG = {
     "localization_prediction_set": [
         "additive",
         "multiplicative",
-        # "uncertainty",
+        "uncertainty",
     ],
     "classification_prediction_set": ["lac", "aps"],
     # Below: fixed parameters
     "batch_size": 12,
     "optimizer": "binary_search",
+    "iou_threshold": 0.5,  # TODO: try 0.8 in comparison
 }
 
 
@@ -117,6 +118,9 @@ class Benchmark:
                                                         "optimizer": self.config[
                                                             "optimizer"
                                                         ],
+                                                        "iou_threshold": self.config[
+                                                            "iou_threshold"
+                                                        ],
                                                     }
                                                 )
 
@@ -140,9 +144,9 @@ class Benchmark:
             group=self.run_id,
         )
         wandb.log({"run_id": self.run_id})
-        
+
         # Log detailed information about ongoing experiment (parameters)
-        logger.info(f"")
+        logger.info("")
         # Load dataset
         if experiment["dataset"] not in self.DATASETS:
             raise NotImplementedError(
@@ -169,6 +173,10 @@ class Benchmark:
             batch_size=batch_size,
             collate_fn=dataset._collate_fn,
             shuffle=False,
+            iou_threshold=experiment["iou_threshold"],
+            deletion_method="bayesod"
+            if experiment["localization_prediction_set"] == "uncertainty"
+            else "nms",
         )
         preds_val = model.build_predictions(
             data_val,
@@ -177,6 +185,10 @@ class Benchmark:
             batch_size=batch_size,
             collate_fn=dataset._collate_fn,
             shuffle=False,
+            iou_threshold=experiment["iou_threshold"],
+            deletion_method="bayesod"
+            if experiment["localization_prediction_set"] == "uncertainty"
+            else "nms",
         )
 
         conf = ODConformalizer(

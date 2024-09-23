@@ -170,3 +170,4 @@ work_dirs/
 wandb/
 .vscode/
 saved_predictions/
+test.png

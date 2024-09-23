@@ -50,11 +50,14 @@ class ODPredictions(Predictions):
         dataset_name: str,
         split_name: str,
         image_paths,
+        image_shapes,
         true_boxes,
         pred_boxes,
         confidences,
         true_cls,
         pred_cls,
+        names,
+        pred_boxes_uncertainty=None,
         unique_id: Optional[int] = None,
     ):
         super().__init__(
@@ -64,11 +67,14 @@ class ODPredictions(Predictions):
             task_name="object_detection",
         )
         self.image_paths = image_paths
+        self.image_shapes = image_shapes
         self.true_boxes = true_boxes
         self.pred_boxes = pred_boxes
         self.confidence = confidences
         self.true_cls = true_cls
         self.pred_cls = pred_cls
+        self.names = names
+        self.pred_boxes_uncertainty = pred_boxes_uncertainty
 
         # ClassificationPredictions instance
         self.preds_cls: Optional[Any] = None

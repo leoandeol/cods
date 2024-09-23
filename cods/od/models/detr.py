@@ -1,10 +1,9 @@
 import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
 import torchvision.transforms as T
-from cods.od.models import ODModel
 
+from cods.od.models import ODModel, ResizeChannels
 
 # TODO all models have a clear set of hyperparameters (dictionary) that can be controlled :
 # e.g for YOLO: 4 margins, objectness, translation, scale, etc...
@@ -31,116 +30,100 @@ def rescale_bboxes(out_bbox, size):
     return b
 
 
-class ResizeChannels(nn.Module):
-    def __init__(self, num_channels):
-        super().__init__()
-        self.num_channels = num_channels
-
-    # for if 1 channel, repeat 3 times, if 3 channels, don't change the image
-    def forward(self, image):
-        if image.shape[0] == 1:
-            return image.repeat(3, 1, 1)
-        else:
-            return image
-
-
-# Class definition
-
-
 class DETRModel(ODModel):
-    COCO_CLASSES = [
-        "N/A",
-        "person",
-        "bicycle",
-        "car",
-        "motorcycle",
-        "airplane",
-        "bus",
-        "train",
-        "truck",
-        "boat",
-        "traffic light",
-        "fire hydrant",
-        "N/A",
-        "stop sign",
-        "parking meter",
-        "bench",
-        "bird",
-        "cat",
-        "dog",
-        "horse",
-        "sheep",
-        "cow",
-        "elephant",
-        "bear",
-        "zebra",
-        "giraffe",
-        "N/A",
-        "backpack",
-        "umbrella",
-        "N/A",
-        "N/A",
-        "handbag",
-        "tie",
-        "suitcase",
-        "frisbee",
-        "skis",
-        "snowboard",
-        "sports ball",
-        "kite",
-        "baseball bat",
-        "baseball glove",
-        "skateboard",
-        "surfboard",
-        "tennis racket",
-        "bottle",
-        "N/A",
-        "wine glass",
-        "cup",
-        "fork",
-        "knife",
-        "spoon",
-        "bowl",
-        "banana",
-        "apple",
-        "sandwich",
-        "orange",
-        "broccoli",
-        "carrot",
-        "hot dog",
-        "pizza",
-        "donut",
-        "cake",
-        "chair",
-        "couch",
-        "potted plant",
-        "bed",
-        "N/A",
-        "dining table",
-        "N/A",
-        "N/A",
-        "toilet",
-        "N/A",
-        "tv",
-        "laptop",
-        "mouse",
-        "remote",
-        "keyboard",
-        "cell phone",
-        "microwave",
-        "oven",
-        "toaster",
-        "sink",
-        "refrigerator",
-        "N/A",
-        "book",
-        "clock",
-        "vase",
-        "scissors",
-        "teddy bear",
-        "hair drier",
-        "toothbrush",
-    ]
+    # COCO_CLASSES = [
+    #     "N/A",
+    #     "person",
+    #     "bicycle",
+    #     "car",
+    #     "motorcycle",
+    #     "airplane",
+    #     "bus",
+    #     "train",
+    #     "truck",
+    #     "boat",
+    #     "traffic light",
+    #     "fire hydrant",
+    #     "N/A",
+    #     "stop sign",
+    #     "parking meter",
+    #     "bench",
+    #     "bird",
+    #     "cat",
+    #     "dog",
+    #     "horse",
+    #     "sheep",
+    #     "cow",
+    #     "elephant",
+    #     "bear",
+    #     "zebra",
+    #     "giraffe",
+    #     "N/A",
+    #     "backpack",
+    #     "umbrella",
+    #     "N/A",
+    #     "N/A",
+    #     "handbag",
+    #     "tie",
+    #     "suitcase",
+    #     "frisbee",
+    #     "skis",
+    #     "snowboard",
+    #     "sports ball",
+    #     "kite",
+    #     "baseball bat",
+    #     "baseball glove",
+    #     "skateboard",
+    #     "surfboard",
+    #     "tennis racket",
+    #     "bottle",
+    #     "N/A",
+    #     "wine glass",
+    #     "cup",
+    #     "fork",
+    #     "knife",
+    #     "spoon",
+    #     "bowl",
+    #     "banana",
+    #     "apple",
+    #     "sandwich",
+    #     "orange",
+    #     "broccoli",
+    #     "carrot",
+    #     "hot dog",
+    #     "pizza",
+    #     "donut",
+    #     "cake",
+    #     "chair",
+    #     "couch",
+    #     "potted plant",
+    #     "bed",
+    #     "N/A",
+    #     "dining table",
+    #     "N/A",
+    #     "N/A",
+    #     "toilet",
+    #     "N/A",
+    #     "tv",
+    #     "laptop",
+    #     "mouse",
+    #     "remote",
+    #     "keyboard",
+    #     "cell phone",
+    #     "microwave",
+    #     "oven",
+    #     "toaster",
+    #     "sink",
+    #     "refrigerator",
+    #     "N/A",
+    #     "book",
+    #     "clock",
+    #     "vase",
+    #     "scissors",
+    #     "teddy bear",
+    #     "hair drier",
+    #     "toothbrush",
+    # ]
 
     MODEL_NAMES = [
         "detr_resnet50",
@@ -213,86 +196,6 @@ class DETRModel(ODModel):
 
         return scaled_pred_boxes, confidences, pred_cls
 
-    # def build_predictions(
-    #     self,
-    #     dataset,
-    #     dataset_name: str,
-    #     split_name: str,
-    #     batch_size: int,
-    #     shuffle: bool = False,
-    #     verbose: bool = True,
-    #     **kwargs,
-    # ) -> ODPredictions:
-    #     preds = self._load_preds_if_exists(
-    #         dataset_name=dataset_name,
-    #         split_name=split_name,
-    #         task_name="object_detection",
-    #     )
-    #     if preds is not None:
-    #         if verbose:
-    #             print("Predictions already exist, loading them...")
-    #         return preds
-    #     elif verbose:
-    #         print("Predictions do not exist, building them...")
-
-    #     dataloader = torch.utils.data.DataLoader(
-    #         dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
-    #     )
-
-    #     pbar = enumerate(tqdm.tqdm(dataloader, disable=not verbose))
-
-    #     all_image_paths = []
-    #     all_true_boxes = []
-    #     all_pred_boxes = []
-    #     all_confidences = []
-    #     all_true_cls = []
-    #     all_pred_cls = []
-
-    #     with torch.no_grad():
-    #         for i, batch in pbar:
-
-    #             image_paths, true_boxes, pred_boxes, confidences, true_cls, pred_cls = (
-    #                 self.predict_batch(batch)
-    #             )
-
-    #             all_image_paths.append(image_paths)
-    #             all_true_boxes.append(true_boxes)
-    #             all_pred_boxes.append(pred_boxes)
-    #             all_confidences.append(confidences)
-    #             all_true_cls.append(true_cls)
-    #             all_pred_cls.append(pred_cls)
-
-    #     all_image_paths = list(
-    #         [path for arr_path in all_image_paths for path in arr_path]
-    #     )
-    #     all_true_boxes = list([box for arr_box in all_true_boxes for box in arr_box])
-    #     all_pred_boxes = list([box for arr_box in all_pred_boxes for box in arr_box])
-    #     all_confidences = list(
-    #         [
-    #             confidence
-    #             for arr_confidence in all_confidences
-    #             for confidence in arr_confidence
-    #         ]
-    #     )
-    #     all_true_cls = list([cls for arr_cls in all_true_cls for cls in arr_cls])
-    #     all_pred_cls = list(
-    #         [proba for arr_proba in all_pred_cls for proba in arr_proba]
-    #     )
-    #     # or rather np.concatenate(
-
-    #     preds = ODPredictions(
-    #         dataset_name=dataset_name,
-    #         split_name=split_name,
-    #         image_paths=all_image_paths,
-    #         true_boxes=all_true_boxes,
-    #         pred_boxes=all_pred_boxes,
-    #         confidences=all_confidences,
-    #         true_cls=all_true_cls,
-    #         pred_cls=all_pred_cls,
-    #     )
-    #     self._save_preds(preds)
-    #     return preds
-
     def predict_batch(self, batch: list, **kwargs) -> dict:
         """
         Predicts the output given a batch of input tensors.
@@ -347,6 +250,7 @@ class DETRModel(ODModel):
 
         return {
             "image_paths": image_paths,
+            "image_shapes": image_sizes,
             "true_boxes": true_boxes,
             "pred_boxes": pred_boxes,
             "confidences": confidences,
