@@ -167,9 +167,18 @@ class ConfidenceBetterLoss(ODLoss):
                     distances.append(distance)
                 # print(f"distances: {distances}")
                 # TODO arbirtrary
+
+                # HACK: communicated by @leoandeol, temp fix. FIXME
+                if len(distances) == 0:
+                    loss_i = torch.ones(1).cuda()
+                    continue
+                # END HACK
+
+                # FIXME, WARNING: Here is Leo's MAGIC NUMBER "< 100", must be handled properly.
+                LEOS_MAGIC_NUMBER = 100
                 loss_i = (
                     torch.zeros(1).cuda()
-                    if torch.min(torch.stack(distances)) < 100
+                    if torch.min(torch.stack(distances)) < LEOS_MAGIC_NUMBER
                     else torch.ones(1).cuda()
                 )
                 losses.append(loss_i)
