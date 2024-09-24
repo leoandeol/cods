@@ -51,12 +51,17 @@ class BinarySearchOptimizer(Optimizer):
         pbar = tqdm(range(steps), disable=not verbose)
 
         for step in pbar:
+            print(f"[LUCA dbg] {step = }")
             for id, (lower, upper) in enumerate(zip(lowers, uppers)):
+                print(f"[LUCA dbg] {id = }")
                 if upper - lower < epsilon:
                     break
                 lbd = (lower + upper) / 2
                 current_lbds[id] = lbd
+
+                print(f" --- eval obj: START")
                 risk = objective_function(*current_lbds)
+                print(f" --- eval obj: END")
 
                 pbar.set_description(
                     f"[{lower:.2f}, {upper:.2f}] -> {current_lbds}. Corrected Risk = {risk:.2f}"

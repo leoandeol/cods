@@ -656,6 +656,7 @@ class ConfidenceConformalizer(Conformalizer):
 
             """
             # TODO(leoandeol): super costly and probably redundant
+            print(f'[LUCA dbg] COSTLY RUN: objective_function with lbd={lbd}')
             # URGENT: fix this : store values of distances in matching so it's instantaneous to redo
             match_predictions_to_true_boxes(
                 predictions,
@@ -663,6 +664,7 @@ class ConfidenceConformalizer(Conformalizer):
                 verbose=False,
                 overload_confidence_threshold=1 - lbd,
             )
+            print(" === matching call: done")
             # for matching we always provide the full conf_boxes list
             # conf_boxes = list(
             #     [
@@ -1475,7 +1477,7 @@ class ODConformalizer(Conformalizer):
             logger.info("Matching Predictions to True Boxes")
 
         match_predictions_to_true_boxes(
-            predictions,
+            predictions, # ref to predictions object, modified in place within func call
             distance_function=self.matching_function,
             verbose=True,
             overload_confidence_threshold=optimistic_confidence_threshold,
