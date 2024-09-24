@@ -372,7 +372,7 @@ def assymetric_hausdorff_distance(true_box, pred_box):
     )
 
 
-def match_predictions_to_true_boxes(
+def _match_predictions_to_true_boxes(
     preds,
     distance_function,
     overload_confidence_threshold=None,
@@ -407,7 +407,6 @@ def match_predictions_to_true_boxes(
         conf_thr = 0
 
     # filter pred_boxes with low objectness
-    # preds_boxes = [x[y >= conf_thr] for x, y in zip(preds.pred_boxes, preds.confidence)]
     preds_boxes_cpu = [
         x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
         for x, y in zip(preds.pred_boxes, preds.confidence)
@@ -443,16 +442,14 @@ def match_predictions_to_true_boxes(
     # return all_matching
 
 
-def _match_predictions_to_true_boxes(
+def match_predictions_to_true_boxes(
     preds,
     distance_function,
     overload_confidence_threshold=None,
     verbose=False,
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
-
     print(f"[LUCA dbg] --- matching fest")
-
     dist_iou = lambda x, y: -f_iou(x, y)
     DISTANCE_FUNCTIONS = {
         "iou": dist_iou,
@@ -460,8 +457,7 @@ def _match_predictions_to_true_boxes(
     }
 
     if verbose and distance_function is None:
-        # defaulting to assymetric hausdorff distance
-        print("Using assymetric hausdorff distance")
+        print("Using default:  asymmetric Hausdorff distance")
 
     if distance_function not in DISTANCE_FUNCTIONS.keys():
         raise ValueError(
@@ -478,41 +474,50 @@ def _match_predictions_to_true_boxes(
     else:
         conf_thr = 0
     # filter pred_boxes with low objectness
-    preds_boxes = [
-        x[y >= conf_thr]  # if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
-        for x, y in zip(preds.pred_boxes, preds.confidence)
-    ]
+    preds_boxes = [x[y >= conf_thr] for x, y in zip(preds.pred_boxes, preds.confidence)]
 
-    # for pred_boxes, true_boxes in tqdm(
-    #     zip(preds_boxes, preds.true_boxes),
-    #     disable=not verbose,
-    # ):
-    for pred_boxes, true_boxes in zip(preds_boxes, preds.true_boxes):
+    ## [LUCA]
+    # preds_boxes = [
+    #     x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
+    #     for x, y in zip(preds.pred_boxes, preds.confidence)
+    # ]
+
+    # preds_boxes_cpu = [
+    #     x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
+    #     for x, y in zip(preds.pred_boxes, preds.confidence)
+    # ]
+    true_boxes_cpu = [x.cpu().numpy() for x in preds.true_boxes]
+
+    for z_, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes, preds.true_boxes)):
+        # for z_, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes, true_boxes_cpu)):
+        # for pred_boxes, true_boxes in zip(preds_boxes_cpu, true_boxes_cpu):
+        # for pred_boxes, true_boxes in zip(preds_boxes, preds.true_boxes):
         matching = []
+        if z_ % 200 == 0:
+            print(f"[LUCA dbg] matching iter {z_=}")
 
         for i, true_box in enumerate(true_boxes):
             distances = []
 
-            for j, pred_box in enumerate(pred_boxes):
-                # TODO replace with hausdorff distance ?
-                # iou = f_iou(true_box, pred_box)
-                # TODO: test
-                # dist = -f_iou(true_box, pred_box)
-                dist = f_dist(true_box, pred_box)
-                dist = dist.cpu().numpy() if isinstance(dist, torch.Tensor) else dist
-                # print(dist)
-                distances.append(dist)  # .cpu().numpy())
             if len(pred_boxes) == 0:
                 matching.append([])
                 continue
-            # TODO: replace this by possible a set of matches
-            # TODO: must always be an array
-            matching.append([np.argmin(distances)])  # np.argmax(ious))
-            # print(matching[-1])
+            else:
+                for j, pred_box in enumerate(pred_boxes):
+                    dist = f_dist(true_box, pred_box)
+                    dist = (
+                        dist.cpu().numpy() if isinstance(dist, torch.Tensor) else dist
+                    )
+                    distances.append(dist)  # .cpu().numpy())
+
+                # TODO: replace this by possible a set of matches
+                # TODO: must always be an array
+                matching.append([np.argmin(distances)])  # np.argmax(ious))
+                # print(matching[-1])
         all_matching.append(matching)
         # break
 
-    print(f"[LUCA dbg] === HERE")
+    print(f"[LUCA dbg] === HERE: exit matching fest")
     preds.matching = all_matching
     # return all_matching
 
@@ -561,15 +566,24 @@ def compute_risk_object_level(
     true_cls = predictions.true_cls
     conf_boxes = conformalized_predictions.conf_boxes
     conf_cls = conformalized_predictions.conf_cls
-    for i in range(len(true_boxes)):
-        true_boxes_i = true_boxes[i]
+
+    for i, tb_all in enumerate(true_boxes):
+        true_boxes_i = tb_all  # true_boxes[i]
         true_cls_i = true_cls[i].cuda()  # TODO: why the cuda for cls and not boxes
         conf_boxes_i = conf_boxes[i]
         conf_cls_i = conf_cls[i]
         matching_i = predictions.matching[i]
-        for j in range(len(true_boxes_i)):
+
+        # for j in range(len(true_boxes_i)):
+        for j, tb_i in enumerate(true_boxes_i):
             matching_i_j = matching_i[j]
-            if len(matching_i_j) == 0:
+
+            # if not matching_i_j:
+            #     print(f'No match for {i=}, {j=}')
+            #     raise RuntimeError("No match found")
+
+            if len(matching_i_j) == 0 or not matching_i_j:
+                # if len(matching_i_j) == 0:
                 matched_conf_boxes_i_j = torch.tensor([]).float().cuda()
                 matched_conf_cls_i_j = torch.tensor([]).float().cuda()
                 # Unsure above

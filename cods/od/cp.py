@@ -35,6 +35,7 @@ from cods.od.loss import (
     ThresholdedRecallLoss,
 )
 from cods.od.metrics import compute_global_coverage
+import time
 from cods.od.score import (
     MinAdditiveSignedAssymetricHausdorffNCScore,
     MinMultiplicativeSignedAssymetricHausdorffNCScore,
@@ -658,13 +659,18 @@ class ConfidenceConformalizer(Conformalizer):
             # TODO(leoandeol): super costly and probably redundant
             print(f'[LUCA dbg] COSTLY RUN: objective_function with lbd={lbd}')
             # URGENT: fix this : store values of distances in matching so it's instantaneous to redo
+            start_time = time.time()
+
             match_predictions_to_true_boxes(
                 predictions,
                 distance_function=self.matching_function,
                 verbose=False,
                 overload_confidence_threshold=1 - lbd,
             )
-            print(" === matching call: done")
+
+            end_time = time.time()
+            wall_time = end_time - start_time
+            print(f" === matching call: {wall_time} seconds")
             # for matching we always provide the full conf_boxes list
             # conf_boxes = list(
             #     [
