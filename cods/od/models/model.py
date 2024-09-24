@@ -92,7 +92,8 @@ class ODModel(Model):
             dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
         )
 
-        self.model.eval()
+        #TODO: dangerous for YOLO
+        #self.model.eval()
 
         pbar = enumerate(tqdm.tqdm(dataloader, disable=not verbose))
 

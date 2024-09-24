@@ -3,7 +3,8 @@ import torch
 import torch.nn.functional as F
 import torchvision.transforms as T
 
-from cods.od.models import ODModel, ResizeChannels
+from cods.od.models.model import ODModel
+from cods.od.models.utils import ResizeChannels
 
 # TODO all models have a clear set of hyperparameters (dictionary) that can be controlled :
 # e.g for YOLO: 4 margins, objectness, translation, scale, etc...

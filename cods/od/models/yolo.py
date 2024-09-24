@@ -4,7 +4,8 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 from ultralytics import YOLO
 
-from cods.od.models import ODModel, ResizeChannels
+from cods.od.models.model import ODModel
+from cods.od.models.utils import ResizeChannels
 
 
 def xywh2xyxy_scaled(x, width_scale, height_scale):
@@ -72,14 +73,15 @@ class YOLOModel(ODModel):
         self.device = device
         # self.model.eval()
         # self.model.to(device)
+        # TODO debug
         self.transform = T.Compose(
             [
-                T.Resize(800),
-                T.ToTensor(),
-                ResizeChannels(3),
-                T.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
-                ),
+                # T.Resize(800),
+                # T.ToTensor(),
+                # ResizeChannels(3),
+                # T.Normalize(
+                #     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                # ),
             ]
         )
 
@@ -94,25 +96,23 @@ class YOLOModel(ODModel):
         all_confs = []
         all_probs = []
         model_width, model_height = model_input_size
-        for i in len(raw_output):
+        for i in range(len(raw_output)):
             original_width, original_height = img_shapes[i]
+
+            box_output = raw_output[i].t()
 
             # Calculate scaling factors
             width_scale = original_width / model_width
             height_scale = original_height / model_height
 
             # convert to [x0, y0, x1, y1] format
-            out_boxes = raw_output[i, :4]
+            out_boxes = box_output[:, :4]
             boxes = xywh2xyxy_scaled(out_boxes, width_scale, height_scale)
 
-            cls_probs = torch.softmax(raw_output[i, 4:], dim=-1)
+            cls_probs = torch.softmax(box_output[:, 4:], dim=-1)
 
             final_confidence, predicted_class = torch.max(
-                raw_output[i, 4:], dim=-1
-            )
-            final_confidence, predicted_class = (
-                final_confidence.item(),
-                predicted_class.item(),
+                box_output[:, 4:], dim=-1
             )
 
             all_boxes.append(boxes)
@@ -144,7 +144,7 @@ class YOLOModel(ODModel):
         ).cuda()
 
         images = [self.transform(image) for image in images]
-        images = list([image.to(self.device) for image in images])
+        # images = list([image.to(self.device) for image in images])
         self.model(images)
         raw_output = self.model.raw_output
         model_input_size = self.model.input_shape
