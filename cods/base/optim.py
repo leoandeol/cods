@@ -4,13 +4,11 @@ from typing import Callable, List, Tuple, Union
 import numpy as np
 from skopt import gp_minimize
 from tqdm import tqdm
-import time
 
 
 class Optimizer:
-    def optimize(
-        self, objective_function: Callable, alpha: float, **kwargs
-    ) -> float:
+
+    def optimize(self, objective_function: Callable, alpha: float, **kwargs) -> float:
         raise NotImplementedError("Optimizer is an abstract class")
 
 
@@ -33,9 +31,7 @@ class BinarySearchOptimizer(Optimizer):
         epsilon:
         objective_function: function of one parameter lbd (use partials), which includes the correction part
         """
-        if not isinstance(bounds[0], list) and not isinstance(
-            bounds[0], tuple
-        ):
+        if not isinstance(bounds[0], list) and not isinstance(bounds[0], tuple):
             bounds = [bounds]
 
         lowers = []
@@ -58,11 +54,7 @@ class BinarySearchOptimizer(Optimizer):
                 lbd = (lower + upper) / 2
                 current_lbds[id] = lbd
 
-                start_time = time.time()
                 risk = objective_function(*current_lbds)
-                end_time = time.time()
-                execution_time = end_time - start_time
-                # print(f"objectve_function time: {execution_time} seconds")
 
                 pbar.set_description(
                     f"[{lower:.2f}, {upper:.2f}] -> {current_lbds}. Corrected Risk = {risk:.2f}"
@@ -116,8 +108,7 @@ class GaussianProcessOptimizer(Optimizer):
             fun_opti,
             (
                 [bounds]
-                if not isinstance(bounds[0], list)
-                and not isinstance(bounds[0], tuple)
+                if not isinstance(bounds[0], list) and not isinstance(bounds[0], tuple)
                 else bounds
             ),
             n_calls=steps,
