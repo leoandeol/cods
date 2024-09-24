@@ -128,10 +128,10 @@ class ConfidenceBetterLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor,
-        true_cls: torch.Tensor,
-        conf_boxes: torch.Tensor,
-        conf_cls: torch.Tensor,
+        true_boxes: torch.Tensor | List[torch.Tensor],
+        true_cls: torch.Tensor | List[torch.Tensor],
+        conf_boxes: torch.Tensor | List[torch.Tensor],
+        conf_cls: List[torch.Tensor],
     ) -> torch.Tensor:
         """Call the Confidence Loss.
 
@@ -152,7 +152,6 @@ class ConfidenceBetterLoss(ODLoss):
             loss = torch.ones(1).cuda()
         else:
             for i, true_boxes_i in enumerate(true_boxes):
-                true_boxes_i = true_boxes_i.cuda()
                 # search for closest box
                 distances = []
                 for conf_boxes_i in conf_boxes[i]:
@@ -167,6 +166,8 @@ class ConfidenceBetterLoss(ODLoss):
                     )
                     # TODO: improve distance
                     distances.append(distance)
+                # print(f"distances: {distances}")
+                # TODO arbirtrary
 
                 if len(distances) == 0:
                     loss_i = torch.ones(1).cuda()

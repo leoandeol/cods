@@ -144,7 +144,7 @@ class ODModel(Model):
             [shape for arr_shape in all_image_shapes for shape in arr_shape]
         )
         all_true_boxes = list(
-            [box for arr_box in all_true_boxes for box in arr_box]
+            [box.cuda() for arr_box in all_true_boxes for box in arr_box]
         )
         all_pred_boxes = list(
             [box for arr_box in all_pred_boxes for box in arr_box]
@@ -167,7 +167,7 @@ class ODModel(Model):
             ]
         )
         all_true_cls = list(
-            [cls for arr_cls in all_true_cls for cls in arr_cls]
+            [cls.cuda() for arr_cls in all_true_cls for cls in arr_cls]
         )
         all_pred_cls = list(
             [proba for arr_proba in all_pred_cls for proba in arr_proba]
