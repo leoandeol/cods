@@ -1,4 +1,6 @@
+import torch
 import torch.nn as nn
+from torchvision.ops import box_iou
 
 
 class ResizeChannels(nn.Module):
@@ -12,3 +14,25 @@ class ResizeChannels(nn.Module):
             return image.repeat(3, 1, 1)
         else:
             return image
+
+
+def bayesod(
+    pred_boxes: torch.Tensor,
+    confidences: torch.Tensor,
+    pred_cls: torch.Tensor,
+    iou_threshold: float,
+):
+    """_summary_
+
+    Args:
+        pred_boxes (torch.Tensor): _description_
+        confidences (torch.Tensor): _description_
+        pred_cls (torch.Tensor): _description_
+        iou_threshold (float): _description_
+    """
+
+    ious = box_iou(pred_boxes, pred_boxes)
+
+    ious_overlap = ious > iou_threshold
+    
+    

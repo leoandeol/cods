@@ -52,6 +52,7 @@ class BinarySearchOptimizer(Optimizer):
 
         for step in pbar:
             for id, (lower, upper) in enumerate(zip(lowers, uppers)):
+                # Stop based on lambda
                 if upper - lower < epsilon:
                     break
                 lbd = (lower + upper) / 2

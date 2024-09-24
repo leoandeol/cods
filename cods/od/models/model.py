@@ -6,6 +6,7 @@ import tqdm
 
 from cods.base.models import Model
 from cods.od.data import ODPredictions
+from cods.od.models.utils import bayesod
 
 
 class ODModel(Model):
@@ -225,7 +226,12 @@ class ODModel(Model):
                 new_pred_cls.append(new_pred_cl)
                 new_confidences.append(new_confidence)
             elif method.lower() == "bayesod":
-                raise NotImplementedError("To be implemented soon")
+                new_pred_boxes, new_confs, new_pred_cls = bayesod(
+                    pred_boxes[i],
+                    confidences[i],
+                    pred_cls[i],
+                    iou_threshold=iou_threshold,
+                )
             else:
                 raise NotImplementedError(
                     "Not Implemented, method must be one of 'nms', 'bayesod'"

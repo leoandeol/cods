@@ -378,6 +378,7 @@ def match_predictions_to_true_boxes(
     verbose=False,
 ):
     """ """
+    # TODO(leo): switch to gpu
     dist_iou = lambda x, y: -f_iou(x, y)
     DISTANCE_FUNCTIONS = {
         "iou": dist_iou,
@@ -404,13 +405,16 @@ def match_predictions_to_true_boxes(
         conf_thr = 0
     # filter pred_boxes with low objectness
     preds_boxes = [
-        x[
-            y >= conf_thr
+        x.cpu().numpy()[
+            y.cpu().numpy() >= conf_thr
         ]  # if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
         for x, y in zip(preds.pred_boxes, preds.confidence)
     ]
+    true_boxes = [
+        true_boxes_i.cpu().numpy() for true_boxes_i in preds.true_boxes
+    ]
     for pred_boxes, true_boxes in tqdm(
-        zip(preds_boxes, preds.true_boxes),
+        zip(preds_boxes, true_boxes),
         disable=not verbose,
     ):
         matching = []
