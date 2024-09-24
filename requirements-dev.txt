@@ -1,4 +1,5 @@
 ruff
+ipykernel
 jupyter
 notebook
 ipykernel

@@ -57,6 +57,7 @@ class BinarySearchOptimizer(Optimizer):
                     break
                 lbd = (lower + upper) / 2
                 current_lbds[id] = lbd
+
                 risk = objective_function(*current_lbds)
 
                 pbar.set_description(
