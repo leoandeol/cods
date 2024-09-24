@@ -380,6 +380,7 @@ def match_predictions_to_true_boxes(
     verbose=False,
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
+    # TODO(leo): switch to gpu
     dist_iou = lambda x, y: -f_iou(x, y)
     DISTANCE_FUNCTIONS = {
         "iou": dist_iou,
@@ -404,22 +405,19 @@ def match_predictions_to_true_boxes(
     else:
         conf_thr = 0
     # filter pred_boxes with low objectness
-    # preds_boxes = [x[y >= conf_thr] for x, y in zip(preds.pred_boxes, preds.confidence)]
-
-    ## [LUCA]
-    preds_boxes_cpu = [
-        x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
+    preds_boxes = [
+        x.cpu().numpy()[
+            y.cpu().numpy() >= conf_thr
+        ]  # if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
         for x, y in zip(preds.pred_boxes, preds.confidence)
     ]
-
-    true_boxes_cpu = [x.cpu().numpy() for x in preds.true_boxes]
-
-    for _, (pred_boxes, true_boxes) in enumerate(
-        zip(preds_boxes_cpu, true_boxes_cpu)
+    true_boxes = [
+        true_boxes_i.cpu().numpy() for true_boxes_i in preds.true_boxes
+    ]
+    for pred_boxes, true_boxes in tqdm(
+        zip(preds_boxes, true_boxes),
+        disable=not verbose,
     ):
-        # for z_, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes, preds.true_boxes)):
-        # for pred_boxes, true_boxes in zip(preds_boxes_cpu, true_boxes_cpu):
-        # for pred_boxes, true_boxes in zip(preds_boxes, preds.true_boxes):
         matching = []
 
         for i, true_box in enumerate(true_boxes):
