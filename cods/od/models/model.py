@@ -92,8 +92,8 @@ class ODModel(Model):
             dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
         )
 
-        #TODO: dangerous for YOLO
-        #self.model.eval()
+        # TODO: dangerous for YOLO
+        # self.model.eval()
 
         pbar = enumerate(tqdm.tqdm(dataloader, disable=not verbose))
 
@@ -149,7 +149,7 @@ class ODModel(Model):
             [box for arr_box in all_pred_boxes for box in arr_box]
         )
         if len(all_pred_boxes_unc) > 0:
-            all_pred_boxes = list(
+            all_pred_boxes_unc = list(
                 [
                     box_unc
                     for arr_box_unc in all_pred_boxes_unc
@@ -157,7 +157,7 @@ class ODModel(Model):
                 ]
             )
         else:
-            all_pred_boxes = None
+            all_pred_boxes_unc = None
         all_confidences = list(
             [
                 confidence
