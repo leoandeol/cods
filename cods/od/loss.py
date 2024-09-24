@@ -107,6 +107,7 @@ class ConfidenceBetterLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
+        distance_threshold: float = 100,
         other_losses: Optional[List[Loss]] = None,
         **kwargs,
     ):
@@ -122,6 +123,7 @@ class ConfidenceBetterLoss(ODLoss):
 
         """
         super().__init__(upper_bound=upper_bound)
+        self.distance_threshold = distance_threshold
         self.other_losses = other_losses if other_losses is not None else []
 
     def __call__(
@@ -168,17 +170,16 @@ class ConfidenceBetterLoss(ODLoss):
                 # print(f"distances: {distances}")
                 # TODO arbirtrary
 
-                # HACK: communicated by @leoandeol, temp fix. FIXME
+
                 if len(distances) == 0:
                     loss_i = torch.ones(1).cuda()
+                    losses.append(loss_i)
                     continue
-                # END HACK
 
-                # FIXME, WARNING: Here is Leo's MAGIC NUMBER "< 100", must be handled properly.
-                LEOS_MAGIC_NUMBER = 100
                 loss_i = (
                     torch.zeros(1).cuda()
-                    if torch.min(torch.stack(distances)) < LEOS_MAGIC_NUMBER
+                    if torch.min(torch.stack(distances))
+                    < self.distance_threshold
                     else torch.ones(1).cuda()
                 )
                 losses.append(loss_i)
@@ -490,7 +491,7 @@ class PixelWiseRecallLoss(ODLoss):
         true_boxes: torch.Tensor,
         true_cls: torch.Tensor,
         conf_boxes: torch.Tensor,
-        conf_cls: torch.Tensor
+        conf_cls: torch.Tensor,
     ) -> torch.Tensor:
         """Call the Pixel-wise Recall Loss.
 
