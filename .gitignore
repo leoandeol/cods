@@ -171,3 +171,5 @@ wandb/
 .vscode/
 saved_predictions/
 test.png
+*.pt
+*.pth

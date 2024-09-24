@@ -19,7 +19,7 @@ def xywh2xyxy_scaled(x, width_scale, height_scale):
 
 class AlteredYOLO(YOLO):
     def __init__(self, model_path):
-        super().__init__(model_path)
+        super().__init__(model_path, verbose=False)
         self.raw_output = None
 
     def predict(self, source=None, stream=False, **kwargs):
@@ -35,7 +35,7 @@ class AlteredYOLO(YOLO):
         end_hook = self.model.model[-1].register_forward_hook(output_hook)
 
         # Run prediction
-        results = super().predict(source, stream, **kwargs)
+        results = super().predict(source, stream, verbose=False, **kwargs)
 
         # Remove the hook
         start_hook.remove()
@@ -108,7 +108,7 @@ class YOLOModel(ODModel):
             # convert to [x0, y0, x1, y1] format
             out_boxes = box_output[:, :4]
             boxes = xywh2xyxy_scaled(out_boxes, width_scale, height_scale)
-
+            
             cls_probs = torch.softmax(box_output[:, 4:], dim=-1)
 
             final_confidence, predicted_class = torch.max(
