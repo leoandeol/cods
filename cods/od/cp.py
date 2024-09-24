@@ -657,9 +657,7 @@ class ConfidenceConformalizer(Conformalizer):
 
             """
             # TODO(leoandeol): super costly and probably redundant
-            print(f'[LUCA dbg] COSTLY RUN: objective_function with lbd={lbd}')
             # URGENT: fix this : store values of distances in matching so it's instantaneous to redo
-            start_time = time.time()
 
             match_predictions_to_true_boxes(
                 predictions,
@@ -668,9 +666,6 @@ class ConfidenceConformalizer(Conformalizer):
                 overload_confidence_threshold=1 - lbd,
             )
 
-            end_time = time.time()
-            wall_time = end_time - start_time
-            print(f" === matching call: {wall_time} seconds")
             # for matching we always provide the full conf_boxes list
             # conf_boxes = list(
             #     [
@@ -688,11 +683,15 @@ class ConfidenceConformalizer(Conformalizer):
             # First enlarge bounding boxes to the max size
             # TODO(leoandeol): this is hardcoded, we should get input image size somewhere
             conf_boxes = predictions.pred_boxes
+
+            ## FIXME: MUST BE HANDLED PROPERLY FOR EACH INPUT IMAGE SIZE
+            MAGIC_BIG_MARGIN = [2500, 2500, 2500, 2500]
             conf_boxes = apply_margins(
                 conf_boxes,
-                [500, 500, 500, 500],
+                MAGIC_BIG_MARGIN,
                 mode="additive",
             )
+
             # Second, prediction sets for classification with always everything
             n_classes = len(predictions.pred_cls[0][0].squeeze())
             # conf_cls = [
@@ -706,9 +705,9 @@ class ConfidenceConformalizer(Conformalizer):
             conf_cls = [
                 [
                     torch.arange(n_classes)[None, ...].cuda()
-                    for j, pred_cls_i_j in enumerate(pred_cls_i)
+                    for _ in range(len(pred_cls_i))
                 ]
-                for i, pred_cls_i in enumerate(predictions.pred_cls)
+                for _, pred_cls_i in enumerate(predictions.pred_cls)
             ]
 
             tmp_parameters = ODParameters(
@@ -728,6 +727,7 @@ class ConfidenceConformalizer(Conformalizer):
                 predictions,
                 loss=self.loss,
             )
+
             n = len(predictions)
             B = overload_B if overload_B is not None else self.loss.upper_bound
             corrected_risk = self._correct_risk(
@@ -735,6 +735,7 @@ class ConfidenceConformalizer(Conformalizer):
                 n=n,
                 B=B,
             )
+
             return corrected_risk
 
         return objective_function

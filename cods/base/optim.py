@@ -4,6 +4,7 @@ from typing import Callable, List, Tuple, Union
 import numpy as np
 from skopt import gp_minimize
 from tqdm import tqdm
+import time
 
 
 class Optimizer:
@@ -51,17 +52,17 @@ class BinarySearchOptimizer(Optimizer):
         pbar = tqdm(range(steps), disable=not verbose)
 
         for step in pbar:
-            print(f"[LUCA dbg] {step = }")
             for id, (lower, upper) in enumerate(zip(lowers, uppers)):
-                print(f"[LUCA dbg] {id = }")
                 if upper - lower < epsilon:
                     break
                 lbd = (lower + upper) / 2
                 current_lbds[id] = lbd
 
-                print(f" --- eval obj: START")
+                start_time = time.time()
                 risk = objective_function(*current_lbds)
-                print(f" --- eval obj: END")
+                end_time = time.time()
+                execution_time = end_time - start_time
+                # print(f"objectve_function time: {execution_time} seconds")
 
                 pbar.set_description(
                     f"[{lower:.2f}, {upper:.2f}] -> {current_lbds}. Corrected Risk = {risk:.2f}"

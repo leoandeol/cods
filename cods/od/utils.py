@@ -372,76 +372,6 @@ def assymetric_hausdorff_distance(true_box, pred_box):
     )
 
 
-def _match_predictions_to_true_boxes(
-    preds,
-    distance_function,
-    overload_confidence_threshold=None,
-    verbose=False,
-) -> None:
-    """Matching predictions to true boxes. Done in place, modifies the preds object."""
-
-    print(f"[LUCA dbg] --- matching fest")
-
-    dist_iou = lambda x, y: -f_iou(x, y)
-    DISTANCE_FUNCTIONS = {
-        "iou": dist_iou,
-        "hausdorff": assymetric_hausdorff_distance,
-    }
-
-    if verbose and distance_function is None:
-        print("Using asymmetric hausdorff distance")
-
-    if distance_function not in DISTANCE_FUNCTIONS.keys():
-        raise ValueError(
-            f"Distance function {distance_function} not supported, must be one of {DISTANCE_FUNCTIONS.keys()}",
-        )
-
-    f_dist = DISTANCE_FUNCTIONS[distance_function]
-
-    all_matching = []
-    if overload_confidence_threshold is not None:
-        conf_thr = overload_confidence_threshold
-    elif preds.confidence_threshold is not None:
-        conf_thr = preds.confidence_threshold
-    else:
-        conf_thr = 0
-
-    # filter pred_boxes with low objectness
-    preds_boxes_cpu = [
-        x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
-        for x, y in zip(preds.pred_boxes, preds.confidence)
-    ]
-    true_boxes_cpu = [x.cpu().numpy() for x in preds.true_boxes]
-
-    def distances_true_box_to_pred_boxes(true_box, pred_boxes):
-        distances_ = []
-        for pred_box in pred_boxes:
-            dist = f_dist(true_box, pred_box)
-            distances_.append(dist)
-
-        return np.argmin(distances_)
-
-    def match_one_true_box(one_true_box, pred_boxes):
-        if len(pred_boxes) == 0:
-            mini = []
-        else:
-            distances = distances_true_box_to_pred_boxes(one_true_box, pred_boxes)
-            mini = np.argmin(distances)
-        return matching.append([mini])
-
-    for pred_boxes, true_boxes in zip(preds_boxes_cpu, true_boxes_cpu):
-        matching = []
-
-        for i, true_box in enumerate(true_boxes):
-            res = match_one_true_box(true_box, pred_boxes)
-            matching.append(res)
-
-        all_matching.append(matching)
-
-    preds.matching = all_matching
-    # return all_matching
-
-
 def match_predictions_to_true_boxes(
     preds,
     distance_function,
@@ -449,7 +379,6 @@ def match_predictions_to_true_boxes(
     verbose=False,
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
-    print(f"[LUCA dbg] --- matching fest")
     dist_iou = lambda x, y: -f_iou(x, y)
     DISTANCE_FUNCTIONS = {
         "iou": dist_iou,
@@ -474,27 +403,21 @@ def match_predictions_to_true_boxes(
     else:
         conf_thr = 0
     # filter pred_boxes with low objectness
-    preds_boxes = [x[y >= conf_thr] for x, y in zip(preds.pred_boxes, preds.confidence)]
+    # preds_boxes = [x[y >= conf_thr] for x, y in zip(preds.pred_boxes, preds.confidence)]
 
     ## [LUCA]
-    # preds_boxes = [
-    #     x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
-    #     for x, y in zip(preds.pred_boxes, preds.confidence)
-    # ]
+    preds_boxes_cpu = [
+        x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
+        for x, y in zip(preds.pred_boxes, preds.confidence)
+    ]
 
-    # preds_boxes_cpu = [
-    #     x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
-    #     for x, y in zip(preds.pred_boxes, preds.confidence)
-    # ]
     true_boxes_cpu = [x.cpu().numpy() for x in preds.true_boxes]
 
-    for z_, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes, preds.true_boxes)):
-        # for z_, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes, true_boxes_cpu)):
+    for _, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes_cpu, true_boxes_cpu)):
+        # for z_, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes, preds.true_boxes)):
         # for pred_boxes, true_boxes in zip(preds_boxes_cpu, true_boxes_cpu):
         # for pred_boxes, true_boxes in zip(preds_boxes, preds.true_boxes):
         matching = []
-        if z_ % 200 == 0:
-            print(f"[LUCA dbg] matching iter {z_=}")
 
         for i, true_box in enumerate(true_boxes):
             distances = []
@@ -517,7 +440,6 @@ def match_predictions_to_true_boxes(
         all_matching.append(matching)
         # break
 
-    print(f"[LUCA dbg] === HERE: exit matching fest")
     preds.matching = all_matching
     # return all_matching
 
@@ -526,13 +448,15 @@ def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
     n = len(pred_boxes)
     new_boxes = []
     Qst = torch.FloatTensor([Qs]).cuda()
+    correction_factor = torch.FloatTensor([[-1, -1, 1, 1]]).cuda()
+
     for i in range(n):
         if len(pred_boxes[i]) == 0:
             new_boxes.append(torch.tensor([]).float().cuda())
             continue
         if mode == "additive":
             new_box = pred_boxes[i] + torch.mul(
-                torch.FloatTensor([[-1, -1, 1, 1]]).cuda(),
+                correction_factor,
                 Qst,
             )
         elif mode == "multiplicative":
@@ -569,21 +493,15 @@ def compute_risk_object_level(
 
     for i, tb_all in enumerate(true_boxes):
         true_boxes_i = tb_all  # true_boxes[i]
-        true_cls_i = true_cls[i].cuda()  # TODO: why the cuda for cls and not boxes
+        true_cls_i = true_cls[i]  # TODO: why the cuda for cls and not boxes
         conf_boxes_i = conf_boxes[i]
         conf_cls_i = conf_cls[i]
         matching_i = predictions.matching[i]
 
-        # for j in range(len(true_boxes_i)):
-        for j, tb_i in enumerate(true_boxes_i):
+        for j, _ in enumerate(true_boxes_i):
             matching_i_j = matching_i[j]
 
-            # if not matching_i_j:
-            #     print(f'No match for {i=}, {j=}')
-            #     raise RuntimeError("No match found")
-
-            if len(matching_i_j) == 0 or not matching_i_j:
-                # if len(matching_i_j) == 0:
+            if len(matching_i_j) == 0:
                 matched_conf_boxes_i_j = torch.tensor([]).float().cuda()
                 matched_conf_cls_i_j = torch.tensor([]).float().cuda()
                 # Unsure above
