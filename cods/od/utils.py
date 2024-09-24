@@ -416,19 +416,20 @@ def match_predictions_to_true_boxes(
     true_boxes_cpu = [x.cpu().numpy() for x in preds.true_boxes]
 
     def distances_true_box_to_pred_boxes(true_box, pred_boxes):
-        distances = []
+        distances_ = []
         for pred_box in pred_boxes:
             dist = f_dist(true_box, pred_box)
-            distances.append(dist)
+            distances_.append(dist)
 
-            if len(pred_boxes) == 0:
-                matching.append([])
-                continue
-        return np.argmin(distances)
+        return np.argmin(distances_)
 
     def match_one_true_box(one_true_box, pred_boxes):
-        distances = distances_true_box_to_pred_boxes(true_box, pred_boxes)
-        return matching.append([np.argmin(distances)])
+        if len(pred_boxes) == 0:
+            mini = []
+        else:
+            distances = distances_true_box_to_pred_boxes(one_true_box, pred_boxes)
+            mini = np.argmin(distances)
+        return matching.append([mini])
 
     for pred_boxes, true_boxes in zip(preds_boxes_cpu, true_boxes_cpu):
         matching = []
@@ -512,6 +513,7 @@ def _match_predictions_to_true_boxes(
         all_matching.append(matching)
         # break
 
+    print(f"[LUCA dbg] === HERE")
     preds.matching = all_matching
     # return all_matching
 
