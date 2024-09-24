@@ -84,7 +84,9 @@ class ODModel(Model):
                 print("Predictions do not exist, building them...")
         else:
             if verbose:
-                print("Force recompute is set to True, building predictions...")
+                print(
+                    "Force recompute is set to True, building predictions..."
+                )
 
         dataloader = torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
@@ -115,11 +117,13 @@ class ODModel(Model):
                 true_cls = res["true_cls"]
                 pred_cls = res["pred_cls"]
 
-                pred_boxes, pred_cls, confidences, pred_boxes_unc = self._filter_preds(
-                    pred_boxes,
-                    pred_cls,
-                    confidences,
-                    iou_threshold=iou_threshold,
+                pred_boxes, pred_cls, confidences, pred_boxes_unc = (
+                    self._filter_preds(
+                        pred_boxes,
+                        pred_cls,
+                        confidences,
+                        iou_threshold=iou_threshold,
+                    )
                 )
 
                 all_image_paths.append(image_paths)
@@ -141,7 +145,9 @@ class ODModel(Model):
         all_true_boxes = list(
             [box.cuda() for arr_box in all_true_boxes for box in arr_box]
         )
-        all_pred_boxes = list([box for arr_box in all_pred_boxes for box in arr_box])
+        all_pred_boxes = list(
+            [box for arr_box in all_pred_boxes for box in arr_box]
+        )
         if len(all_pred_boxes_unc) > 0:
             all_pred_boxes_unc = list(
                 [
@@ -159,7 +165,9 @@ class ODModel(Model):
                 for confidence in arr_confidence
             ]
         )
-        all_true_cls = list([cls.cuda() for arr_cls in all_true_cls for cls in arr_cls])
+        all_true_cls = list(
+            [cls.cuda() for arr_cls in all_true_cls for cls in arr_cls]
+        )
         all_pred_cls = list(
             [proba for arr_proba in all_pred_cls for proba in arr_proba]
         )

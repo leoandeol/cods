@@ -3,10 +3,11 @@ from typing import List
 
 logger = getLogger("cods")
 
+import multiprocessing
+
 import numpy as np
 import torch
 from tqdm import tqdm
-import multiprocessing
 
 # def get_classif_preds_from_od_preds(
 #     preds: ODPredictions,
@@ -413,7 +414,9 @@ def match_predictions_to_true_boxes(
 
     true_boxes_cpu = [x.cpu().numpy() for x in preds.true_boxes]
 
-    for _, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes_cpu, true_boxes_cpu)):
+    for _, (pred_boxes, true_boxes) in enumerate(
+        zip(preds_boxes_cpu, true_boxes_cpu)
+    ):
         # for z_, (pred_boxes, true_boxes) in enumerate(zip(preds_boxes, preds.true_boxes)):
         # for pred_boxes, true_boxes in zip(preds_boxes_cpu, true_boxes_cpu):
         # for pred_boxes, true_boxes in zip(preds_boxes, preds.true_boxes):
@@ -429,7 +432,9 @@ def match_predictions_to_true_boxes(
                 for j, pred_box in enumerate(pred_boxes):
                     dist = f_dist(true_box, pred_box)
                     dist = (
-                        dist.cpu().numpy() if isinstance(dist, torch.Tensor) else dist
+                        dist.cpu().numpy()
+                        if isinstance(dist, torch.Tensor)
+                        else dist
                     )
                     distances.append(dist)  # .cpu().numpy())
 
@@ -520,7 +525,9 @@ def compute_risk_object_level(
             )
             # TODO: investigate why we need to do that
             loss_value = (
-                loss_value if len(loss_value.shape) > 0 else loss_value.unsqueeze(0)
+                loss_value
+                if len(loss_value.shape) > 0
+                else loss_value.unsqueeze(0)
             )
             losses.append(loss_value)
     losses = torch.stack(losses).ravel()
@@ -553,7 +560,9 @@ def compute_risk_image_level(
 
     for i in range(len(true_boxes)):
         true_boxes_i = true_boxes[i]
-        true_cls_i = true_cls[i].cuda()  # TODO: why the cuda for cls and not boxes
+        true_cls_i = true_cls[
+            i
+        ].cuda()  # TODO: why the cuda for cls and not boxes
         conf_boxes_i = conf_boxes[i]
         conf_cls_i = conf_cls[i]
         # for j in range(len(true_boxes_i)):

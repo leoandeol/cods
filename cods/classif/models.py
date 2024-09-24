@@ -1,5 +1,4 @@
 import torch
-
 from tqdm import tqdm
 
 from cods.base.models import Model

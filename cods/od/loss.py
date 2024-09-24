@@ -176,7 +176,8 @@ class ConfidenceBetterLoss(ODLoss):
 
                 loss_i = (
                     torch.zeros(1).cuda()
-                    if torch.min(torch.stack(distances)) < self.distance_threshold
+                    if torch.min(torch.stack(distances))
+                    < self.distance_threshold
                     else torch.ones(1).cuda()
                 )
                 losses.append(loss_i)
@@ -202,7 +203,9 @@ class ODBinaryClassificationLoss(ClassificationLoss):
         """ """
         # if len(conf_cls) == 0:
         #    logger.warning(f"conf_cls is empty : {conf_cls}")
-        loss = torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
+        loss = (
+            torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
+        )
         # if loss == 0:
         #    logger.info(f"true_cls: {true_cls}, conf_cls: {conf_cls}")
         return loss
