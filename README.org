@@ -1,6 +1,5 @@
 #+TITLE: 🐟 CODS - Conformal Object Detection and Segmentation 🐟
-/Ask 'CODS' for all your Conformal needs!/
-# Coming soon to a pypi near you!
+/A library for distribution-free model-agnostic finite-sample uncertainty quantification applied to computer vision tasks.!/
 
 [[./docs/pics/fig_cod_rev.png]]
 
