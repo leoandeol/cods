@@ -213,7 +213,6 @@ class DETRModel(ODModel):
                 - "true_cls" (list): The true class labels of the objects in the images
                 - "pred_cls" (list): The predicted class labels of the objects in the images
         """
-        image_paths, image_sizes, images, ground_truth = batch
 
         image_paths, image_sizes, images, ground_truth = batch
         img_shapes = torch.FloatTensor(

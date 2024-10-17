@@ -173,3 +173,4 @@ saved_predictions/
 test.png
 *.pt
 *.pth
+*.pdf

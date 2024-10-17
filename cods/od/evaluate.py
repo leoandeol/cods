@@ -1,6 +1,10 @@
 import pickle
+import argparse
+import json
 from logging import getLogger
 from time import time
+from itertools import product
+
 
 from tqdm import tqdm
 
@@ -18,27 +22,6 @@ from cods.od.models import DETRModel
 # MODES = ["classification", "localization", "detection", "combined"]
 
 MODES = ["classification", "localization", "detection"]
-
-DEFAULT_CONFIG = {
-    "dataset": ["mscoco"],
-    "model": ["detr"],
-    "alphas": [[0.045, 0.05, 0.05]],
-    "guarantee_level": ["object", "image"],
-    "matching_function": ["hausdorff", "iou"],
-    "confidence_method": ["nb_boxes", "better"],
-    "localization_method": ["pixelwise", "boxwise", "thresholded"],
-    "classification_method": ["binary"],
-    "localization_prediction_set": [
-        "additive",
-        "multiplicative",
-        "uncertainty",
-    ],
-    "classification_prediction_set": ["lac", "aps"],
-    # Below: fixed parameters
-    "batch_size": 12,
-    "optimizer": "binary_search",
-    "iou_threshold": 0.5,  # TODO: try 0.8 in comparison
-}
 
 
 class Benchmark:
@@ -66,76 +49,65 @@ class Benchmark:
             raise NotImplementedError("Multithreading not implemented yet")
 
         experiments = []
-        for dataset in self.config["dataset"]:
+        param_combinations = product(
+            self.config["dataset"],
+            self.config["model"],
+            self.config["alphas"],
+            self.config["guarantee_level"],
+            self.config["matching_function"],
+            self.config["confidence_method"],
+            self.config["localization_method"],
+            self.config["classification_method"],
+            self.config["localization_prediction_set"],
+            self.config["classification_prediction_set"],
+        )
+
+        for combination in param_combinations:
+            dataset, model, alphas, guarantee_level, matching_function, confidence_method, localization_method, classification_method, localization_prediction_set, classification_prediction_set = combination
             if dataset not in self.DATASETS:
                 raise ValueError(
                     f"Invalid dataset: {dataset}, must be one of {self.DATASETS.keys()}"
                 )
-            for model in self.config["model"]:
-                if model not in self.MODELS:
-                    raise ValueError(
-                        f"Invalid model: {model}, must be one of {self.MODELS.keys()}"
-                    )
-                for alphas in self.config["alphas"]:
-                    for guarantee_level in self.config["guarantee_level"]:
-                        for matching_function in self.config[
-                            "matching_function"
-                        ]:
-                            for confidence_method in self.config[
-                                "confidence_method"
-                            ]:
-                                for localization_method in self.config[
-                                    "localization_method"
-                                ]:
-                                    for classification_method in self.config[
-                                        "classification_method"
-                                    ]:
-                                        for (
-                                            localization_prediction_set
-                                        ) in self.config[
-                                            "localization_prediction_set"
-                                        ]:
-                                            for (
-                                                classification_prediction_set
-                                            ) in self.config[
-                                                "classification_prediction_set"
-                                            ]:
-                                                experiments.append(
-                                                    {
-                                                        "dataset": dataset,
-                                                        "model": model,
-                                                        "alphas": alphas,
-                                                        "guarantee_level": guarantee_level,
-                                                        "matching_function": matching_function,
-                                                        "confidence_method": confidence_method,
-                                                        "localization_method": localization_method,
-                                                        "classification_method": classification_method,
-                                                        "localization_prediction_set": localization_prediction_set,
-                                                        "classification_prediction_set": classification_prediction_set,
-                                                        "batch_size": self.config[
-                                                            "batch_size"
-                                                        ],
-                                                        "optimizer": self.config[
-                                                            "optimizer"
-                                                        ],
-                                                        "iou_threshold": self.config[
-                                                            "iou_threshold"
-                                                        ],
-                                                    }
-                                                )
+            if model not in self.MODELS:
+                raise ValueError(
+                    f"Invalid model: {model}, must be one of {self.MODELS.keys()}"
+                )
+            experiments.append(
+                {
+                    "dataset": dataset,
+                    "model": model,
+                    "alphas": alphas,
+                    "guarantee_level": guarantee_level,
+                    "matching_function": matching_function,
+                    "confidence_method": confidence_method,
+                    "localization_method": localization_method,
+                    "classification_method": classification_method,
+                    "localization_prediction_set": localization_prediction_set,
+                    "classification_prediction_set": classification_prediction_set,
+                    "batch_size": self.config["batch_size"],
+                    "optimizer": self.config["optimizer"],
+                    "iou_threshold": self.config["iou_threshold"],
+                }
+            )
 
         # pickle the results with a unique name
         unique_name = str(time())
 
         results = []
         for experiment in tqdm(experiments):
-            experiment_result = self.run_experiment(experiment)
-            results.append(experiment_result)
-            # updating the pickle file with the results
-            logger.info("Updating pickle file with results")
-            with open(f"results-{unique_name}.pkl", "wb") as f:
-                pickle.dump(results, f)
-
+            try:
+                experiment_result = self.run_experiment(experiment)
+                results.append(experiment_result)
+                # updating the pickle file with the results
+                logger.info("Updating pickle file with results")
+                with open(f"results-{unique_name}.pkl", "wb") as f:
+                    pickle.dump(results, f)
+            except Exception as e:
+                logger.error(f"Experiment failed: {e}")
+        dataset = MSCOCODataset(
+            root="/datasets/shared_datasets/coco/", split="val"
+        )
+        data_cal, data_val = dataset.random_split(0.5, shuffled=False)
     def run_experiment(self, experiment, verbose=False):
         wandb.init(
             project="cods-benchmark",
@@ -168,7 +140,7 @@ class Benchmark:
         batch_size = experiment["batch_size"]
         preds_cal = model.build_predictions(
             data_cal,
-            dataset_name="mscoco",
+            dataset_name=experiment["dataset"],
             split_name="cal",
             batch_size=batch_size,
             collate_fn=dataset._collate_fn,
@@ -180,7 +152,7 @@ class Benchmark:
         )
         preds_val = model.build_predictions(
             data_val,
-            dataset_name="mscoco",
+            dataset_name=experiment["dataset"],
             split_name="test",
             batch_size=batch_size,
             collate_fn=dataset._collate_fn,
@@ -275,6 +247,17 @@ class Benchmark:
         return experiment
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run benchmark with config")
+    parser.add_argument(
+        "--config", type=str, required=True, help="Path to the JSON config file"
+    )
+    return parser.parse_args()
+
 if __name__ == "__main__":
-    benchmark = Benchmark(DEFAULT_CONFIG)
+    args = parse_args()
+    with open(args.config, "r") as f:
+        config = json.load(f)
+    
+    benchmark = Benchmark(config)
     benchmark.run()

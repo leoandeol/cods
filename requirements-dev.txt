@@ -3,3 +3,4 @@ ipykernel
 jupyter
 notebook
 ipykernel
+wandb
