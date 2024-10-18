@@ -1,16 +1,14 @@
-import pickle
 import argparse
 import json
+import pickle
+from itertools import product
 from logging import getLogger
 from time import time
-from itertools import product
+
 import numpy as np
-
-
 from tqdm import tqdm
 
 import wandb
-
 
 logger = getLogger("cods")
 
@@ -68,7 +66,21 @@ class Benchmark:
         )
 
         for combination in param_combinations:
-            dataset, model, alphas, guarantee_level, matching_function, confidence_method, localization_method, classification_method, localization_prediction_set, classification_prediction_set, batch_size, optimizer, iou_threshold = combination
+            (
+                dataset,
+                model,
+                alphas,
+                guarantee_level,
+                matching_function,
+                confidence_method,
+                localization_method,
+                classification_method,
+                localization_prediction_set,
+                classification_prediction_set,
+                batch_size,
+                optimizer,
+                iou_threshold,
+            ) = combination
             if dataset not in self.DATASETS:
                 raise ValueError(
                     f"Invalid dataset: {dataset}, must be one of {self.DATASETS.keys()}"
@@ -113,6 +125,7 @@ class Benchmark:
             root="/datasets/shared_datasets/coco/", split="val"
         )
         data_cal, data_val = dataset.random_split(0.5, shuffled=False)
+
     def run_experiment(self, experiment, verbose=False):
         wandb.init(
             project="cods-benchmark",
@@ -247,7 +260,11 @@ class Benchmark:
         #     verbose=verbose,
         # )
         # Just recall-precision for now
-        recalls, precisions, scores = get_recall_precision(preds_val, SCORE_THRESHOLD=preds_val.confidence_threshold,IOU_THRESHOLD=experiment["iou_threshold"])
+        recalls, precisions, scores = get_recall_precision(
+            preds_val,
+            SCORE_THRESHOLD=preds_val.confidence_threshold,
+            IOU_THRESHOLD=experiment["iou_threshold"],
+        )
 
         metrics = {
             "recall": np.mean(recalls),
@@ -267,14 +284,18 @@ class Benchmark:
 def parse_args():
     parser = argparse.ArgumentParser(description="Run benchmark with config")
     parser.add_argument(
-        "--config", type=str, required=True, help="Path to the JSON config file"
+        "--config",
+        type=str,
+        required=True,
+        help="Path to the JSON config file",
     )
     return parser.parse_args()
+
 
 if __name__ == "__main__":
     args = parse_args()
     with open(args.config, "r") as f:
         config = json.load(f)
-    
+
     benchmark = Benchmark(config)
     benchmark.run()
