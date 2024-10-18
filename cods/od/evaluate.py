@@ -4,11 +4,13 @@ import json
 from logging import getLogger
 from time import time
 from itertools import product
+import numpy as np
 
 
 from tqdm import tqdm
 
 import wandb
+
 
 logger = getLogger("cods")
 
@@ -16,7 +18,7 @@ import torch
 
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
-from cods.od.metrics import unroll_metrics
+from cods.od.metrics import get_recall_precision
 from cods.od.models import DETRModel
 
 # MODES = ["classification", "localization", "detection", "combined"]
@@ -60,10 +62,13 @@ class Benchmark:
             self.config["classification_method"],
             self.config["localization_prediction_set"],
             self.config["classification_prediction_set"],
+            self.config["batch_size"],
+            self.config["optimizer"],
+            self.config["iou_threshold"],
         )
 
         for combination in param_combinations:
-            dataset, model, alphas, guarantee_level, matching_function, confidence_method, localization_method, classification_method, localization_prediction_set, classification_prediction_set = combination
+            dataset, model, alphas, guarantee_level, matching_function, confidence_method, localization_method, classification_method, localization_prediction_set, classification_prediction_set, batch_size, optimizer, iou_threshold = combination
             if dataset not in self.DATASETS:
                 raise ValueError(
                     f"Invalid dataset: {dataset}, must be one of {self.DATASETS.keys()}"
@@ -84,9 +89,9 @@ class Benchmark:
                     "classification_method": classification_method,
                     "localization_prediction_set": localization_prediction_set,
                     "classification_prediction_set": classification_prediction_set,
-                    "batch_size": self.config["batch_size"],
-                    "optimizer": self.config["optimizer"],
-                    "iou_threshold": self.config["iou_threshold"],
+                    "batch_size": batch_size,
+                    "optimizer": optimizer,
+                    "iou_threshold": iou_threshold,
                 }
             )
 
@@ -231,11 +236,23 @@ class Benchmark:
 
         wandb.log(results)
 
-        metrics = unroll_metrics(
-            predictions=preds_val,
-            conformalized_predictions=conformal_preds,
-            verbose=verbose,
-        )
+        # Trop couteux
+        # metrics = unroll_metrics(
+        #     predictions=preds_val,
+        #     conformalized_predictions=conformal_preds,
+        #     verbose=verbose,
+        # )metrics = unroll_metrics(
+        #     predictions=preds_val,
+        #     conformalized_predictions=conformal_preds,
+        #     verbose=verbose,
+        # )
+        # Just recall-precision for now
+        recalls, precisions, scores = get_recall_precision(preds_val, SCORE_THRESHOLD=preds_val.confidence_threshold,IOU_THRESHOLD=experiment["iou_threshold"])
+
+        metrics = {
+            "recall": np.mean(recalls),
+            "precision": np.mean(precisions),
+        }
 
         wandb.log(metrics)
 

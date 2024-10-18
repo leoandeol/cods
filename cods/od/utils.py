@@ -3,7 +3,6 @@ from typing import List
 
 logger = getLogger("cods")
 
-import multiprocessing
 
 import numpy as np
 import torch
@@ -345,16 +344,16 @@ def f_iou(boxA, boxB):
         float: Intersection over union (IoU) value.
 
     """
-    xA = max(boxA[0], boxB[0])
-    yA = max(boxA[1], boxB[1])
-    xB = min(boxA[2], boxB[2])
-    yB = min(boxA[3], boxB[3])
+    xA = np.maximum(boxA[0], boxB[0])
+    yA = np.maximum(boxA[1], boxB[1])
+    xB = np.minimum(boxA[2], boxB[2])
+    yB = np.minimum(boxA[3], boxB[3])
 
-    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    interArea = np.maximum(0, xB - xA + 1) * np.maximum(0, yB - yA + 1)
     boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
     boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
 
-    iou = interArea / float(boxAArea + boxBArea - interArea)
+    iou = interArea / (boxAArea + boxBArea - interArea).astype("float32")
     return iou
 
 
