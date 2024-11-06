@@ -147,7 +147,6 @@ def getStretch(
 
 def get_recall_precision(
     od_predictions: ODPredictions,
-    pred_boxes,  # =None,
     IOU_THRESHOLD=0.5,
     SCORE_THRESHOLD=0.5,
     verbose=True,
@@ -169,6 +168,7 @@ def get_recall_precision(
     """
     true_boxes = od_predictions.true_boxes
     scores = od_predictions.confidence
+    pred_boxes = od_predictions.pred_boxes
 
     recalls = []
     precisions = []
@@ -218,7 +218,6 @@ def get_recall_precision(
 
 def getAveragePrecision(
     od_predictions: ODPredictions,
-    pred_boxes,
     verbose=True,
     iou_threshold=0.3,
 ) -> tuple:
@@ -241,7 +240,6 @@ def getAveragePrecision(
     for thresh in pbar:
         tmp_recalls, tmp_precisions, _ = get_recall_precision(
             od_predictions,
-            pred_boxes,
             IOU_THRESHOLD=iou_threshold,
             SCORE_THRESHOLD=thresh,
             verbose=False,

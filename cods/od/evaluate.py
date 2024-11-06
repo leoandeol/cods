@@ -112,21 +112,27 @@ class Benchmark:
 
         results = []
         for experiment in tqdm(experiments):
-            try:
-                experiment_result = self.run_experiment(experiment)
-                results.append(experiment_result)
-                # updating the pickle file with the results
-                logger.info("Updating pickle file with results")
-                with open(f"results-{unique_name}.pkl", "wb") as f:
-                    pickle.dump(results, f)
-            except Exception as e:
-                logger.error(f"Experiment failed: {e}")
+            # try:
+            experiment_result = self.run_experiment(experiment)
+            results.append(experiment_result)
+            # updating the pickle file with the results
+            logger.info("Updating pickle file with results")
+            with open(f"results-{unique_name}.pkl", "wb") as f:
+                pickle.dump(results, f)
+            # except Exception as e:
+                #logger.error(f"Experiment failed: {e}")
         dataset = MSCOCODataset(
             root="/datasets/shared_datasets/coco/", split="val"
         )
         data_cal, data_val = dataset.random_split(0.5, shuffled=False)
 
     def run_experiment(self, experiment, verbose=False):
+        if verbose:
+            # print config
+            logger.info("Running experiment with config:")
+            for key, value in experiment.items():
+                logger.info(f"{key}: {value}")
+
         wandb.init(
             project="cods-benchmark",
             reinit=True,

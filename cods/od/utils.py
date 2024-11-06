@@ -344,16 +344,17 @@ def f_iou(boxA, boxB):
         float: Intersection over union (IoU) value.
 
     """
-    xA = np.maximum(boxA[0], boxB[0])
-    yA = np.maximum(boxA[1], boxB[1])
-    xB = np.minimum(boxA[2], boxB[2])
-    yB = np.minimum(boxA[3], boxB[3])
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = max(boxA[2], boxB[2])
+    yB = max(boxA[3], boxB[3])
 
-    interArea = np.maximum(0, xB - xA + 1) * np.maximum(0, yB - yA + 1)
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
     boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
     boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
 
-    iou = interArea / (boxAArea + boxBArea - interArea).astype("float32")
+    # To ensure numerical stability
+    iou = interArea / (boxAArea + boxBArea - interArea + 1e-12)
     return iou
 
 

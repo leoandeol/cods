@@ -48,7 +48,7 @@ class ODLoss(Loss):
 
 
 # LAC STYLE
-class ConfidenceLoss(ODLoss):
+class BoxCountThresholdConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
@@ -103,7 +103,7 @@ class ConfidenceLoss(ODLoss):
         )
 
 
-class ConfidenceBetterLoss(ODLoss):
+class BoxCountRecallConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
@@ -145,50 +145,71 @@ class ConfidenceBetterLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
-        losses = []
         if len(true_boxes) == 0:
             loss = torch.zeros(1).cuda()
-        elif len(conf_boxes) == 0:
-            loss = torch.ones(1).cuda()
         else:
-            for i, true_boxes_i in enumerate(true_boxes):
-                # search for closest box
-                distances = []
-                for conf_boxes_i in conf_boxes[i]:
-                    # TODO doesn"r work because of expansion fo boxes for localization
-                    center_true_x = (true_boxes_i[0] + true_boxes_i[2]) / 2
-                    center_true_y = (true_boxes_i[1] + true_boxes_i[3]) / 2
-                    center_conf_x = (conf_boxes_i[0] + conf_boxes_i[2]) / 2
-                    center_conf_y = (conf_boxes_i[1] + conf_boxes_i[3]) / 2
-                    distance = torch.sqrt(
-                        (center_true_x - center_conf_x) ** 2
-                        + (center_true_y - center_conf_y) ** 2
-                    )
-                    # TODO: improve distance
-                    distances.append(distance)
-                # print(f"distances: {distances}")
-                # TODO arbirtrary
-
-                if len(distances) == 0:
-                    loss_i = torch.ones(1).cuda()
-                    losses.append(loss_i)
-                    continue
-
-                loss_i = (
-                    torch.zeros(1).cuda()
-                    if torch.min(torch.stack(distances))
-                    < self.distance_threshold
-                    else torch.ones(1).cuda()
-                )
-                losses.append(loss_i)
-            loss = torch.mean(torch.stack(losses))
+            loss = torch.maximum(
+                        torch.zeros(1),
+                        torch.tensor(
+                            (len(true_boxes) - len(conf_boxes))
+                            / len(true_boxes)
+                        ),
+                    ).cuda()
         return max(
-            [loss]
+            [
+                (
+                    loss
+                ),
+            ]
             + [
                 loss(true_boxes, true_cls, conf_boxes, conf_cls)
                 for loss in self.other_losses
             ],
         )
+        # losses = []
+        # if len(true_boxes) == 0:
+        #     loss = torch.zeros(1).cuda()
+        # elif len(conf_boxes) == 0:
+        #     loss = torch.ones(1).cuda()
+        # else:
+        #     for i, true_boxes_i in enumerate(true_boxes):
+        #         # search for closest box
+        #         distances = []
+        #         for conf_boxes_i in conf_boxes[i]:
+        #             # TODO doesn"r work because of expansion fo boxes for localization
+        #             center_true_x = (true_boxes_i[0] + true_boxes_i[2]) / 2
+        #             center_true_y = (true_boxes_i[1] + true_boxes_i[3]) / 2
+        #             center_conf_x = (conf_boxes_i[0] + conf_boxes_i[2]) / 2
+        #             center_conf_y = (conf_boxes_i[1] + conf_boxes_i[3]) / 2
+        #             distance = torch.sqrt(
+        #                 (center_true_x - center_conf_x) ** 2
+        #                 + (center_true_y - center_conf_y) ** 2
+        #             )
+        #             # TODO: improve distance
+        #             distances.append(distance)
+        #         # print(f"distances: {distances}")
+        #         # TODO arbirtrary
+
+        #         if len(distances) == 0:
+        #             loss_i = torch.ones(1).cuda()
+        #             losses.append(loss_i)
+        #             continue
+
+        #         loss_i = (
+        #             torch.zeros(1).cuda()
+        #             if torch.min(torch.stack(distances))
+        #             < self.distance_threshold
+        #             else torch.ones(1).cuda()
+        #         )
+        #         losses.append(loss_i)
+        #     loss = torch.mean(torch.stack(losses))
+        # return max(
+        #     [loss]
+        #     + [
+        #         loss(true_boxes, true_cls, conf_boxes, conf_cls)
+        #         for loss in self.other_losses
+        #     ],
+        # )
 
 
 class ODBinaryClassificationLoss(ClassificationLoss):
@@ -330,10 +351,14 @@ class ThresholdedRecallLoss(ODLoss):
             return 1
         areas = get_covered_areas_of_gt_union(conf_boxes, true_boxes)
         is_not_covered = (
-            torch.FloatTensor(areas) < 0.999
-        )  # because doubt on the computation of the overlap, check formula TODO
+            areas < 0.999
+        ).float()  # because doubt on the computation of the overlap, check formula TODO
         miscoverage = torch.mean(is_not_covered)
-        loss = 1 if miscoverage > self.beta else 0
+        loss = (
+            torch.ones(1).cuda()
+            if miscoverage > self.beta
+            else torch.zeros(1).cuda()
+        )
         return loss
 
 

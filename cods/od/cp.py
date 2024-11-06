@@ -3,10 +3,10 @@ from typing import Callable, List, Optional, Tuple, Union
 
 logger = logging.getLogger("cods")
 # FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-FORMAT = (
-    "[%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
-)
+FORMAT = "[%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
 logging.basicConfig(format=FORMAT)
+
+import time
 
 import torch
 
@@ -25,11 +25,11 @@ from cods.od.data import (
     ODResults,
 )
 from cods.od.loss import (
+    # ClassBoxWiseRecallLoss,
+    BoxCountRecallConfidenceLoss,
+    BoxCountThresholdConfidenceLoss,
     BoxWiseRecallLoss,
     ClassificationLossWrapper,
-    # ClassBoxWiseRecallLoss,
-    ConfidenceBetterLoss,
-    ConfidenceLoss,
     ODBinaryClassificationLoss,
     # MaximumLoss,
     ODLoss,
@@ -37,7 +37,6 @@ from cods.od.loss import (
     ThresholdedRecallLoss,
 )
 from cods.od.metrics import compute_global_coverage
-import time
 from cods.od.score import (
     MinAdditiveSignedAssymetricHausdorffNCScore,
     MinMultiplicativeSignedAssymetricHausdorffNCScore,
@@ -500,7 +499,10 @@ class LocalizationConformalizer(Conformalizer):
             raise ValueError(
                 "Conformalizer must be calibrated, or parameters provided, before conformalizing.",
             )
-        if parameters is not None and parameters.lambda_localization is not None:
+        if (
+            parameters is not None
+            and parameters.lambda_localization is not None
+        ):
             if verbose:
                 logger.info("Using λ for localization from parameters")
             lambda_localization = parameters.lambda_localization
@@ -583,8 +585,8 @@ class ConfidenceConformalizer(Conformalizer):
     """ """
 
     ACCEPTED_LOSSES = {
-        "nb_boxes": ConfidenceLoss,
-        "better": ConfidenceBetterLoss,
+        "box_count_threshold": BoxCountThresholdConfidenceLoss,
+        "box_count_recall": BoxCountRecallConfidenceLoss,
     }
 
     def __init__(
@@ -1234,7 +1236,10 @@ class ODConformalizer(Conformalizer):
                 "No multiple_testing_correction provided, assuming no correction is needed. The explicit list of alphas is expected for calibration.",
             )
             self.multiple_testing_correction = multiple_testing_correction
-        elif multiple_testing_correction not in self.MULTIPLE_TESTING_CORRECTIONS:
+        elif (
+            multiple_testing_correction
+            not in self.MULTIPLE_TESTING_CORRECTIONS
+        ):
             raise ValueError(
                 f"multiple_testing_correction {multiple_testing_correction} not accepted, must be one of {self.MULTIPLE_TESTING_CORRECTIONS}",
             )
@@ -1267,7 +1272,9 @@ class ODConformalizer(Conformalizer):
         elif isinstance(localization_method, LocalizationConformalizer):
             self.localization_conformalizer = localization_method
             self.localization_method = localization_method.loss_name
-            self.localization_prediction_set = localization_method.prediction_set
+            self.localization_prediction_set = (
+                localization_method.prediction_set
+            )
         else:
             self.localization_conformalizer = None
             self.localization_method = None
@@ -1285,7 +1292,9 @@ class ODConformalizer(Conformalizer):
         elif isinstance(classification_method, ODClassificationConformalizer):
             self.classification_conformalizer = classification_method
             self.classification_method = classification_method.method
-            self.classification_prediction_set = classification_method.prediction_set
+            self.classification_prediction_set = (
+                classification_method.prediction_set
+            )
         else:
             self.classification_conformalizer = None
             self.classification_method = None
@@ -1372,7 +1381,12 @@ class ODConformalizer(Conformalizer):
                     "No multiple_testing_correction provided, expecting an explicit alpha for each conformalizer. 'global_alpha' should be 'None'.",
                 )
             if (
-                (alpha_confidence is None != self.confidence_conformalizer is None)
+                (
+                    alpha_confidence
+                    is None
+                    != self.confidence_conformalizer
+                    is None
+                )
                 or (
                     alpha_localization
                     is None
@@ -1608,7 +1622,9 @@ class ODConformalizer(Conformalizer):
 
         if parameters is None:
             # TODO: rethink this
-            raise ValueError("Parameters must be provided for conformalization")
+            raise ValueError(
+                "Parameters must be provided for conformalization"
+            )
 
         results = ODConformalizedPredictions(
             predictions=predictions,
@@ -1637,33 +1653,39 @@ class ODConformalizer(Conformalizer):
         if self.confidence_conformalizer is not None:
             if verbose:
                 logger.info("Evaluating Confidence Conformalizer")
-            coverage_obj, set_size_obj = self.confidence_conformalizer.evaluate(
-                predictions,
-                parameters,
-                conformalized_predictions,
-                verbose=False,
+            coverage_obj, set_size_obj = (
+                self.confidence_conformalizer.evaluate(
+                    predictions,
+                    parameters,
+                    conformalized_predictions,
+                    verbose=False,
+                )
             )
         else:
             coverage_obj, set_size_obj = None, None
         if self.localization_conformalizer is not None:
             if verbose:
                 logger.info("Evaluating Localization Conformalizer")
-            coverage_loc, set_size_loc = self.localization_conformalizer.evaluate(
-                predictions,
-                parameters,
-                conformalized_predictions,
-                verbose=False,
+            coverage_loc, set_size_loc = (
+                self.localization_conformalizer.evaluate(
+                    predictions,
+                    parameters,
+                    conformalized_predictions,
+                    verbose=False,
+                )
             )
         else:
             coverage_loc, set_size_loc = None, None
         if self.classification_conformalizer is not None:
             if verbose:
                 logger.info("Evaluating Classification Conformalizer")
-            coverage_cls, set_size_cls = self.classification_conformalizer.evaluate(
-                predictions,
-                parameters,
-                conformalized_predictions,
-                verbose=False,
+            coverage_cls, set_size_cls = (
+                self.classification_conformalizer.evaluate(
+                    predictions,
+                    parameters,
+                    conformalized_predictions,
+                    verbose=False,
+                )
             )
         else:
             coverage_cls, set_size_cls = None, None
@@ -1813,7 +1835,9 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                         if len(x[y >= 1 - lbd_obj]) > 0
                         else x[None, y.argmax()]
                     )
-                    for x, y in zip(predictions.pred_boxes, predictions.confidence)
+                    for x, y in zip(
+                        predictions.pred_boxes, predictions.confidence
+                    )
                 ],
             )
             conf_boxes = apply_margins(

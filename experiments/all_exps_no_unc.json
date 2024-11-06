@@ -21,8 +21,8 @@
         "iou"
     ],
     "confidence_method": [
-        "nb_boxes",
-        "better"
+        "box_count_threshold",
+        "box_count_recall"
     ],
     "localization_method": [
         "pixelwise",

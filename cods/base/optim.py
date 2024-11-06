@@ -78,7 +78,7 @@ class BinarySearchOptimizer(Optimizer):
                         lowers[id] = lower
                 else:
                     if len(good_lbds) == 0:
-                        logging.warning(
+                        logging.error(
                             "No satisfactory solution of binary search found."
                         )
                         return None
