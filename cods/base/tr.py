@@ -57,7 +57,7 @@ def binom_inv_cdf(Rhat, n, delta):
     return torch.tensor(
         brentq(f_bin, 1e-10, 1 - 1e-10, maxiter=1000, xtol=1e-4),
         dtype=torch.float,
-    ).cuda()
+    ).to(device)
 
 
 class ToleranceRegion:

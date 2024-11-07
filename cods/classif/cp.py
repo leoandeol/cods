@@ -11,7 +11,7 @@ class ClassificationConformalizer(Conformalizer):
     ACCEPTED_METHODS = {"lac": LACNCScore, "aps": APSNCScore}
     ACCEPTED_PREPROCESS = {"softmax": torch.softmax}
 
-    def __init__(self, method="lac", preprocess="softmax"):
+    def __init__(self, method="lac", preprocess="softmax", device="cpu"):
         if method not in self.ACCEPTED_METHODS.keys() and not isinstance(
             method, ClassifNCScore
         ):
@@ -32,6 +32,7 @@ class ClassificationConformalizer(Conformalizer):
         self._score_function: Optional[Any] = None
         self._quantile: Optional[Any] = None
         self._n_classes: Optional[Any] = None
+        self.device = device
 
     def calibrate(
         self,
@@ -118,7 +119,7 @@ class ClassificationConformalizer(Conformalizer):
         losses = []
         set_sizes = []
         for i, true_cls_i in enumerate(preds.true_cls):
-            true_cls_i = true_cls_i.cuda()
+            true_cls_i = true_cls_i.to(self.device)
             conf_cls_i = conf_cls[i]
             loss = torch.isin(true_cls_i, conf_cls_i).float()
             losses.append(loss)

@@ -1,8 +1,6 @@
 from logging import getLogger
 from typing import Callable, Optional, Union
 
-logger = getLogger("cods")
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -14,6 +12,8 @@ from cods.od.data import (
     ODPredictions,
 )
 from cods.od.utils import f_iou
+
+logger = getLogger("cods")
 
 
 def compute_global_coverage(

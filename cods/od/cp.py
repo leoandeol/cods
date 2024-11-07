@@ -111,6 +111,7 @@ class LocalizationConformalizer(Conformalizer):
         number_of_margins: int = 1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
         optimizer: Optional[Union[str, Optimizer]] = None,
         backend: str = "auto",
+        device="cpu",
         **kwargs,
     ):
         """Initialize the CP class.
@@ -197,6 +198,7 @@ class LocalizationConformalizer(Conformalizer):
             )
 
         self.lambda_localization = None
+        self.device = device
 
     # def calibrate(
     #     self,
@@ -355,7 +357,7 @@ class LocalizationConformalizer(Conformalizer):
             n_classes = len(predictions.pred_cls[0][0].squeeze())
             conf_cls = [
                 [
-                    torch.arange(n_classes)[None, ...].cuda()
+                    torch.arange(n_classes)[None, ...].to(self.device)
                     for pred_cls_i_j in pred_cls_i
                 ]
                 for pred_cls_i in predictions.pred_cls
@@ -596,6 +598,7 @@ class ConfidenceConformalizer(Conformalizer):
         loss: str = "nb_boxes",
         other_losses: Optional[List] = None,
         optimizer: str = "binary_search",
+        device="cpu",
     ):
         """ """
         super().__init__()
@@ -623,6 +626,7 @@ class ConfidenceConformalizer(Conformalizer):
 
         self.lambda_minus = None
         self.lambda_plus = None
+        self.device = device
 
     def _get_objective_function(
         self,
@@ -695,17 +699,9 @@ class ConfidenceConformalizer(Conformalizer):
 
             # Second, prediction sets for classification with always everything
             n_classes = len(predictions.pred_cls[0][0].squeeze())
-            # conf_cls = [
-            #     [
-            #         torch.arange(n_classes)[None, ...].cuda()
-            #         for j, true_cls_i_j in enumerate(true_cls_i)
-            #         if (len(predictions.matching[i][j]) > 0)
-            #     ]
-            #     for i, true_cls_i in enumerate(predictions.true_cls)
-            # ] # filtering is done when computing the risk, not needed here
             conf_cls = [
                 [
-                    torch.arange(n_classes)[None, ...].cuda()
+                    torch.arange(n_classes)[None, ...].to(self.device)
                     for _ in range(len(pred_cls_i))
                 ]
                 for _, pred_cls_i in enumerate(predictions.pred_cls)
@@ -893,10 +889,13 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         backend="auto",
         guarantee_level="image",
         optimizer="binary_search",
+        device="cpu",
         **kwargs,
     ):
         """ """
-        super().__init__(method=prediction_set, preprocess=preprocess)
+        super().__init__(
+            method=prediction_set, preprocess=preprocess, device=device
+        )
         if guarantee_level not in self.GUARANTEE_LEVELS:
             raise ValueError(
                 f"guarantee_level {guarantee_level} not accepted, must be one of {self.GUARANTEE_LEVELS}",
@@ -955,7 +954,11 @@ class ODClassificationConformalizer(ClassificationConformalizer):
                 for i, pred_cls_i in enumerate(predictions.pred_cls):
                     conf_cls_i = []
                     for j, pred_cls_i_j in enumerate(pred_cls_i):
-                        conf_cls_i_j = torch.where(pred_cls_i_j >= 1 - lbd)[0]
+                        conf_cls_i_j = torch.where(
+                            pred_cls_i_j >= 1 - lbd
+                        )[
+                            0
+                        ]  # .to(self.device) #TODO(leo): shouldn't need to do that here
                         conf_cls_i.append(conf_cls_i_j)
                     conf_cls.append(conf_cls_i)
                 return conf_cls
@@ -1197,6 +1200,7 @@ class ODConformalizer(Conformalizer):
             None,
         ] = None,
         classification_prediction_set: str = "lac",  # Fix where we type check
+        device="cpu",
         **kwargs,
     ):
         """Initialize the ODClassificationConformalizer object.
@@ -1213,6 +1217,8 @@ class ODConformalizer(Conformalizer):
         - kwargs: Additional keyword arguments.
 
         """
+        self.device = device
+
         if backend not in self.BACKENDS:
             raise ValueError(
                 f"backend {backend} not accepted, must be one of {self.BACKENDS}",
@@ -1267,6 +1273,7 @@ class ODConformalizer(Conformalizer):
                 loss=localization_method,
                 guarantee_level=guarantee_level,
                 prediction_set=localization_prediction_set,
+                device=device,
                 **kwargs,
             )
         elif isinstance(localization_method, LocalizationConformalizer):
@@ -1288,6 +1295,7 @@ class ODConformalizer(Conformalizer):
                 guarantee_level=guarantee_level,
                 loss=classification_method,
                 prediction_set=classification_prediction_set,
+                device=device,
             )
         elif isinstance(classification_method, ODClassificationConformalizer):
             self.classification_conformalizer = classification_method
@@ -1312,6 +1320,7 @@ class ODConformalizer(Conformalizer):
                 loss=confidence_method,
                 guarantee_level=guarantee_level,
                 matching_function=matching_function,
+                device=device,
                 other_losses=[
                     conf.loss
                     for conf in [

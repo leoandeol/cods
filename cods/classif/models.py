@@ -12,7 +12,7 @@ class ClassificationModel(Model):
         model_name,
         pretrained=True,
         weights=None,
-        device="cuda",
+        device="cpu",
         save=True,
         save_dir_path=None,
     ):

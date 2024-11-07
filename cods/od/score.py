@@ -113,10 +113,8 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         apply_margins(self, pred_boxes, quantile): Applies margins to the predicted boxes based on quantile.
     """
 
-    def __init__(self, image_shape: torch.Tensor = None):
+    def __init__(self, image_shape: torch.Tensor):
         super().__init__()
-        if image_shape is None:
-            image_shape = torch.FloatTensor([500, 500, 500, 500]).cuda()
         self.image_shape = image_shape
 
     def __call__(
@@ -132,6 +130,7 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         Returns:
             torch.Tensor: The calculated score.
         """
+        device = pred_boxes.device
         matching_scores = []
         scores = []
         if len(pred_boxes) == 0:
@@ -153,7 +152,7 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
             print(
                 "Warning: no matching boxes found. It should not happen too often"
             )
-            return torch.ones(4).cuda() * self.image_shape
+            return torch.ones(4).to(device) * self.image_shape
         else:
             idx = np.argmin(matching_scores).item()
             return scores[idx]
@@ -171,12 +170,13 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         Returns:
             torch.Tensor: The predicted boxes with applied margins.
         """
+        device = pred_boxes.device
         n = len(pred_boxes)
         new_boxes = [None] * n
-        Qst = torch.FloatTensor([quantile]).cuda()
+        Qst = torch.FloatTensor([quantile]).to(device)
         for i in range(n):
             new_boxes[i] = pred_boxes[i] + torch.mul(
-                torch.FloatTensor([[-1, -1, 1, 1]]).cuda(), Qst
+                torch.FloatTensor([[-1, -1, 1, 1]]).to(device), Qst
             )
         return new_boxes
 
@@ -224,12 +224,13 @@ class UnionAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         Returns:
             torch.Tensor: The predicted boxes with applied margins.
         """
+        device = pred_boxes.device
         n = len(pred_boxes)
         new_boxes = [None] * n
-        Qst = torch.FloatTensor([quantile]).cuda()
+        Qst = torch.FloatTensor([quantile]).to(device)
         for i in range(n):
             new_boxes[i] = pred_boxes[i] + torch.mul(
-                torch.FloatTensor([[-1, -1, 1, 1]]).cuda(), Qst
+                torch.FloatTensor([[-1, -1, 1, 1]]).to(device), Qst
             )
         return new_boxes
 
@@ -297,9 +298,10 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         Returns:
             torch.Tensor: The predicted boxes with applied margins.
         """
+        device = pred_boxes.device
         n = len(pred_boxes)
         new_boxes = [None] * n
-        Qst = torch.FloatTensor([quantile]).cuda()
+        Qst = torch.FloatTensor([quantile]).to(device)
         for i in range(n):
             w = pred_boxes[i][:, 2] - pred_boxes[i][:, 0]
             h = pred_boxes[i][:, 3] - pred_boxes[i][:, 1]
@@ -352,9 +354,10 @@ class UnionMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         Returns:
             torch.Tensor: The predicted boxes with applied margins.
         """
+        device = pred_boxes.device
         n = len(pred_boxes)
         new_boxes = [None] * n
-        Qst = torch.FloatTensor([quantile]).cuda()
+        Qst = torch.FloatTensor([quantile]).to(device)
         for i in range(n):
             w = pred_boxes[i][:, 2] - pred_boxes[i][:, 0]
             h = pred_boxes[i][:, 3] - pred_boxes[i][:, 1]

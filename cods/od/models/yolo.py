@@ -27,7 +27,7 @@ class AlteredYOLO(YOLO):
             self.raw_output = output[0].clone()
 
         def image_hook(module, input, output):
-            print(input[0].shape[2:][::-1])
+            # print(input[0].shape[2:][::-1])
             self.input_shape = input[0].shape[2:][::-1]
 
         # Register the forward hook
@@ -49,10 +49,10 @@ class YOLOModel(ODModel):
 
     def __init__(
         self,
-        model_name,
+        model_name="yolov8x.pt",
         pretrained=True,
         weights=None,
-        device="cuda",
+        device="cpu",
         save=True,
         save_dir_path=None,
     ):
@@ -72,7 +72,7 @@ class YOLOModel(ODModel):
             )
         self.device = device
         # self.model.eval()
-        # self.model.to(device)
+        self.model.to(device)
         # TODO debug
         self.transform = T.Compose(
             [
@@ -108,7 +108,7 @@ class YOLOModel(ODModel):
             # convert to [x0, y0, x1, y1] format
             out_boxes = box_output[:, :4]
             boxes = xywh2xyxy_scaled(out_boxes, width_scale, height_scale)
-            
+
             cls_probs = torch.softmax(box_output[:, 4:], dim=-1)
 
             final_confidence, predicted_class = torch.max(
@@ -141,7 +141,7 @@ class YOLOModel(ODModel):
 
         img_shapes = torch.FloatTensor(
             np.stack([image.size for image in images])
-        ).cuda()
+        ).to(self.device)
 
         images = [self.transform(image) for image in images]
         # images = list([image.to(self.device) for image in images])

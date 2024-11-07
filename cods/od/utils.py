@@ -8,205 +8,6 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-# def get_classif_preds_from_od_preds(
-#     preds: ODPredictions,
-# ) -> ClassificationPredictions:
-#     """Convert object detection predictions to classification predictions.
-
-#     Args:
-#     ----
-#         preds (ODPredictions): Object detection predictions.
-
-#     Returns:
-#     -------
-#         ClassificationPredictions: Classification predictions.
-
-#     """
-#     logger.error("Currently only handling object level guarantees")
-#     dataset_name = preds.dataset_name
-#     split_name = preds.split_name
-#     image_paths = preds.image_paths
-#     idx_to_cls = None
-
-#     if preds.matching is None:
-#         raise ValueError("Warning: preds.matching is None")
-#     matching = preds.matching
-
-#     true_cls = []
-#     pred_cls = []
-#     for i, true_cls_img in enumerate(preds.true_cls):
-#         pred_cls_img = []
-#         for j, true_cls_box in enumerate(true_cls_img):
-#             pred_cls_box = preds.pred_cls[i][matching[i][j]]
-#             pred_cls_img.append(pred_cls_box)
-#         # TODO: fix this behavior
-#         if len(pred_cls_img) == 0 or torch.stack(pred_cls_img).shape[1] == 0:
-#             # TODO: Document this choice
-#             # pred_cls_img = torch.zeros((0)).cuda()
-#             if len(true_cls_img) == 0:
-#                 continue
-#             # raise ValueError("Warning: len(pred_cls_img) == 0")
-#             pred_cls_img = torch.zeros((len(true_cls_img), 91)).cuda()
-#         else:
-#             pred_cls_img = torch.stack(pred_cls_img)
-#         true_cls.append(true_cls_img)
-#         pred_cls.append(pred_cls_img)
-#     # pred_cls = list([x.squeeze() for x in pred_cls])
-#     # pred_cls = list([x if len(x.shape) >= 2 else x.unsqueeze(0) for x in pred_cls])
-#     # print([x.shape for x in pred_cls if len(x.shape) > 2])
-#     pred_cls = pred_cls
-#     true_cls = torch.cat(true_cls).cuda()
-
-#     obj = ClassificationPredictions(
-#         dataset_name=dataset_name,
-#         split_name=split_name,
-#         image_paths=image_paths,
-#         idx_to_cls=idx_to_cls,
-#         true_cls=true_cls,
-#         pred_cls=pred_cls,
-#     )
-#     preds.preds_cls = obj
-#     return obj
-
-
-# def flatten_conf_cls(conf_cls: List[List[torch.Tensor]]) -> List[torch.Tensor]:
-#     """Flatten nested arrays into a single list.
-
-#     Args:
-#     ----
-#         conf_cls (List[List[torch.Tensor]]): Nested arrays.
-
-#     Returns:
-#     -------
-#         List[torch.Tensor]: Flattened list.
-
-#     """
-#     conf_cls = [item for sublist in conf_cls for item in sublist]
-#     return conf_cls
-
-
-# def get_conf_cls_for_od(
-#     od_preds: ODPredictions,
-#     conformalizer: Union[
-#         ClassificationConformalizer,
-#         ClassificationToleranceRegion,
-#     ],
-# ) -> List[List[torch.Tensor]]:
-#     """Get confidence scores for object detection predictions.
-
-#     Args:
-#     ----
-#         od_preds (ODPredictions): Object detection predictions.
-#         conformalizer (Union[ClassificationConformalizer, ClassificationToleranceRegion]): Conformalizer object.
-
-#     Returns:
-#     -------
-#         List[List[torch.Tensor]]: Confidence scores for each object detection prediction.
-
-#     """
-#     logger.error("Currently only handling object level guarantees")
-#     if od_preds.matching is None:
-#         raise ValueError("Warning: od_preds.matching is None")
-#     matching = od_preds.matching
-#     conf_cls = []
-#     for i, true_cls_img in enumerate(od_preds.true_cls):
-#         pre_pred_cls_img = od_preds.pred_cls[i]
-#         pred_cls_img = []
-#         for j, true_cls_box in enumerate(true_cls_img):
-#             pred_cls_box = pre_pred_cls_img[matching[i][j]]
-#             pred_cls_img.append(pred_cls_box)
-#         if len(pred_cls_img) != len(true_cls_img):
-#             raise ValueError(
-#                 "Warning: len(pred_cls_img) != len(true_cls_img), "
-#                 + str(len(pred_cls_img))
-#                 + " != "
-#                 + str(len(true_cls_img)),
-#             )
-#         if len(true_cls_img) == 0:
-#             conf_cls.append([])
-#             continue
-#         conf_cls_img = conformalizer.conformalize(
-#             ClassificationPredictions(
-#                 dataset_name=od_preds.dataset_name,
-#                 split_name=od_preds.split_name,
-#                 image_paths=od_preds.image_paths,
-#                 idx_to_cls=None,
-#                 true_cls=true_cls_img,
-#                 pred_cls=pred_cls_img,
-#             ),
-#         )
-#         conf_cls.append(conf_cls_img)
-#     return conf_cls
-
-
-# def evaluate_cls_conformalizer(
-#     od_preds: ODPredictions,
-#     conf_cls: List[List[torch.Tensor]],
-#     conformalizer: Union[
-#         ClassificationConformalizer,
-#         ClassificationToleranceRegion,
-#     ],
-#     verbose: bool = False,
-# ) -> Tuple[torch.Tensor, torch.Tensor]:
-#     """Evaluate the performance of a classification conformalizer.
-
-#     Args:
-#     ----
-#         od_preds (ODPredictions): Object detection predictions.
-#         conf_cls (List[List[torch.Tensor]]): Confidence scores for each object detection prediction.
-#         conformalizer (Union[ClassificationConformalizer, ClassificationToleranceRegion]): Conformalizer object.
-#         verbose (bool, optional): Whether to print verbose output. Defaults to False.
-
-#     Returns:
-#     -------
-#         torch.Tensor: Coverage and set size for each object detection prediction.
-
-#     """
-#     logger.error("Currently only handling object level guarantees")
-#     if od_preds.matching is None:
-#         raise ValueError("Warning: od_preds.matching is None")
-#     covs = []
-#     set_sizes = []
-#     for i, true_cls_img in enumerate(od_preds.true_cls):
-#         pre_pred_cls_img = od_preds.pred_cls[i]
-#         pred_cls_img = []
-#         for j, true_cls_box in enumerate(true_cls_img):
-#             # if len(od_preds.matching[i]) > j:
-#             pred_cls_box = pre_pred_cls_img[od_preds.matching[i][j]]
-#             pred_cls_img.append(pred_cls_box)
-#             if len(conf_cls[i][j]) == 0:
-#                 print(  # raise ValueError(
-#                     f"Warning: len(conf_cls[i][j]) == 0, conf_cls[i][j] = {conf_cls[i][j]}",
-#                 )
-#             # else:
-#             #    pred_cls_img.append(torch.empty(0).cuda())
-#         if len(pred_cls_img) != len(true_cls_img):
-#             raise ValueError(
-#                 "Warning: len(pred_cls_img) != len(true_cls_img), "
-#                 + str(len(pred_cls_img))
-#                 + " != "
-#                 + str(len(true_cls_img)),
-#             )
-#         if len(true_cls_img) == 0:
-#             continue
-#         coverage_cls, set_size_cls = conformalizer.evaluate(
-#             ClassificationPredictions(
-#                 dataset_name=od_preds.dataset_name,
-#                 split_name=od_preds.split_name,
-#                 image_paths=od_preds.image_paths,
-#                 idx_to_cls=None,
-#                 true_cls=true_cls_img,
-#                 pred_cls=pred_cls_img,
-#             ),
-#             conf_cls[i],
-#             verbose=verbose,
-#         )
-#         covs.append(coverage_cls)
-#         set_sizes.append(set_size_cls)
-#     covs = torch.cat(covs)
-#     set_sizes = torch.cat(set_sizes)
-#     return covs, set_sizes
-
 
 def mesh_func(
     x1: int,
@@ -230,9 +31,10 @@ def mesh_func(
         torch.Tensor: Mesh function.
 
     """
+    device = pbs.device
     xx, yy = torch.meshgrid(
-        torch.linspace(x1, x2, x2 - x1 + 1).cuda(),
-        torch.linspace(y1, y2, y2 - y1 + 1).cuda(),
+        torch.linspace(x1, x2, x2 - x1 + 1).to(device),
+        torch.linspace(y1, y2, y2 - y1 + 1).to(device),
         indexing="xy",
     )
     outxx = (xx.reshape((1, -1)) >= pbs[:, 0, None]) & (
@@ -259,10 +61,11 @@ def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
         torch.Tensor: Covered areas of ground truth bounding boxes.
 
     """
+    device = pred_boxes[0].device
     areas = []
     for tb, pbs in zip(true_boxes, pred_boxes):
         if len(pbs) == 0:
-            areas.append(torch.tensor(0).float().cuda())
+            areas.append(torch.tensor(0).float().to(device))
             continue
         x1, y1, x2, y2 = tb
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
@@ -273,37 +76,6 @@ def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
         areas.append(area)
     areas = torch.stack(areas)
     return areas
-
-
-# Deprecated
-# def get_covered_areas_of_gt_max(pred_boxes, true_boxes):
-#     """Compute the covered areas of ground truth bounding boxes using maximum.
-
-#     Args:
-#     ----
-#         pred_boxes (List[List[int]]): List of predicted bounding boxes.
-#         true_boxes (List[List[int]]): List of ground truth bounding boxes.
-
-#     Returns:
-#     -------
-#         torch.Tensor: Covered areas of ground truth bounding boxes.
-
-#     """
-#     areas = []
-#     for tb in true_boxes:
-#         x1, y1, x2, y2 = tb
-#         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-
-#         p_areas = []
-#         for pb in pred_boxes:
-#             Z = mesh_func(x1, y1, x2, y2, pb[None, ...])
-
-#             p_area = Z.sum() / ((x2 - x1 + 1) * (y2 - y1 + 1))
-#             p_areas.append(p_area)
-#         area = torch.max(p_areas)
-#         areas.append(area)
-#     areas = torch.stack(areas)
-#     return areas
 
 
 def contained(tb, pb):
@@ -450,12 +222,13 @@ def match_predictions_to_true_boxes(
 def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
     n = len(pred_boxes)
     new_boxes = []
-    Qst = torch.FloatTensor([Qs]).cuda()
-    correction_factor = torch.FloatTensor([[-1, -1, 1, 1]]).cuda()
+    device = pred_boxes[0].device
+    Qst = torch.FloatTensor([Qs]).to(device)
+    correction_factor = torch.FloatTensor([[-1, -1, 1, 1]]).to(device)
 
     for i in range(n):
         if len(pred_boxes[i]) == 0:
-            new_boxes.append(torch.tensor([]).float().cuda())
+            new_boxes.append(torch.tensor([]).float().to(device))
             continue
         if mode == "additive":
             new_box = pred_boxes[i] + torch.mul(
@@ -494,9 +267,19 @@ def compute_risk_object_level(
     conf_boxes = conformalized_predictions.conf_boxes
     conf_cls = conformalized_predictions.conf_cls
 
+    assert true_boxes[0].device == conf_boxes[0].device, (
+        true_boxes[0].device,
+        conf_boxes[0].device,
+    )
+    assert true_cls[0].device == conf_cls[0][0].device, (
+        true_cls[0].device,
+        conf_cls[0][0].device,
+    )
+    device = conf_boxes[0].device
+
     for i, tb_all in enumerate(true_boxes):
         true_boxes_i = tb_all  # true_boxes[i]
-        true_cls_i = true_cls[i]  # TODO: why the cuda for cls and not boxes
+        true_cls_i = true_cls[i] 
         conf_boxes_i = conf_boxes[i]
         conf_cls_i = conf_cls[i]
         matching_i = predictions.matching[i]
@@ -505,8 +288,8 @@ def compute_risk_object_level(
             matching_i_j = matching_i[j]
 
             if len(matching_i_j) == 0:
-                matched_conf_boxes_i_j = torch.tensor([]).float().cuda()
-                matched_conf_cls_i_j = torch.tensor([]).float().cuda()
+                matched_conf_boxes_i_j = torch.tensor([]).float().to(device)
+                matched_conf_cls_i_j = torch.tensor([]).float().to(device)
                 # Unsure above
             else:
                 matched_conf_boxes_i_j = torch.stack(
@@ -516,8 +299,8 @@ def compute_risk_object_level(
                     [conf_cls_i[m] for m in matching_i[j]],
                 )
             loss_value = loss(
-                [true_boxes_i[j]],
-                [true_cls_i[j].cuda()],
+                [true_boxes_i[j]],  # .to(device)],
+                [true_cls_i[j]],  # .to(device)],
                 [matched_conf_boxes_i_j],
                 [matched_conf_cls_i_j],
             )
@@ -555,13 +338,13 @@ def compute_risk_image_level(
     true_cls = predictions.true_cls
     conf_boxes = conformalized_predictions.conf_boxes
     conf_cls = conformalized_predictions.conf_cls
-
+    device = conf_boxes[0].device
     for i in range(len(true_boxes)):
         true_boxes_i = true_boxes[i]
-        true_cls_i = true_cls[
-            i
-        ].cuda()  # TODO: why the cuda for cls and not boxes
         conf_boxes_i = conf_boxes[i]
+        true_cls_i = true_cls[i].to(
+            device,
+        )  # TODO: why the cuda for cls and not boxes
         conf_cls_i = conf_cls[i]
         # for j in range(len(true_boxes_i)):
         matching_i = predictions.matching[i]
@@ -570,7 +353,7 @@ def compute_risk_image_level(
                 (
                     torch.stack([conf_boxes_i[m] for m in matching_i[j]])
                     if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().cuda()
+                    else torch.tensor([]).float().to(device)
                 )
                 for j in range(len(true_boxes_i))
             ],
@@ -580,14 +363,14 @@ def compute_risk_image_level(
                 (
                     torch.stack([conf_cls_i[m] for m in matching_i[j]])
                     if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().cuda()
+                    else torch.tensor([]).float().to(device)
                 )
                 for j in range(len(true_boxes_i))
             ],
         )
         loss_value = loss(
             true_boxes_i,
-            true_cls_i,  # .cuda(),  # TODO: why the cuda for cls and not boxes
+            true_cls_i, 
             matched_conf_boxes_i,
             matched_conf_cls_i,
         )

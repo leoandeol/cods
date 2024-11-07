@@ -88,12 +88,13 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
+        device = conf_boxes[0].device
         return max(
             [
                 (
-                    torch.zeros(1).cuda()
+                    torch.zeros(1).to(device)
                     if len(conf_boxes) >= len(true_boxes)
-                    else torch.ones(1).cuda()
+                    else torch.ones(1).to(device)
                 ),
             ]
             + [
@@ -145,21 +146,19 @@ class BoxCountRecallConfidenceLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
+        device = conf_boxes[0].device
         if len(true_boxes) == 0:
-            loss = torch.zeros(1).cuda()
+            loss = torch.zeros(1).to(device)
         else:
             loss = torch.maximum(
-                        torch.zeros(1),
-                        torch.tensor(
-                            (len(true_boxes) - len(conf_boxes))
-                            / len(true_boxes)
-                        ),
-                    ).cuda()
+                torch.zeros(1),
+                torch.tensor(
+                    (len(true_boxes) - len(conf_boxes)) / len(true_boxes)
+                ),
+            ).to(device)
         return max(
             [
-                (
-                    loss
-                ),
+                (loss),
             ]
             + [
                 loss(true_boxes, true_cls, conf_boxes, conf_cls)
@@ -168,9 +167,9 @@ class BoxCountRecallConfidenceLoss(ODLoss):
         )
         # losses = []
         # if len(true_boxes) == 0:
-        #     loss = torch.zeros(1).cuda()
+        #     loss = torch.zeros(1).to(device)
         # elif len(conf_boxes) == 0:
-        #     loss = torch.ones(1).cuda()
+        #     loss = torch.ones(1).to(device)
         # else:
         #     for i, true_boxes_i in enumerate(true_boxes):
         #         # search for closest box
@@ -191,15 +190,15 @@ class BoxCountRecallConfidenceLoss(ODLoss):
         #         # TODO arbirtrary
 
         #         if len(distances) == 0:
-        #             loss_i = torch.ones(1).cuda()
+        #             loss_i = torch.ones(1).to(device)
         #             losses.append(loss_i)
         #             continue
 
         #         loss_i = (
-        #             torch.zeros(1).cuda()
+        #             torch.zeros(1).to(device)
         #             if torch.min(torch.stack(distances))
         #             < self.distance_threshold
-        #             else torch.ones(1).cuda()
+        #             else torch.ones(1).to(device)
         #         )
         #         losses.append(loss_i)
         #     loss = torch.mean(torch.stack(losses))
@@ -258,13 +257,14 @@ class ClassificationLossWrapper(ODLoss):
         conf_cls: torch.Tensor,
     ) -> torch.Tensor:
         """ """
+        device = conf_boxes[0].device
         losses = []
         if len(true_cls) == 0:
             logger.warning(f"true_cls is empty : {true_cls}")
-            return torch.zeros(1).cuda()
+            return torch.zeros(1).to(device)
         if len(conf_cls) == 0:
             logger.warning(f"conf_cls is empty : {conf_cls}")
-            return torch.ones(1).cuda()
+            return torch.ones(1).to(device)
         for i in range(len(conf_cls)):
             loss = self.classification_loss(conf_cls[i], true_cls[i])
             # print(f"loss: {loss}")
@@ -345,6 +345,7 @@ class ThresholdedRecallLoss(ODLoss):
         - float: The loss value.
 
         """
+        device = conf_boxes[0].device
         if len(true_boxes) == 0:
             return 0
         if len(conf_boxes) == 0:
@@ -355,9 +356,9 @@ class ThresholdedRecallLoss(ODLoss):
         ).float()  # because doubt on the computation of the overlap, check formula TODO
         miscoverage = torch.mean(is_not_covered)
         loss = (
-            torch.ones(1).cuda()
+            torch.ones(1).to(device)
             if miscoverage > self.beta
-            else torch.zeros(1).cuda()
+            else torch.zeros(1).to(device)
         )
         return loss
 
@@ -406,10 +407,11 @@ class ClassBoxWiseRecallLoss(ODLoss):
         - float: The loss value.
 
         """
+        device = conf_boxes[0].device
         if len(true_boxes) == 0:
-            return torch.zeros(1).cuda()
+            return torch.zeros(1).to(device)
         if len(conf_boxes) == 0:
-            return torch.ones(1).cuda()
+            return torch.ones(1).to(device)
         areas = self.get_covered_areas(conf_boxes, true_boxes)
         is_not_covered_loc = (
             areas < 0.999
@@ -417,12 +419,12 @@ class ClassBoxWiseRecallLoss(ODLoss):
         is_not_covered_cls = torch.tensor(
             [tc not in cc for (tc, cc) in zip(true_cls, conf_cls)],
             dtype=torch.float,
-        ).cuda()
+        ).to(device)
         is_not_covered = torch.logical_or(
             is_not_covered_loc,
             is_not_covered_cls,
         ).float()
-        miscoverage = torch.zeros(1).cuda() + torch.mean(
+        miscoverage = torch.zeros(1).to(device) + torch.mean(
             is_not_covered,
         )  # TODO: bugfix
         return miscoverage
@@ -474,15 +476,16 @@ class BoxWiseRecallLoss(ODLoss):
         - float: The loss value.
 
         """
+        device = conf_boxes[0].device
         if len(true_boxes) == 0:
-            return torch.zeros(1).cuda()
+            return torch.zeros(1).to(device)
         if len(conf_boxes) == 0:
-            return torch.ones(1).cuda()
+            return torch.ones(1).to(device)
         areas = self.get_covered_areas(conf_boxes, true_boxes)
         is_not_covered = (
             areas < 0.999
         ).float()  # because doubt on the computation of the overlap, check formula TODO
-        miscoverage = torch.zeros(1).cuda() + torch.mean(
+        miscoverage = torch.zeros(1).to(device) + torch.mean(
             is_not_covered,
         )  # TODO: tmp for bugfix
         return miscoverage
@@ -528,12 +531,13 @@ class PixelWiseRecallLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
+        device = conf_boxes[0].device
         if len(true_boxes) == 0:
-            return torch.zeros(1).cuda()
+            return torch.zeros(1).to(device)
         if len(conf_boxes) == 0:
-            return torch.ones(1).cuda()
+            return torch.ones(1).to(device)
         areas = self.get_covered_areas(conf_boxes, true_boxes)
-        loss = torch.ones(1).cuda() - torch.mean(areas)
+        loss = torch.ones(1).to(device) - torch.mean(areas)
         return loss
 
 

@@ -1,3 +1,4 @@
+from hashlib import sha256
 from typing import Optional
 
 import torch
@@ -16,7 +17,7 @@ class ODModel(Model):
         save_dir_path: str,
         pretrained: bool = True,
         weights: Optional[str] = None,
-        device: str = "cuda",
+        device: str = "cpu",
     ):
         """
         Initializes an instance of the ODModel class.
@@ -26,7 +27,7 @@ class ODModel(Model):
             save_dir_path (str): The path to save the model.
             pretrained (bool, optional): Whether to use pretrained weights. Defaults to True.
             weights (str, optional): The path to the weights file. Defaults to None.
-            device (str, optional): The device to use for computation. Defaults to "cuda".
+            device (str, optional): The device to use for computation. Defaults to "cpu".
         """
         super(ODModel, self).__init__(
             model_name=model_name,
@@ -65,17 +66,23 @@ class ODModel(Model):
         Returns:
             ODPredictions: Predictions object to use for prediction set construction.
         """
+        string_to_hash = f"{dataset.root}_{dataset_name}_{split_name}_{batch_size}_{shuffle}_object_detection_{dataset.image_ids}"
+        hash = sha256(string_to_hash.encode()).hexdigest()
+
         preds = None
         if not force_recompute:
             preds = self._load_preds_if_exists(
-                dataset_name=dataset_name,
-                split_name=split_name,
-                task_name="object_detection",
+                hash,
+                # dataset_name=dataset_name,
+                # split_name=split_name,
+                # task_name="object_detection",
             )
             if preds is not None:
                 if verbose:
                     print("Predictions already exist, loading them...")
                 if isinstance(preds, ODPredictions):
+                    # Make sure the predictions are on the right device
+                    preds.to(self.device)
                     return preds
                 else:
                     raise ValueError(
@@ -144,7 +151,11 @@ class ODModel(Model):
             [shape for arr_shape in all_image_shapes for shape in arr_shape]
         )
         all_true_boxes = list(
-            [box.cuda() for arr_box in all_true_boxes for box in arr_box]
+            [
+                box.to(self.device)
+                for arr_box in all_true_boxes
+                for box in arr_box
+            ]
         )
         all_pred_boxes = list(
             [box for arr_box in all_pred_boxes for box in arr_box]
@@ -167,7 +178,11 @@ class ODModel(Model):
             ]
         )
         all_true_cls = list(
-            [cls.cuda() for arr_cls in all_true_cls for cls in arr_cls]
+            [
+                cls.to(self.device)
+                for arr_cls in all_true_cls
+                for cls in arr_cls
+            ]
         )
         all_pred_cls = list(
             [proba for arr_proba in all_pred_cls for proba in arr_proba]
@@ -186,7 +201,7 @@ class ODModel(Model):
             names=dataset.NAMES,
             pred_boxes_uncertainty=all_pred_boxes_unc,
         )
-        self._save_preds(preds)
+        self._save_preds(preds, hash)
         return preds
 
     def _filter_preds(

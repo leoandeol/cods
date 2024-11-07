@@ -1,9 +1,12 @@
 import json
 import os
 import random
+from logging import getLogger
 
 from PIL import Image
 from torch.utils.data import Dataset
+
+logger = getLogger("cods")
 
 # from torchvision.datasets import VOCDetection, CocoDetection
 
@@ -194,8 +197,7 @@ class MSCOCODataset(Dataset):
 
     from typing import Optional
 
-    # split dataset in two dataset randomly
-    def random_split(
+    def split_dataset(
         self,
         proportion,
         shuffle=True,
@@ -203,6 +205,7 @@ class MSCOCODataset(Dataset):
         **kwargs,
     ):
         if shuffle:
+            logger.info("Shuffling dataset")
             self.shuffle()
 
         n_total_samples = len(self)

@@ -1,10 +1,13 @@
 import os
 import pickle
+from logging import getLogger
 from typing import Optional
 
 import torch
 
 from cods.base.data import Predictions
+
+logger = getLogger("cods")
 
 
 class Model:
@@ -14,7 +17,7 @@ class Model:
         save_dir_path: str,
         pretrained=True,
         weights=None,
-        device="cuda",
+        device="cpu",
     ):
         self.model_name = model_name
         self.model = None  # TODO: add model loading
@@ -24,23 +27,21 @@ class Model:
         if save_dir_path is None:
             save_dir_path = "./saved_predictions"
         self.save_dir_path = save_dir_path
+        logger.info(f"Model {model_name} initialized")
 
     def build_predictions(
         self, dataloader: torch.utils.data.DataLoader, verbose=True, **kwargs
     ) -> Predictions:
         raise NotImplementedError("Please Implement this method")
 
-    "./saved_predictions/model_name/dataset_name/split_name/predictions.pkl"
-
-    def _save_preds(self, predictions: Predictions):
+    def _save_preds(self, predictions: Predictions, hash: str):
         """Save predictions to file
 
         Args:
             predictions (Predictions): predictions object
             path (str): path to file
         """
-        path = f"{self.save_dir_path}/{self.model_name}/{predictions.dataset_name}"
-        path = f"{path}/{predictions.split_name}/predictions_{predictions.task_name}.pkl"
+        path = f"{self.save_dir_path}/{hash}.pkl"
         # create directory if it doesn't exist
         dir_path = os.path.dirname(path)
         if not os.path.exists(dir_path):
@@ -54,9 +55,10 @@ class Model:
 
     def _load_preds_if_exists(
         self,
-        dataset_name: str,
-        split_name: str,
-        task_name: str,
+        hash: str,
+        # dataset_name: str,
+        # split_name: str,
+        # task_name: str,
     ) -> Optional[Predictions]:
         """Load predictions if they exist, else return None
 
@@ -66,7 +68,7 @@ class Model:
         Returns:
             Predictions: predictions object
         """
-        path = f"{self.save_dir_path}/{self.model_name}/{dataset_name}/{split_name}/predictions_{task_name}.pkl"
+        path = f"{self.save_dir_path}/{hash}.pkl"
         if not os.path.exists(path):
             print(f"File {path} does not exist")
             return None

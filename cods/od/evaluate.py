@@ -1,4 +1,5 @@
 import argparse
+import concurrent.futures
 import json
 import pickle
 from itertools import product
@@ -6,20 +7,16 @@ from logging import getLogger
 from time import time
 
 import numpy as np
+import torch
 from tqdm import tqdm
 
 import wandb
-
-logger = getLogger("cods")
-
-import torch
-
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
 from cods.od.metrics import get_recall_precision
-from cods.od.models import DETRModel
+from cods.od.models import DETRModel, YOLOModel
 
-# MODES = ["classification", "localization", "detection", "combined"]
+logger = getLogger("cods")
 
 MODES = ["classification", "localization", "detection"]
 
@@ -29,17 +26,12 @@ class Benchmark:
         "mscoco": MSCOCODataset,
     }
 
-    MODELS = {
-        "detr": DETRModel,
-    }
+    MODELS = {"detr": DETRModel, "yolo": YOLOModel}
 
-    def __init__(self, config=None):
-        if config is None:
-            self.config = DEFAULT_CONFIG
-            logger.info("Using default config")
-        else:
-            self.config = config
-            logger.info("Using provided config")
+    def __init__(self, config, device):
+        self.config = config
+        self.device = device
+        logger.info("Loaded config")
 
         self.run_id = "experiment-" + wandb.util.generate_id()
 
@@ -49,6 +41,7 @@ class Benchmark:
             raise NotImplementedError("Multithreading not implemented yet")
 
         experiments = []
+        # TODO(leo): Add model_name to the config
         param_combinations = product(
             self.config["dataset"],
             self.config["model"],
@@ -107,6 +100,11 @@ class Benchmark:
                 }
             )
 
+        # with concurrent.futures.ProcessPoolExecutor(
+        #     max_workers=18
+        # ) as executor:
+        #     executor.map(self.run_experiment, experiments)
+
         # pickle the results with a unique name
         unique_name = str(time())
 
@@ -120,11 +118,7 @@ class Benchmark:
             with open(f"results-{unique_name}.pkl", "wb") as f:
                 pickle.dump(results, f)
             # except Exception as e:
-                #logger.error(f"Experiment failed: {e}")
-        dataset = MSCOCODataset(
-            root="/datasets/shared_datasets/coco/", split="val"
-        )
-        data_cal, data_val = dataset.random_split(0.5, shuffled=False)
+            # logger.error(f"Experiment failed: {e}")
 
     def run_experiment(self, experiment, verbose=False):
         if verbose:
@@ -151,14 +145,16 @@ class Benchmark:
         dataset = MSCOCODataset(
             root="/datasets/shared_datasets/coco/", split="val"
         )
-        data_cal, data_val = dataset.random_split(0.5, shuffled=False)
+        data_cal, data_val = dataset.split_dataset(0.5, shuffle=False)
 
         # Load model
         if experiment["model"] != "detr":
             raise NotImplementedError(
                 f"Model { experiment['model']} not implemented yet."
             )
-        model = DETRModel(model_name="detr_resnet50", pretrained=True)
+        model = self.MODELS[experiment["model"]](
+            pretrained=True, device=self.device
+        )
 
         # Build predictions
         batch_size = experiment["batch_size"]
@@ -200,6 +196,7 @@ class Benchmark:
                 "classification_prediction_set"
             ],
             optimizer=experiment["optimizer"],
+            device=self.device,
         )
 
         alphas = experiment["alphas"]
@@ -295,6 +292,12 @@ def parse_args():
         required=True,
         help="Path to the JSON config file",
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cpu",
+        help="Device to use for training and evaluation",
+    )
     return parser.parse_args()
 
 
@@ -303,5 +306,5 @@ if __name__ == "__main__":
     with open(args.config, "r") as f:
         config = json.load(f)
 
-    benchmark = Benchmark(config)
+    benchmark = Benchmark(config, device=args.device)
     benchmark.run()

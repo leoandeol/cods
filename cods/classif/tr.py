@@ -1,9 +1,10 @@
-import torch
 from typing import Callable
 
+import torch
+
 from cods.base.tr import ToleranceRegion
-from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 from cods.classif.data import ClassificationPredictions
+from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 
 
 class ClassificationToleranceRegion(ToleranceRegion):
@@ -15,6 +16,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
         inequality="binomial_inverse_cdf",
         optimizer="binary_search",
         preprocess="softmax",
+        device="cpu",
         optimizer_args={},
     ):
         super().__init__(
@@ -30,6 +32,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
             raise ValueError(
                 f"preprocess '{preprocess}' not accepted, must be one of {self.accepted_preprocess}"
             )
+        self.device = device
         self.preprocess = preprocess
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
         if isinstance(loss, str):
@@ -122,8 +125,8 @@ class ClassificationToleranceRegion(ToleranceRegion):
         # TODO: fix
         return self.f_inequality(
             Rhat=risk,
-            n=torch.tensor(n, dtype=torch.float).cuda(),
-            delta=torch.tensor(delta, dtype=torch.float).cuda(),
+            n=torch.tensor(n, dtype=torch.float).to(self.device),
+            delta=torch.tensor(delta, dtype=torch.float).to(self.device),
         )
 
     def conformalize(
