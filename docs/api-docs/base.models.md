@@ -11,14 +11,14 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/models.py#L10"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/models.py#L13"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Model`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/models.py#L11"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/models.py#L14"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -28,7 +28,7 @@ __init__(
     save_dir_path: str,
     pretrained=True,
     weights=None,
-    device='cuda'
+    device='cpu'
 )
 ```
 
@@ -41,7 +41,7 @@ __init__(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/models.py#L28"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/models.py#L32"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `build_predictions`
 

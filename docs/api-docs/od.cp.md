@@ -7,389 +7,354 @@
 
 
 
+**Global Variables**
+---------------
+- **FORMAT**
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L54"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L67"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `LocalizationConformalizer`
+A class for performing localization conformalization. Should be used within an ODConformalizer. 
 
+Attributes 
+---------- 
+- BACKENDS (list): A list of supported backends. 
+- accepted_methods (dict): A dictionary mapping accepted method names to their corresponding score functions. 
+- PREDICTION_SETS (list): A list of supported prediction sets. 
+- LOSSES (dict): A dictionary mapping loss names to their corresponding loss classes. 
+- OPTIMIZERS (dict): A dictionary mapping optimizer names to their corresponding optimizer classes. 
 
+Methods 
+------- 
+- __init__: Initialize the LocalizationConformalizer class. 
+- _get_risk_function: Get the risk function for risk conformalization. 
 
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L55"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `__init__`
-
-```python
-__init__(method: str = 'min-hausdorff-additive', margins: int = 1, **kwargs)
-```
-
-Conformalizer for object localization tasks. 
-
-
-
-**Args:**
- 
- - <b>`method`</b> (str):  The method to compute non-conformity scores. Must be one of ["min-hausdorff-additive", "min-hausdorff-multiplicative", "union-hausdorff-additive", "union-hausdorff-multiplicative"]. 
- - <b>`margins`</b> (int):  The number of margins to compute. Must be one of [1, 2, 4]. 
- - <b>`**kwargs`</b>:  Additional keyword arguments. 
-
-
-
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L89"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `calibrate`
-
-```python
-calibrate(
-    preds: ODPredictions,
-    alpha: float = 0.1,
-    confidence_threshold: Optional[float] = None,
-    verbose: bool = True
-) → list
-```
-
-Calibrates the conformalizer using the given predictions. 
-
-
-
-**Args:**
- 
- - <b>`preds`</b> (ODPredictions):  The object detection predictions. 
- - <b>`alpha`</b> (float):  The significance level for the calibration. 
- - <b>`confidence_threshold`</b> (float, optional):  The confidence threshold for the predictions. If not provided, it must be set in the predictions or in the conformalizer. 
- - <b>`verbose`</b> (bool):  Whether to display progress information. 
-
-
-
-**Returns:**
- 
- - <b>`list`</b>:  The computed quantiles for each margin. 
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L198"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `conformalize`
-
-```python
-conformalize(preds: ODPredictions) → list
-```
-
-Conformalizes the object detection predictions using the calibrated quantiles. 
-
-
-
-**Args:**
- 
- - <b>`preds`</b> (ODPredictions):  The object detection predictions. 
-
-
-
-**Returns:**
- 
- - <b>`list`</b>:  The conformalized bounding boxes. 
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L217"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `evaluate`
-
-```python
-evaluate(
-    preds: ODPredictions,
-    conf_boxes: list,
-    verbose: bool = True
-) → Tuple[Tensor, Tensor]
-```
-
-Evaluates the conformalized predictions. 
-
-
-
-**Args:**
- 
- - <b>`preds`</b> (ODPredictions):  The object detection predictions. 
- - <b>`conf_boxes`</b> (list):  The conformalized bounding boxes. 
- - <b>`verbose`</b> (bool):  Whether to display evaluation results. 
-
-
-
-**Returns:**
- 
- - <b>`Tuple[torch.Tensor, torch.Tensor]`</b>:  The computed coverage and set sizes. 
-
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L274"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-## <kbd>class</kbd> `LocalizationRiskConformalizer`
-A class that performs risk conformalization for localization tasks. 
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L281"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
 __init__(
-    prediction_set: str = 'additive',
-    loss: str = None,
-    optimizer: str = 'binary_search'
+    loss: Union[str, ODLoss],
+    prediction_set: str,
+    guarantee_level: str,
+    number_of_margins: int = 1,
+    optimizer: Optional[str, Optimizer] = None,
+    backend: str = 'auto',
+    device='cpu',
+    **kwargs
 )
 ```
 
-Initialize the LocalizationRiskConformalizer. 
+Initialize the CP class. 
 
+Parameters 
+---------- 
+- loss (Union[str, ODLoss]): The loss function to be used. It can be either a string representing a predefined loss function or an instance of the ODLoss class. 
+- prediction_set (str): The prediction set to be used. Must be one of ["additive", "multiplicative", "adaptive"]. 
+- guarantee_level (str): The guarantee level to be used. Must be one of ["image", "object"]. 
+- number_of_margins (int, optional): The number of margins to compute. Default is 1. 
+- optimizer (Optional[Union[str, Optimizer]], optional): The optimizer to be used. It can be either a string representing a predefined optimizer or an instance of the Optimizer class. Default is None. 
+- backend (str, optional): The backend to be used. Default is "auto". 
+- **kwargs: Additional keyword arguments. 
 
-
-**Parameters:**
- 
-- prediction_set (str): The type of prediction set to use. Must be one of ["additive", "multiplicative", "adaptative"]. 
-- loss (str): The type of loss to use. Must be one of ["pixelwise", "boxwise"]. 
-- optimizer (str): The type of optimizer to use. Must be one of ["binary_search", "gaussianprocess", "gpr", "kriging"]. 
+Raises 
+------ 
+- ValueError: If the loss is not accepted, it must be one of the predefined losses or an instance of ODLoss. 
+- ValueError: If the prediction set is not accepted, it must be one of the predefined prediction sets. 
+- ValueError: If the number of margins is not 1, 2, or 4. 
+- NotImplementedError: If the number of margins is greater than 1 (only 1 margin is supported for now). 
+- ValueError: If the backend is not accepted, it must be one of the predefined backends. 
+- ValueError: If the optimizer is not accepted, it must be one of the predefined optimizers or an instance of Optimizer. 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L381"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L409"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
 ```python
 calibrate(
-    preds: ODPredictions,
-    alpha: float = 0.1,
+    predictions: ODPredictions,
+    alpha: float,
     steps: int = 13,
     bounds: List[float] = [0, 1000],
     verbose: bool = True,
-    confidence_threshold: float = None
+    overload_confidence_threshold: Optional[float] = None
 ) → float
 ```
 
 Calibrate the conformalizer. 
 
-
-
-**Parameters:**
- 
-- preds (ODPredictions): The object detection predictions. 
+Parameters 
+---------- 
+- predictions (ODPredictions): The object detection predictions. 
 - alpha (float): The significance level. 
 - steps (int): The number of steps for optimization. 
 - bounds (List[float]): The bounds for optimization. 
 - verbose (bool): Whether to print the optimization progress. 
 - confidence_threshold (float): The threshold for objectness confidence. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - lbd (float): The calibrated lambda value. 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L430"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L475"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
 ```python
-conformalize(preds: ODPredictions) → List[List[float]]
+conformalize(
+    predictions: ODPredictions,
+    parameters: Optional[ODParameters] = None,
+    verbose: bool = True
+) → List[Tensor]
 ```
 
-Conformalize the object detection predictions. 
+Conformalizes the predictions using the specified lambda values for localization. 
 
 
 
-**Parameters:**
+**Args:**
  
-- preds (ODPredictions): The object detection predictions. 
+---- 
+ - <b>`predictions`</b> (ODPredictions):  The predictions to be conformalized. 
+ - <b>`parameters`</b> (Optional[ODParameters], optional):  The optional parameters containing the lambda value for localization. Defaults to None. 
+ - <b>`verbose`</b> (bool, optional):  Whether to display verbose information. Defaults to True. 
 
 
 
 **Returns:**
  
-- conf_boxes (List[List[float]]): The conformalized bounding boxes. 
+------- 
+ - <b>`List[torch.Tensor]`</b>:  The conformalized bounding boxes. 
+
+
+
+**Raises:**
+ 
+------ 
+ - <b>`ValueError`</b>:  If the conformalizer is not calibrated before conformalizing. 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L449"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L536"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `evaluate`
 
 ```python
 evaluate(
-    preds: ODPredictions,
-    conf_boxes: List[List[float]],
+    predictions: ODPredictions,
+    parameters: ODParameters,
+    conformalized_predictions: ODConformalizedPredictions,
     verbose: bool = True
 ) → Tuple[Tensor, Tensor]
 ```
 
-Evaluate the conformalized predictions. 
 
 
 
-**Parameters:**
- 
-- preds (ODPredictions): The object detection predictions. 
-- conf_boxes (List[List[float]]): The conformalized bounding boxes. 
-- verbose (bool): Whether to print the evaluation results. 
-
-
-
-**Returns:**
- 
-- safety (torch.Tensor): The safety scores. 
-- set_sizes (torch.Tensor): The set sizes. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L502"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L586"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ConfidenceConformalizer`
-A class that performs risk conformalization for localization tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L509"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L594"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
 __init__(
-    prediction_set: str = 'additive',
+    guarantee_level: str,
+    matching_function: str,
     loss: str = 'nb_boxes',
-    optimizer: str = 'binary_search'
+    other_losses: Optional[List] = None,
+    optimizer: str = 'binary_search',
+    device='cpu'
 )
 ```
 
-Initialize the LocalizationRiskConformalizer. 
 
 
 
-**Parameters:**
- 
-- prediction_set (str): The type of prediction set to use. Must be one of ["additive", "multiplicative", "adaptative"]. 
-- loss (str): The type of loss to use. Must be one of ["pixelwise", "boxwise"]. 
-- optimizer (str): The type of optimizer to use. Must be one of ["binary_search", "gaussianprocess", "gpr", "kriging"]. 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L600"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L761"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
 ```python
 calibrate(
-    preds: ODPredictions,
+    predictions: ODPredictions,
     alpha: float = 0.1,
     steps: int = 13,
-    bounds: List[float] = [0, 1000],
-    verbose: bool = True,
-    confidence_threshold: float = None
-) → float
+    bounds: List[float] = [0, 1],
+    verbose: bool = True
+) → Tuple[float, float]
 ```
 
-Calibrate the conformalizer. 
 
 
 
-**Parameters:**
- 
-- preds (ODPredictions): The object detection predictions. 
-- alpha (float): The significance level. 
-- steps (int): The number of steps for optimization. 
-- bounds (List[float]): The bounds for optimization. 
-- verbose (bool): Whether to print the optimization progress. 
-- confidence_threshold (float): The threshold for objectness confidence. 
-
-
-
-**Returns:**
- 
-- lbd (float): The calibrated lambda value. 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L649"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L805"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
 ```python
-conformalize(preds: ODPredictions) → float
+conformalize(predictions: ODPredictions) → float
 ```
 
 Conformalize the object detection predictions. 
 
+Parameters 
+---------- 
+- predictions (ODPredictions): The object detection predictions. 
 
-
-**Parameters:**
- 
-- preds (ODPredictions): The object detection predictions. 
-
-
-
-**Returns:**
- 
+Returns 
+------- 
 - conf_boxes (List[List[float]]): The conformalized bounding boxes. 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L664"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L824"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `evaluate`
 
 ```python
 evaluate(
-    preds: ODPredictions,
-    conf_boxes: List[List[float]],
+    predictions: ODPredictions,
+    parameters: ODParameters,
+    conformalized_predictions: ODConformalizedPredictions,
     verbose: bool = True
 ) → Tuple[Tensor, Tensor]
 ```
 
 Evaluate the conformalized predictions. 
 
-
-
-**Parameters:**
- 
-- preds (ODPredictions): The object detection predictions. 
+Parameters 
+---------- 
+- predictions (ODPredictions): The object detection predictions. 
 - conf_boxes (List[List[float]]): The conformalized bounding boxes. 
 - verbose (bool): Whether to print the evaluation results. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - safety (torch.Tensor): The safety scores. 
 - set_sizes (torch.Tensor): The set sizes. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L717"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L871"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODClassificationConformalizer`
 
 
 
 
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L884"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `__init__`
+
+```python
+__init__(
+    loss='binary',
+    prediction_set='lac',
+    preprocess='softmax',
+    backend='auto',
+    guarantee_level='image',
+    optimizer='binary_search',
+    device='cpu',
+    **kwargs
+)
+```
+
+
+
+
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L722"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1016"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `calibrate`
+
+```python
+calibrate(
+    predictions: ODPredictions,
+    alpha: float,
+    bounds: List[float] = [0, 1],
+    steps: int = 40,
+    verbose: bool = True,
+    overload_confidence_threshold: Optional[float] = None
+) → Tensor
+```
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1068"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `conformalize`
+
+```python
+conformalize(predictions: ODPredictions) → List
+```
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1086"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `evaluate`
+
+```python
+evaluate(
+    predictions: ODPredictions,
+    parameters: Optional[ODParameters],
+    conformalized_predictions: ODConformalizedPredictions,
+    verbose: bool = True
+) → Tuple[Tensor, Tensor]
+```
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1119"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODConformalizer`
 Class representing conformalizers for object detection tasks. 
@@ -398,6 +363,7 @@ Class representing conformalizers for object detection tasks.
 
 **Attributes:**
  
+---------- 
  - <b>`MULTIPLE_TESTING_CORRECTIONS`</b> (List[str]):  List of supported multiple testing correction methods. 
  - <b>`BACKENDS`</b> (List[str]):  List of supported backends. 
  - <b>`GUARANTEE_LEVELS`</b> (List[str]):  List of supported guarantee levels. 
@@ -406,6 +372,7 @@ Class representing conformalizers for object detection tasks.
 
 **Args:**
  
+---- 
  - <b>`backend`</b> (str):  The backend used for the conformalization. Only 'auto' is supported currently. 
  - <b>`guarantee_level`</b> (str):  The guarantee level for the conformalization. Must be one of ["image", "object"]. 
  - <b>`confidence_threshold`</b> (Optional[float]):  The confidence threshold used for objectness conformalization. Mutually exclusive with 'confidence_method', if set, then confidence_method must be None. 
@@ -419,46 +386,51 @@ Class representing conformalizers for object detection tasks.
 
 **Raises:**
  
+------ 
  - <b>`ValueError`</b>:  If the provided backend is not supported. 
  - <b>`ValueError`</b>:  If the provided guarantee level is not supported. 
  - <b>`ValueError`</b>:  If both confidence_threshold and confidence_method are provided. 
  - <b>`ValueError`</b>:  If neither confidence_threshold nor confidence_method are provided. 
  - <b>`ValueError`</b>:  If the provided multiple_testing_correction is not supported. 
 
-Methods: calibrate(predictions, global_alpha, alpha_confidence, alpha_localization, alpha_classification, verbose=True)  Calibrates the conformalizers and returns the calibration results. 
+Methods: 
+------- calibrate(predictions, global_alpha, alpha_confidence, alpha_localization, alpha_classification, verbose=True)  Calibrates the conformalizers and returns the calibration results. 
 
 
 
 **Args:**
  
-         - <b>`predictions`</b> (ODPredictions):  The predictions to be calibrated. 
-         - <b>`global_alpha`</b> (Optional[float]):  The global alpha value for calibration. If multiple_testing_correction is None, individual alpha values will be used for each conformalizer. 
-         - <b>`alpha_confidence`</b> (Optional[float]):  The alpha value for the confidence conformalizer. 
-         - <b>`alpha_localization`</b> (Optional[float]):  The alpha value for the localization conformalizer. 
-         - <b>`alpha_classification`</b> (Optional[float]):  The alpha value for the classification conformalizer. 
-         - <b>`verbose`</b> (bool, optional):  Whether to print calibration information. Defaults to True. 
+---- 
+ - <b>`predictions`</b> (ODPredictions):  The predictions to be calibrated. 
+ - <b>`global_alpha`</b> (Optional[float]):  The global alpha value for calibration. If multiple_testing_correction is None, individual alpha values will be used for each conformalizer. 
+ - <b>`alpha_confidence`</b> (Optional[float]):  The alpha value for the confidence conformalizer. 
+ - <b>`alpha_localization`</b> (Optional[float]):  The alpha value for the localization conformalizer. 
+ - <b>`alpha_classification`</b> (Optional[float]):  The alpha value for the classification conformalizer. 
+ - <b>`verbose`</b> (bool, optional):  Whether to print calibration information. Defaults to True. 
 
 
 
 **Returns:**
  
-         - <b>`dict[str, Any]`</b>:  A dictionary containing the calibration results, including target alpha values and estimated lambda values for each conformalizer. 
+------- 
+ - <b>`dict[str, Any]`</b>:  A dictionary containing the calibration results, including target alpha values and estimated lambda values for each conformalizer. 
 
 
 
 **Raises:**
  
-         - <b>`ValueError`</b>:  If the multiple_testing_correction is not provided or is not valid. 
-         - <b>`ValueError`</b>:  If the global_alpha is not provided when using the Bonferroni multiple_testing_correction. 
-         - <b>`ValueError`</b>:  If explicit alpha values are provided when using the Bonferroni multiple_testing_correction. 
+------ 
+ - <b>`ValueError`</b>:  If the multiple_testing_correction is not provided or is not valid. 
+ - <b>`ValueError`</b>:  If the global_alpha is not provided when using the Bonferroni multiple_testing_correction. 
+ - <b>`ValueError`</b>:  If explicit alpha values are provided when using the Bonferroni multiple_testing_correction. 
 
 
 
 **Note:**
 
-> - The multiple_testing_correction attribute of the class must be set before calling this method. - The conformalizers must be initialized before calling this method. 
+> ---- - The multiple_testing_correction attribute of the class must be set before calling this method. - The conformalizers must be initialized before calling this method. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L777"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1183"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -466,21 +438,23 @@ Methods: calibrate(predictions, global_alpha, alpha_confidence, alpha_localizati
 __init__(
     backend: str = 'auto',
     guarantee_level: str = 'image',
+    matching_function: str = 'hausdorff',
     confidence_threshold: Optional[float] = None,
     multiple_testing_correction: Optional[str] = None,
     confidence_method: Optional[ConfidenceConformalizer, str] = None,
     localization_method: Optional[LocalizationConformalizer, str] = None,
+    localization_prediction_set: str = 'additive',
     classification_method: Optional[ClassificationConformalizer, str] = None,
+    classification_prediction_set: str = 'lac',
+    device='cpu',
     **kwargs
 )
 ```
 
 Initialize the ODClassificationConformalizer object. 
 
-
-
-**Parameters:**
- 
+Parameters 
+---------- 
 - backend (str): The backend used for the conformalization. Only 'auto' is supported currently. 
 - guarantee_level (str): The guarantee level for the conformalization. Must be one of ["image", "object"]. 
 - confidence_threshold (Optional[float]): The confidence threshold used for objectness conformalization.  Mutually exclusive with 'confidence_method', if set, then confidence_method must be None. 
@@ -495,17 +469,17 @@ Initialize the ODClassificationConformalizer object.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L883"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1341"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
 ```python
 calibrate(
     predictions: ODPredictions,
-    global_alpha: Optional[float],
-    alpha_confidence: Optional[float],
-    alpha_localization: Optional[float],
-    alpha_classification: Optional[float],
+    global_alpha: Optional[float] = None,
+    alpha_confidence: Optional[float] = None,
+    alpha_localization: Optional[float] = None,
+    alpha_classification: Optional[float] = None,
     verbose: bool = True
 ) → ODParameters
 ```
@@ -516,6 +490,7 @@ Calibrates the conformalizers and returns the calibration results.
 
 **Args:**
  
+---- 
  - <b>`predictions`</b> (ODPredictions):  The predictions to be calibrated. 
  - <b>`global_alpha`</b> (Optional[float]):  The global alpha value for calibration. If multiple_testing_correction is None, individual alpha values will be used for each conformalizer. 
  - <b>`alpha_confidence`</b> (Optional[float]):  The alpha value for the confidence conformalizer. 
@@ -527,12 +502,14 @@ Calibrates the conformalizers and returns the calibration results.
 
 **Returns:**
  
+------- 
  - <b>`dict[str, Any]`</b>:  A dictionary containing the calibration results, including target alpha values and estimated lambda values for each conformalizer. 
 
 
 
 **Raises:**
  
+------ 
  - <b>`ValueError`</b>:  If the multiple_testing_correction is not provided or is not valid. 
  - <b>`ValueError`</b>:  If the global_alpha is not provided when using the Bonferroni multiple_testing_correction. 
  - <b>`ValueError`</b>:  If explicit alpha values are provided when using the Bonferroni multiple_testing_correction. 
@@ -541,18 +518,18 @@ Calibrates the conformalizers and returns the calibration results.
 
 **Note:**
 
-> - The multiple_testing_correction attribute of the class must be set before calling this method. - The conformalizers must be initialized before calling this method. 
+> ---- - The multiple_testing_correction attribute of the class must be set before calling this method. - The conformalizers must be initialized before calling this method. 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1067"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1557"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
 ```python
 conformalize(
     predictions: ODPredictions,
-    parameters=typing.Optional[cods.od.data.predictions.ODParameters],
+    parameters: Optional[ODParameters] = None,
     verbose: bool = True
 ) → ODConformalizedPredictions
 ```
@@ -563,19 +540,21 @@ Conformalize the given predictions.
 
 **Args:**
  
+---- 
  - <b>`predictions`</b> (ODPredictions):  The predictions to be conformalized. 
- - <b>`parameters`</b> (Optional[ODParameters]):  The parameters to be used for conformalization. If None, the last parameters will be used. 
+ - <b>`parameters`</b> (Optional[ODParameters]):  The parameters to be used for conformalization. If None, the last parameters will be used.results 
  - <b>`verbose`</b> (bool):  Whether to print conformalization information. 
 
 
 
 **Returns:**
  
+------- 
  - <b>`Tuple[torch.Tensor, torch.Tensor]`</b>:  A tuple containing the conformalized predictions. 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1149"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1647"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `evaluate`
 
@@ -596,121 +575,16 @@ evaluate(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1241"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1765"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>class</kbd> `SeqGlobalODRiskConformalizer`
-
-
-
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1243"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `__init__`
-
-```python
-__init__(
-    localization_method: str,
-    objectness_method: str,
-    classification_method: str,
-    confidence_threshold: Optional[float] = None,
-    fix_cls=False,
-    **kwargs
-)
-```
-
-
-
-
-
-
-
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1274"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `calibrate`
-
-```python
-calibrate(
-    preds: ODPredictions,
-    alpha: float = 0.1,
-    verbose: bool = True
-) → Tuple[Sequence[float], float, float]
-```
-
-
-
-
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1067"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `conformalize`
-
-```python
-conformalize(
-    predictions: ODPredictions,
-    parameters=typing.Optional[cods.od.data.predictions.ODParameters],
-    verbose: bool = True
-) → ODConformalizedPredictions
-```
-
-Conformalize the given predictions. 
-
-
-
-**Args:**
- 
- - <b>`predictions`</b> (ODPredictions):  The predictions to be conformalized. 
- - <b>`parameters`</b> (Optional[ODParameters]):  The parameters to be used for conformalization. If None, the last parameters will be used. 
- - <b>`verbose`</b> (bool):  Whether to print conformalization information. 
-
-
-
-**Returns:**
- 
- - <b>`Tuple[torch.Tensor, torch.Tensor]`</b>:  A tuple containing the conformalized predictions. 
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1365"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `evaluate`
-
-```python
-evaluate(
-    preds: ODPredictions,
-    conf_boxes: list,
-    conf_cls: list,
-    verbose: bool = True
-)
-```
-
-Evaluate the conformalizers. 
-
-
-
-**Parameters:**
- 
-- preds: The ODPredictions object containing the predictions. 
-- conf_boxes: The conformalized bounding boxes. 
-- conf_cls: The conformalized classification scores. 
-- verbose: Whether to print the evaluation results. 
-
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1438"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-## <kbd>class</kbd> `AsymptoticLocalizationObjectnessRiskConformalizer`
+## <kbd>class</kbd> `AsymptoticLocalizationObjectnessConformalizer`
 A class that performs risk conformalization for object detection predictions with asymptotic localization and objectness. 
 
 
 
 **Args:**
  
+---- 
  - <b>`prediction_set`</b> (str):  The type of prediction set to use. Must be one of "additive", "multiplicative", or "adaptative". 
  - <b>`localization_loss`</b> (str):  The type of localization loss to use. Must be one of "pixelwise" or "boxwise". 
  - <b>`optimizer`</b> (str):  The type of optimizer to use. Must be one of "gaussianprocess", "gpr", "kriging", "mc", or "montecarlo". 
@@ -719,6 +593,7 @@ A class that performs risk conformalization for object detection predictions wit
 
 **Attributes:**
  
+---------- 
  - <b>`ACCEPTED_LOSSES`</b> (dict):  A dictionary mapping accepted localization losses to their corresponding classes. 
  - <b>`loss_name`</b> (str):  The name of the localization loss. 
  - <b>`loss`</b> (Loss):  An instance of the localization loss class. 
@@ -726,13 +601,14 @@ A class that performs risk conformalization for object detection predictions wit
  - <b>`lbd`</b> (tuple):  The calibrated lambda values. 
 
 Methods: 
+------- 
  - <b>`_get_risk_function`</b>:  Returns the risk function for optimization. 
  - <b>`_correct_risk`</b>:  Corrects the risk using the number of predictions and the upper bound of the loss. 
  - <b>`calibrate`</b>:  Calibrates the conformalizer using the given predictions. 
  - <b>`conformalize`</b>:  Conformalizes the predictions using the calibrated lambda values. 
  - <b>`evaluate`</b>:  Evaluates the conformalized predictions. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1465"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1797"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -753,13 +629,13 @@ __init__(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1552"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1888"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
 ```python
 calibrate(
-    preds: ODPredictions,
+    predictions: ODPredictions,
     alpha: float = 0.1,
     steps: int = 13,
     bounds: list = [(0, 500), (0.0, 1.0)],
@@ -773,7 +649,8 @@ Calibrates the conformalizer using the given predictions.
 
 **Args:**
  
- - <b>`preds`</b> (ODPredictions):  The object detection predictions. 
+---- 
+ - <b>`predictions`</b> (ODPredictions):  The object detection predictions. 
  - <b>`alpha`</b> (float):  The significance level. 
  - <b>`steps`</b> (int):  The number of optimization steps. 
  - <b>`bounds`</b> (list):  The bounds for the optimization variables. 
@@ -783,22 +660,24 @@ Calibrates the conformalizer using the given predictions.
 
 **Returns:**
  
+------- 
  - <b>`tuple`</b>:  The calibrated lambda values. 
 
 
 
 **Raises:**
  
+------ 
  - <b>`ValueError`</b>:  If the conformalizer has already been calibrated. 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1594"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1932"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
 ```python
-conformalize(preds: ODPredictions)
+conformalize(predictions: ODPredictions)
 ```
 
 Conformalizes the predictions using the calibrated lambda values. 
@@ -807,28 +686,31 @@ Conformalizes the predictions using the calibrated lambda values.
 
 **Args:**
  
- - <b>`preds`</b> (ODPredictions):  The object detection predictions. 
+---- 
+ - <b>`predictions`</b> (ODPredictions):  The object detection predictions. 
 
 
 
 **Returns:**
  
+------- 
  - <b>`list`</b>:  The conformalized bounding boxes. 
 
 
 
 **Raises:**
  
+------ 
  - <b>`ValueError`</b>:  If the conformalizer has not been calibrated. 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1617"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1961"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `evaluate`
 
 ```python
-evaluate(preds: ODPredictions, conf_boxes: list, verbose: bool = True)
+evaluate(predictions: ODPredictions, conf_boxes: list, verbose: bool = True)
 ```
 
 Evaluates the conformalized predictions. 
@@ -837,7 +719,8 @@ Evaluates the conformalized predictions.
 
 **Args:**
  
- - <b>`preds`</b> (ODPredictions):  The object detection predictions. 
+---- 
+ - <b>`predictions`</b> (ODPredictions):  The object detection predictions. 
  - <b>`conf_boxes`</b> (list):  The conformalized bounding boxes. 
  - <b>`verbose`</b> (bool):  Whether to print verbose output. 
 
@@ -845,12 +728,14 @@ Evaluates the conformalized predictions.
 
 **Returns:**
  
+------- 
  - <b>`tuple`</b>:  The evaluation results. 
 
 
 
 **Raises:**
  
+------ 
  - <b>`ValueError`</b>:  If the conformalizer has not been calibrated or the predictions have not been conformalized. 
 
 

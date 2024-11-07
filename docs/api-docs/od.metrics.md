@@ -10,14 +10,16 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L16"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L19"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_global_coverage`
 
 ```python
 compute_global_coverage(
     predictions: ODPredictions,
-    conformalized_predictiond: ODConformalizedPredictions,
+    parameters: ODParameters,
+    conformalized_predictions: ODConformalizedPredictions,
+    guarantee_level: str = 'object',
     confidence: bool = True,
     cls: bool = True,
     localization: bool = True,
@@ -47,7 +49,7 @@ Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L127"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `getStretch`
 
@@ -73,14 +75,13 @@ Get the stretch of object detection predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L125"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L148"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `get_recall_precision`
 
 ```python
 get_recall_precision(
     od_predictions: ODPredictions,
-    pred_boxes,
     IOU_THRESHOLD=0.5,
     SCORE_THRESHOLD=0.5,
     verbose=True,
@@ -110,14 +111,13 @@ Get the recall and precision for object detection predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L196"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L219"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `getAveragePrecision`
 
 ```python
 getAveragePrecision(
     od_predictions: ODPredictions,
-    pred_boxes,
     verbose=True,
     iou_threshold=0.3
 ) → tuple
@@ -143,7 +143,7 @@ Get the average precision for object detection predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L236"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L259"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `plot_recall_precision`
 
@@ -168,39 +168,23 @@ Plot the recall and precision given objectness threshold or IoU threshold.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L260"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L283"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `unroll_metrics`
 
 ```python
 unroll_metrics(
-    od_predictions: ODPredictions,
-    conf_boxes: list[Any],
-    conf_cls: list[Any],
-    confidence_threshold: Optional[Tensor, float] = None,
+    predictions: ODPredictions,
+    conformalized_predictions: ODConformalizedPredictions,
+    confidence_threshold: Optional[float, Tensor] = None,
     iou_threshold: float = 0.5,
     verbose: bool = True
-)
+) → dict
 ```
 
-Unroll the metrics for object detection predictions. 
 
 
 
-**Args:**
- 
- - <b>`od_predictions`</b> (ODPredictions):  Object detection predictions. 
- - <b>`conf_boxes`</b> (list):  List of confidence boxes. 
- - <b>`conf_cls`</b> (list):  List of confidence classes. 
- - <b>`confidence_threshold`</b> (float, optional):  Confidence threshold. Defaults to None. 
- - <b>`iou_threshold`</b> (float, optional):  IoU threshold. Defaults to 0.5. 
- - <b>`verbose`</b> (bool, optional):  Whether to display progress. Defaults to True. 
-
-
-
-**Returns:**
- 
- - <b>`dict`</b>:  Dictionary containing the metrics. 
 
 
 

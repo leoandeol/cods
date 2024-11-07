@@ -11,14 +11,14 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/datasets.py#L14"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/datasets.py#L17"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MSCOCODataset`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/datasets.py#L15"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/datasets.py#L101"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -35,17 +35,12 @@ __init__(root, split, transforms=None, image_ids=None, **kwargs)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/datasets.py#L109"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/datasets.py#L195"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-### <kbd>method</kbd> `random_split`
+### <kbd>method</kbd> `shuffle`
 
 ```python
-random_split(
-    proportion,
-    shuffle=True,
-    n_calib_test: Optional[int] = None,
-    **kwargs
-)
+shuffle()
 ```
 
 
@@ -54,12 +49,17 @@ random_split(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/datasets.py#L103"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/datasets.py#L200"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-### <kbd>method</kbd> `shuffle`
+### <kbd>method</kbd> `split_dataset`
 
 ```python
-shuffle()
+split_dataset(
+    proportion,
+    shuffle=True,
+    n_calib_test: Optional[int] = None,
+    **kwargs
+)
 ```
 
 

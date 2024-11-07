@@ -10,16 +10,15 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/visualization.py#L6"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/visualization.py#L8"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `plot_preds`
 
 ```python
 plot_preds(
-    preds,
+    predictions: ODPredictions,
+    conformalized_predictions: ODConformalizedPredictions,
     idx,
-    conf_boxes: list,
-    conf_cls: list,
     confidence_threshold=None,
     save_as=None
 )

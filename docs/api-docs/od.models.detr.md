@@ -10,7 +10,7 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L17"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L15"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `box_cxcywh_to_xyxy`
 
@@ -25,7 +25,7 @@ box_cxcywh_to_xyxy(x)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L23"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L21"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `box_xyxy_to_cxcywh`
 
@@ -40,7 +40,7 @@ box_xyxy_to_cxcywh(x)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L29"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L27"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `rescale_bboxes`
 
@@ -55,62 +55,23 @@ rescale_bboxes(out_bbox, size)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L36"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-## <kbd>class</kbd> `ResizeChannels`
-
-
-
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L37"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `__init__`
-
-```python
-__init__(num_channels)
-```
-
-
-
-
-
-
-
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L42"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `forward`
-
-```python
-forward(image)
-```
-
-
-
-
-
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L52"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L34"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `DETRModel`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L152"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L40"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
 __init__(
-    model_name,
+    model_name='detr_resnet50',
     pretrained=True,
     weights=None,
-    device='cuda',
+    device='cpu',
     save=True,
     save_dir_path=None
 )
@@ -125,7 +86,7 @@ __init__(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L192"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L84"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `postprocess`
 
@@ -139,7 +100,7 @@ postprocess(outputs, image_sizes)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L294"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 

@@ -9,8 +9,8 @@
 
 **Global Variables**
 ---------------
-- **model**
 - **detr**
+- **yolo**
 
 
 

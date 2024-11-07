@@ -10,24 +10,37 @@
 **Global Variables**
 ---------------
 - **MODES**
-- **DEFAULT_CONFIG**
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/evaluate.py#L287"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `parse_args`
+
+```python
+parse_args()
+```
+
+
+
+
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/evaluate.py#L60"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/evaluate.py#L24"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Benchmark`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/evaluate.py#L69"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/evaluate.py#L31"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
-__init__(configs)
+__init__(config, device)
 ```
 
 
@@ -39,12 +52,26 @@ __init__(configs)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/evaluate.py#L72"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/evaluate.py#L38"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `run`
 
 ```python
 run(threads=1)
+```
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/evaluate.py#L123"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `run_experiment`
+
+```python
+run_experiment(experiment, verbose=False)
 ```
 
 

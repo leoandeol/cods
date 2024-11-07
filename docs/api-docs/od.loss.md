@@ -11,14 +11,14 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L9"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L17"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODLoss`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L10"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L18"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -28,16 +28,12 @@ __init__(upper_bound: int, **kwargs)
 
 Initialize the Object Detection Loss. 
 
-
-
-**Parameters:**
- 
+Parameters 
+---------- 
 - upper_bound (int): The upper bound of the loss. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - None 
 
 
@@ -46,33 +42,33 @@ Initialize the Object Detection Loss.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L34"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L51"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>class</kbd> `ObjectnessLoss`
-
-
+## <kbd>class</kbd> `BoxCountThresholdConfidenceLoss`
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L35"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L52"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
-__init__(upper_bound: int = 1, **kwargs)
+__init__(
+    upper_bound: int = 1,
+    other_losses: Optional[List[Loss]] = None,
+    **kwargs
+)
 ```
 
-Initialize the Objectness Loss. 
+Initialize the Confidence Loss. 
 
-
-
-**Parameters:**
- 
+Parameters 
+---------- 
 - upper_bound (int): The upper bound of the loss. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - None 
 
 
@@ -81,14 +77,75 @@ Initialize the Objectness Loss.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L72"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L107"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>class</kbd> `BoxCountRecallConfidenceLoss`
+
+
+
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L108"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `__init__`
+
+```python
+__init__(
+    upper_bound: int = 1,
+    distance_threshold: float = 100,
+    other_losses: Optional[List[Loss]] = None,
+    **kwargs
+)
+```
+
+Initialize the Confidence Loss. 
+
+Parameters 
+---------- 
+- upper_bound (int): The upper bound of the loss. 
+
+Returns 
+------- 
+- None 
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L214"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>class</kbd> `ODBinaryClassificationLoss`
+
+
+
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L215"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `__init__`
+
+```python
+__init__()
+```
+
+
+
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L236"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ClassificationLossWrapper`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L73"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L237"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -98,16 +155,12 @@ __init__(classification_loss, **kwargs)
 
 Initialize the Classification Loss Wrapper. 
 
-
-
-**Parameters:**
- 
+Parameters 
+---------- 
 - classification_loss (Loss): The classification loss. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - None 
 
 
@@ -116,49 +169,14 @@ Initialize the Classification Loss Wrapper.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L111"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L313"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>class</kbd> `MaximumLoss`
-
-
-
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L112"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>method</kbd> `__init__`
-
-```python
-__init__(*losses)
-```
-
-Initialize the Maximum Loss. 
-
-
-
-**Parameters:**
- 
-- losses (list): The list of losses. 
-
-
-
-**Returns:**
- 
-- None 
+## <kbd>class</kbd> `ThresholdedRecallLoss`
 
 
 
 
-
----
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L138"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-## <kbd>class</kbd> `HausdorffSignedDistanceLoss`
-
-
-
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L139"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L314"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -168,16 +186,12 @@ __init__(beta: float = 0.25)
 
 Initialize the Hausdorff Signed Distance Loss. 
 
-
-
-**Parameters:**
- 
+Parameters 
+---------- 
 - beta (float): The beta value. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - None 
 
 
@@ -186,14 +200,14 @@ Initialize the Hausdorff Signed Distance Loss.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L177"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L366"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ClassBoxWiseRecallLoss`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L178"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L367"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -203,16 +217,12 @@ __init__(union_of_boxes: bool = True)
 
 Initialize the Box-wise Recall Loss. 
 
-
-
-**Parameters:**
- 
+Parameters 
+---------- 
 - union_of_boxes (bool): Whether to use the union of boxes. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - None 
 
 
@@ -221,14 +231,14 @@ Initialize the Box-wise Recall Loss.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L231"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L433"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `BoxWiseRecallLoss`
+Box-wise recall loss: 1 - mean(areas of the union of the boxes), 
 
+This loss function calculates the recall loss based on the areas of the union of the predicted and true bounding boxes. The recall loss is defined as 1 minus the mean of the areas of the union of the boxes. 
 
-
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L232"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L440"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -238,16 +248,12 @@ __init__(union_of_boxes: bool = True)
 
 Initialize the Box-wise Recall Loss. 
 
-
-
-**Parameters:**
- 
+Parameters 
+---------- 
 - union_of_boxes (bool): Whether to use the union of boxes. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - None 
 
 
@@ -256,14 +262,14 @@ Initialize the Box-wise Recall Loss.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L278"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L494"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `PixelWiseRecallLoss`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L279"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L495"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -273,16 +279,12 @@ __init__(union_of_boxes: bool = True)
 
 Initialize the Pixel-wise Recall Loss. 
 
-
-
-**Parameters:**
- 
+Parameters 
+---------- 
 - union_of_boxes (bool): Whether to use the union of boxes. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - None 
 
 
@@ -291,14 +293,14 @@ Initialize the Pixel-wise Recall Loss.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L320"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L544"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `NumberPredictionsGapLoss`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L321"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/loss.py#L545"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -308,10 +310,8 @@ __init__()
 
 Initialize the Number Predictions Gap Loss. 
 
-
-
-**Returns:**
- 
+Returns 
+------- 
 - None 
 
 

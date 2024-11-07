@@ -28,7 +28,7 @@
 ### <kbd>method</kbd> `optimize`
 
 ```python
-optimize(objective_function: Callable, alpha: int, **kwargs) → float
+optimize(objective_function: Callable, alpha: float, **kwargs) → float
 ```
 
 
@@ -38,14 +38,14 @@ optimize(objective_function: Callable, alpha: int, **kwargs) → float
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L15"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L17"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `BinarySearchOptimizer`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L16"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L18"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -62,7 +62,7 @@ __init__()
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L19"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L21"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `optimize`
 
@@ -70,7 +70,7 @@ __init__()
 optimize(
     objective_function: Callable,
     alpha: float,
-    bounds: Union[Tuple, List[Tuple]],
+    bounds: Union[Tuple, List, List[Tuple]],
     steps: int,
     epsilon=1e-05,
     verbose=True
@@ -82,14 +82,14 @@ params: epsilon: objective_function: function of one parameter lbd (use partials
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L82"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L88"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `GaussianProcessOptimizer`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L83"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L89"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -106,7 +106,7 @@ __init__()
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L92"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `optimize`
 
@@ -114,7 +114,7 @@ __init__()
 optimize(
     objective_function: Callable,
     alpha: float,
-    bounds: Union[Tuple, List[Tuple]],
+    bounds: Union[Tuple, List, List[Tuple]],
     steps: int,
     epsilon=1e-05,
     verbose=True
@@ -128,14 +128,14 @@ optimize(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L124"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L131"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MonteCarloOptimizer`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L125"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L132"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -152,7 +152,7 @@ __init__()
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L128"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L135"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `optimize`
 

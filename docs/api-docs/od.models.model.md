@@ -11,14 +11,14 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L11"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L13"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODModel`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L12"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L14"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -28,7 +28,7 @@ __init__(
     save_dir_path: str,
     pretrained: bool = True,
     weights: Optional[str] = None,
-    device: str = 'cuda'
+    device: str = 'cpu'
 )
 ```
 
@@ -42,14 +42,14 @@ Initializes an instance of the ODModel class.
  - <b>`save_dir_path`</b> (str):  The path to save the model. 
  - <b>`pretrained`</b> (bool, optional):  Whether to use pretrained weights. Defaults to True. 
  - <b>`weights`</b> (str, optional):  The path to the weights file. Defaults to None. 
- - <b>`device`</b> (str, optional):  The device to use for computation. Defaults to "cuda". 
+ - <b>`device`</b> (str, optional):  The device to use for computation. Defaults to "cpu". 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L38"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L40"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `build_predictions`
 
@@ -62,6 +62,8 @@ build_predictions(
     shuffle: bool = False,
     verbose: bool = True,
     force_recompute: bool = False,
+    deletion_method: str = 'nms',
+    iou_threshold: float = 0.5,
     **kwargs
 ) → ODPredictions
 ```
@@ -79,6 +81,7 @@ Builds predictions for the given dataset.
  - <b>`shuffle`</b> (bool, optional):  Whether to shuffle the dataset. Defaults to False. 
  - <b>`verbose`</b> (bool, optional):  Prints progress. Defaults to True. 
  - <b>`**kwargs`</b>:  Additional keyword arguments for the DataLoader. 
+ - <b>`#TODO(leo)`</b>:  not up to date 
 
 
 
@@ -88,7 +91,7 @@ Builds predictions for the given dataset.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L182"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L265"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 
