@@ -15,7 +15,7 @@ logger = getLogger("cods")
 
 # Object Detection Loss, many are wrappers of Segmentation losses
 class ODLoss(Loss):
-    def __init__(self, upper_bound: int, **kwargs):
+    def __init__(self, upper_bound: int, device: str = "cpu", **kwargs):
         """Initialize the Object Detection Loss.
 
         Parameters
@@ -29,6 +29,7 @@ class ODLoss(Loss):
         """
         super().__init__()
         self.upper_bound = upper_bound
+        self.device = device
 
     def __call__(
         self,
@@ -53,6 +54,7 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         self,
         upper_bound: int = 1,
         other_losses: Optional[List[Loss]] = None,
+        device: str = "cpu",
         **kwargs,
     ):
         """Initialize the Confidence Loss.
@@ -66,7 +68,7 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         - None
 
         """
-        super().__init__(upper_bound=upper_bound)
+        super().__init__(upper_bound=upper_bound, device=device)
         self.other_losses = other_losses if other_losses is not None else []
 
     def __call__(
@@ -88,13 +90,12 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
-        device = conf_boxes[0].device
         return max(
             [
                 (
-                    torch.zeros(1).to(device)
+                    torch.zeros(1).to(self.device)
                     if len(conf_boxes) >= len(true_boxes)
-                    else torch.ones(1).to(device)
+                    else torch.ones(1).to(self.device)
                 ),
             ]
             + [
@@ -110,6 +111,7 @@ class BoxCountRecallConfidenceLoss(ODLoss):
         upper_bound: int = 1,
         distance_threshold: float = 100,
         other_losses: Optional[List[Loss]] = None,
+        device: str = "cpu",
         **kwargs,
     ):
         """Initialize the Confidence Loss.
@@ -123,7 +125,7 @@ class BoxCountRecallConfidenceLoss(ODLoss):
         - None
 
         """
-        super().__init__(upper_bound=upper_bound)
+        super().__init__(upper_bound=upper_bound, device=device)
         self.distance_threshold = distance_threshold
         self.other_losses = other_losses if other_losses is not None else []
 
@@ -146,16 +148,15 @@ class BoxCountRecallConfidenceLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
-        device = conf_boxes[0].device
         if len(true_boxes) == 0:
-            loss = torch.zeros(1).to(device)
+            loss = torch.zeros(1).to(self.device)
         else:
             loss = torch.maximum(
                 torch.zeros(1),
                 torch.tensor(
                     (len(true_boxes) - len(conf_boxes)) / len(true_boxes)
                 ),
-            ).to(device)
+            ).to(self.device)
         return max(
             [
                 (loss),
@@ -234,7 +235,7 @@ class ODBinaryClassificationLoss(ClassificationLoss):
 # IMAGE WISE VS BOX WISE GUARANTEE
 # wrapping classification loss, by converting the predictions from the od to the classification format
 class ClassificationLossWrapper(ODLoss):
-    def __init__(self, classification_loss, **kwargs):
+    def __init__(self, classification_loss, device: str = "cpu", **kwargs):
         """Initialize the Classification Loss Wrapper.
 
         Parameters
@@ -247,7 +248,9 @@ class ClassificationLossWrapper(ODLoss):
 
         """
         self.classification_loss = classification_loss
-        super().__init__(upper_bound=classification_loss.upper_bound)
+        super().__init__(
+            upper_bound=classification_loss.upper_bound, device=device
+        )
 
     def __call__(
         self,
@@ -257,19 +260,18 @@ class ClassificationLossWrapper(ODLoss):
         conf_cls: torch.Tensor,
     ) -> torch.Tensor:
         """ """
-        device = conf_boxes[0].device
         losses = []
         if len(true_cls) == 0:
             logger.warning(f"true_cls is empty : {true_cls}")
-            return torch.zeros(1).to(device)
+            return torch.zeros(1).to(self.device)
         if len(conf_cls) == 0:
             logger.warning(f"conf_cls is empty : {conf_cls}")
-            return torch.ones(1).to(device)
+            return torch.ones(1).to(self.device)
         for i in range(len(conf_cls)):
             loss = self.classification_loss(conf_cls[i], true_cls[i])
             # print(f"loss: {loss}")
             losses.append(loss)
-        return torch.mean(torch.stack(losses))
+        return torch.zeros(1).to(self.device) + torch.mean(torch.stack(losses))
 
 
 # # MaximumLoss : maximum of a list of losses with a list of parameters
@@ -311,7 +313,11 @@ class ClassificationLossWrapper(ODLoss):
 
 # TODO: formulate in classical conformal sense!
 class ThresholdedRecallLoss(ODLoss):
-    def __init__(self, beta: float = 0.25):
+    def __init__(
+        self,
+        beta: float = 0.25,
+        device: str = "cpu",
+    ):
         """Initialize the Hausdorff Signed Distance Loss.
 
         Parameters
@@ -323,7 +329,7 @@ class ThresholdedRecallLoss(ODLoss):
         - None
 
         """
-        super().__init__(upper_bound=1)
+        super().__init__(upper_bound=1, device=device)
         self.beta = beta
 
     def __call__(
@@ -345,7 +351,6 @@ class ThresholdedRecallLoss(ODLoss):
         - float: The loss value.
 
         """
-        device = conf_boxes[0].device
         if len(true_boxes) == 0:
             return 0
         if len(conf_boxes) == 0:
@@ -356,15 +361,19 @@ class ThresholdedRecallLoss(ODLoss):
         ).float()  # because doubt on the computation of the overlap, check formula TODO
         miscoverage = torch.mean(is_not_covered)
         loss = (
-            torch.ones(1).to(device)
+            torch.ones(1).to(self.device)
             if miscoverage > self.beta
-            else torch.zeros(1).to(device)
+            else torch.zeros(1).to(self.device)
         )
         return loss
 
 
 class ClassBoxWiseRecallLoss(ODLoss):
-    def __init__(self, union_of_boxes: bool = True):
+    def __init__(
+        self,
+        union_of_boxes: bool = True,
+        device: str = "cpu",
+    ):
         """Initialize the Box-wise Recall Loss.
 
         Parameters
@@ -376,7 +385,7 @@ class ClassBoxWiseRecallLoss(ODLoss):
         - None
 
         """
-        super().__init__(upper_bound=1)
+        super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
         self.get_covered_areas = (
             get_covered_areas_of_gt_union
@@ -407,11 +416,10 @@ class ClassBoxWiseRecallLoss(ODLoss):
         - float: The loss value.
 
         """
-        device = conf_boxes[0].device
         if len(true_boxes) == 0:
-            return torch.zeros(1).to(device)
+            return torch.zeros(1).to(self.device)
         if len(conf_boxes) == 0:
-            return torch.ones(1).to(device)
+            return torch.ones(1).to(self.device)
         areas = self.get_covered_areas(conf_boxes, true_boxes)
         is_not_covered_loc = (
             areas < 0.999
@@ -419,12 +427,12 @@ class ClassBoxWiseRecallLoss(ODLoss):
         is_not_covered_cls = torch.tensor(
             [tc not in cc for (tc, cc) in zip(true_cls, conf_cls)],
             dtype=torch.float,
-        ).to(device)
+        ).to(self.device)
         is_not_covered = torch.logical_or(
             is_not_covered_loc,
             is_not_covered_cls,
         ).float()
-        miscoverage = torch.zeros(1).to(device) + torch.mean(
+        miscoverage = torch.zeros(1).to(self.device) + torch.mean(
             is_not_covered,
         )  # TODO: bugfix
         return miscoverage
@@ -437,7 +445,11 @@ class BoxWiseRecallLoss(ODLoss):
     The recall loss is defined as 1 minus the mean of the areas of the union of the boxes.
     """
 
-    def __init__(self, union_of_boxes: bool = True):
+    def __init__(
+        self,
+        union_of_boxes: bool = True,
+        device: str = "cpu",
+    ):
         """Initialize the Box-wise Recall Loss.
 
         Parameters
@@ -449,7 +461,7 @@ class BoxWiseRecallLoss(ODLoss):
         - None
 
         """
-        super().__init__(upper_bound=1)
+        super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
         self.get_covered_areas = get_covered_areas_of_gt_union
         if not union_of_boxes:
@@ -476,23 +488,26 @@ class BoxWiseRecallLoss(ODLoss):
         - float: The loss value.
 
         """
-        device = conf_boxes[0].device
         if len(true_boxes) == 0:
-            return torch.zeros(1).to(device)
+            return torch.zeros(1).to(self.device)
         if len(conf_boxes) == 0:
-            return torch.ones(1).to(device)
+            return torch.ones(1).to(self.device)
         areas = self.get_covered_areas(conf_boxes, true_boxes)
         is_not_covered = (
             areas < 0.999
         ).float()  # because doubt on the computation of the overlap, check formula TODO
-        miscoverage = torch.zeros(1).to(device) + torch.mean(
+        miscoverage = torch.zeros(1).to(self.device) + torch.mean(
             is_not_covered,
         )  # TODO: tmp for bugfix
         return miscoverage
 
 
 class PixelWiseRecallLoss(ODLoss):
-    def __init__(self, union_of_boxes: bool = True):
+    def __init__(
+        self,
+        union_of_boxes: bool = True,
+        device: str = "cpu",
+    ):
         """Initialize the Pixel-wise Recall Loss.
 
         Parameters
@@ -504,7 +519,7 @@ class PixelWiseRecallLoss(ODLoss):
         - None
 
         """
-        super().__init__(upper_bound=1)
+        super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
         self.get_covered_areas = get_covered_areas_of_gt_union
         if not union_of_boxes:
@@ -531,18 +546,20 @@ class PixelWiseRecallLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
-        device = conf_boxes[0].device
         if len(true_boxes) == 0:
-            return torch.zeros(1).to(device)
+            return torch.zeros(1).to(self.device)
         if len(conf_boxes) == 0:
-            return torch.ones(1).to(device)
+            return torch.ones(1).to(self.device)
         areas = self.get_covered_areas(conf_boxes, true_boxes)
-        loss = torch.ones(1).to(device) - torch.mean(areas)
+        loss = torch.ones(1).to(self.device) - torch.mean(areas)
         return loss
 
 
 class NumberPredictionsGapLoss(ODLoss):
-    def __init__(self):
+    def __init__(
+        self,
+        device: str = "cpu",
+    ):
         """Initialize the Number Predictions Gap Loss.
 
         Returns
@@ -550,7 +567,7 @@ class NumberPredictionsGapLoss(ODLoss):
         - None
 
         """
-        self.upper_bound = 1
+        super().__init__(upper_bound=1, device=device)
 
     def __call__(
         self,

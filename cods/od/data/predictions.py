@@ -49,15 +49,15 @@ class ODPredictions(Predictions):
         self,
         dataset_name: str,
         split_name: str,
-        image_paths,
-        image_shapes,
-        true_boxes,
-        pred_boxes,
-        confidences,
-        true_cls,
-        pred_cls,
-        names,
-        pred_boxes_uncertainty=None,
+        image_paths: List[str],
+        image_shapes: List[torch.Tensor],
+        true_boxes: List[torch.Tensor],
+        pred_boxes: List[torch.Tensor],
+        confidences: List[torch.Tensor],
+        true_cls: List[torch.Tensor],
+        pred_cls: List[torch.Tensor],
+        names: List[str],
+        pred_boxes_uncertainty: List[torch.Tensor] = None,
         unique_id: Optional[int] = None,
     ):
         super().__init__(
@@ -89,6 +89,25 @@ class ODPredictions(Predictions):
 
     def __str__(self):
         return f"ODPredictions_len={len(self)}"
+
+    def to(self, device: str):
+        """Move the data to the specified device.
+
+        Parameters
+        ----------
+            device (str): The device to move the data to.
+
+        """
+        self.true_boxes = [box.to(device) for box in self.true_boxes]
+        self.pred_boxes = [box.to(device) for box in self.pred_boxes]
+        self.confidence = [conf.to(device) for conf in self.confidence]
+        self.true_cls = [cls.to(device) for cls in self.true_cls]
+        self.pred_cls = [cls.to(device) for cls in self.pred_cls]
+        if self.pred_boxes_uncertainty is not None:
+            self.pred_boxes_uncertainty = [
+                uncertainty.to(device)
+                for uncertainty in self.pred_boxes_uncertainty
+            ]
 
 
 class ODParameters(Parameters):

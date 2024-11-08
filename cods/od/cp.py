@@ -137,8 +137,9 @@ class LocalizationConformalizer(Conformalizer):
 
         """
         super().__init__()
+        self.device = device
         if isinstance(loss, str) and loss in self.LOSSES:
-            self.loss = self.LOSSES[loss]()
+            self.loss = self.LOSSES[loss](device=self.device)
             self.loss_name = loss
         elif isinstance(loss, ODLoss):
             self.loss = loss
@@ -198,7 +199,6 @@ class LocalizationConformalizer(Conformalizer):
             )
 
         self.lambda_localization = None
-        self.device = device
 
     # def calibrate(
     #     self,
@@ -602,6 +602,7 @@ class ConfidenceConformalizer(Conformalizer):
     ):
         """ """
         super().__init__()
+        self.device = device
         if loss not in self.ACCEPTED_LOSSES:
             raise ValueError(
                 f"loss {loss} not accepted, must be one of {self.ACCEPTED_LOSSES.keys()}",
@@ -609,7 +610,9 @@ class ConfidenceConformalizer(Conformalizer):
         self.loss_name = loss
         self.matching_function = matching_function
         self.other_losses = other_losses
-        self.loss = self.ACCEPTED_LOSSES[loss](other_losses=other_losses)
+        self.loss = self.ACCEPTED_LOSSES[loss](
+            other_losses=other_losses, device=self.device
+        )
         self.guarantee_level = guarantee_level
 
         if guarantee_level == "object":
@@ -626,7 +629,6 @@ class ConfidenceConformalizer(Conformalizer):
 
         self.lambda_minus = None
         self.lambda_plus = None
-        self.device = device
 
     def _get_objective_function(
         self,
@@ -918,7 +920,9 @@ class ODClassificationConformalizer(ClassificationConformalizer):
 
         self.backend = backend
         self._backend_loss = ODBinaryClassificationLoss()
-        self.loss = ClassificationLossWrapper(self._backend_loss)
+        self.loss = ClassificationLossWrapper(
+            self._backend_loss, device=self.device
+        )
         self.lambda_classification = None
 
         if optimizer not in self.OPTIMIZERS:
@@ -1806,7 +1810,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                 f"loss {localization_loss} not accepted, must be one of {self.ACCEPTED_LOSSES.keys()}",
             )
         self.loss_name = localization_loss
-        self.loss = self.ACCEPTED_LOSSES[localization_loss]()
+        self.loss = self.ACCEPTED_LOSSES[localization_loss](device=self.device)
 
         if prediction_set not in ["additive", "multiplicative", "adaptative"]:
             raise ValueError(f"prediction_set {prediction_set} not accepted")

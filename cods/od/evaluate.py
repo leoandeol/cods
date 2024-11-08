@@ -100,9 +100,7 @@ class Benchmark:
                 }
             )
 
-        # with concurrent.futures.ProcessPoolExecutor(
-        #     max_workers=18
-        # ) as executor:
+        # with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
         #     executor.map(self.run_experiment, experiments)
 
         # pickle the results with a unique name
@@ -148,7 +146,7 @@ class Benchmark:
         data_cal, data_val = dataset.split_dataset(0.5, shuffle=False)
 
         # Load model
-        if experiment["model"] != "detr":
+        if experiment["model"] not in self.MODELS:
             raise NotImplementedError(
                 f"Model { experiment['model']} not implemented yet."
             )
