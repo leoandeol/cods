@@ -352,9 +352,9 @@ class ThresholdedRecallLoss(ODLoss):
 
         """
         if len(true_boxes) == 0:
-            return 0
+            return torch.zeros(1).to(self.device)
         if len(conf_boxes) == 0:
-            return 1
+            return torch.ones(1).to(self.device)
         areas = get_covered_areas_of_gt_union(conf_boxes, true_boxes)
         is_not_covered = (
             areas < 0.999
