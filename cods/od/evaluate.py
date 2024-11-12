@@ -221,11 +221,11 @@ class Benchmark:
             verbose=verbose,
         )
         results = {
-            "confidence_set_sizes": results_val.confidence_set_sizes,
+            "confidence_set_sizes": torch.mean(results_val.confidence_set_sizes),
             "confidence_losses": results_val.confidence_coverages,
-            "localization_set_sizes": results_val.localization_set_sizes,
+            "localization_set_sizes": torch.mean(results_val.localization_set_sizes),
             "localization_losses": results_val.localization_coverages,
-            "classification_set_sizes": results_val.classification_set_sizes,
+            "classification_set_sizes": torch.mean(results_val.classification_set_sizes),
             "classification_losses": results_val.classification_coverages,
             "confidence_mean_risk": torch.mean(
                 results_val.confidence_coverages
