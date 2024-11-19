@@ -3,7 +3,6 @@
         "mscoco"
     ],
     "model": [
-        "detr",
         "yolo"
     ],
     "alphas": [
@@ -14,8 +13,7 @@
         ]
     ],
     "guarantee_level": [
-        "object",
-        "image"
+        "object"
     ],
     "matching_function": [
         "hausdorff",

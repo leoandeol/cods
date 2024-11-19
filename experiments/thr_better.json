@@ -3,8 +3,7 @@
         "mscoco"
     ],
     "model": [
-        "detr",
-        "yolo"
+        "detr"
     ],
     "alphas": [
         [
@@ -22,12 +21,9 @@
         "iou"
     ],
     "confidence_method": [
-        "box_count_threshold",
         "box_count_recall"
     ],
     "localization_method": [
-        "pixelwise",
-        "boxwise",
         "thresholded"
     ],
     "classification_method": [
