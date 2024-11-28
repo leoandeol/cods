@@ -321,6 +321,7 @@ def compute_risk_image_level(
     loss,
     # aggregator="mean",
     return_list: bool = False,
+    skip_matching=False,
 ) -> torch.Tensor:
     # aggregtion_funcs = {
     #     "mean": torch.mean,
@@ -347,33 +348,41 @@ def compute_risk_image_level(
         )  # TODO: why the cuda for cls and not boxes
         conf_cls_i = conf_cls[i]
         # for j in range(len(true_boxes_i)):
-        matching_i = predictions.matching[i]
-        matched_conf_boxes_i = list(
-            [
-                (
-                    torch.stack([conf_boxes_i[m] for m in matching_i[j]])
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ],
-        )
-        matched_conf_cls_i = list(
-            [
-                (
-                    torch.stack([conf_cls_i[m] for m in matching_i[j]])
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ],
-        )
-        loss_value = loss(
-            true_boxes_i,
-            true_cls_i, 
-            matched_conf_boxes_i,
-            matched_conf_cls_i,
-        )
+        if skip_matching:
+            loss_value = loss(
+                true_boxes_i,
+                true_cls_i, 
+                conf_boxes_i,
+                conf_cls_i,
+            ) 
+        else:
+            matching_i = predictions.matching[i]
+            matched_conf_boxes_i = list(
+                [
+                    (
+                        torch.stack([conf_boxes_i[m] for m in matching_i[j]])
+                        if len(matching_i[j]) > 0
+                        else torch.tensor([]).float().to(device)
+                    )
+                    for j in range(len(true_boxes_i))
+                ],
+            )
+            matched_conf_cls_i = list(
+                [
+                    (
+                        torch.stack([conf_cls_i[m] for m in matching_i[j]])
+                        if len(matching_i[j]) > 0
+                        else torch.tensor([]).float().to(device)
+                    )
+                    for j in range(len(true_boxes_i))
+                ],
+            )
+            loss_value = loss(
+                true_boxes_i,
+                true_cls_i, 
+                matched_conf_boxes_i,
+                matched_conf_cls_i,
+            )
         # loss_value_i = aggregator_func(losses_i)
         losses.append(loss_value)
     losses = torch.stack(losses).ravel()

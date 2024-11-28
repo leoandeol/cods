@@ -545,6 +545,17 @@ class LocalizationConformalizer(Conformalizer):
             raise ValueError(
                 "Conformalized predictions must be provided for evaluation.",
             )
+        
+        boxes = list(
+            [
+                (
+                    x[y >= predictions.confidence_threshold]
+                    if len(x[y >= predictions.confidence_threshold]) > 0
+                    else x[None, y.argmax()]
+                )
+                for x, y in zip(predictions.pred_boxes, predictions.confidence)
+            ],
+        )
 
         conf_boxes = list(
             [
@@ -564,17 +575,17 @@ class LocalizationConformalizer(Conformalizer):
             return_list=True,
         )
 
-        def compute_set_size(boxes: List[torch.Tensor]) -> torch.Tensor:
+        def compute_set_size(conf_boxes, boxes: List[torch.Tensor]) -> torch.Tensor:
             set_sizes = []
-            for image_boxes in boxes:
-                for box in image_boxes:
-                    set_size = (box[2] - box[0]) * (box[3] - box[1])
+            for conf_boxes_i, boxes_i in zip(conf_boxes,boxes):
+                for conf_box, box in zip(conf_boxes_i, boxes_i):
+                    set_size = ((conf_box[2]-conf_box[0])*(conf_box[3]-conf_box[1]))/((box[2] - box[0]) * (box[3] - box[1]))
                     set_size = torch.sqrt(set_size)
                     set_sizes.append(set_size)
             set_sizes = torch.stack(set_sizes).squeeze().float()
             return set_sizes
 
-        set_sizes = compute_set_size(conf_boxes)
+        set_sizes = compute_set_size(conf_boxes, boxes)
         if verbose:
             logger.info(f"Risk = {torch.mean(losses)}")
             logger.info(f"Average set size = {torch.mean(set_sizes)}")
@@ -723,6 +734,7 @@ class ConfidenceConformalizer(Conformalizer):
                 tmp_conformalized_predictions,
                 predictions,
                 loss=self.loss,
+                skip_matching=True,
             )
 
             n = len(predictions)
@@ -783,6 +795,7 @@ class ConfidenceConformalizer(Conformalizer):
             bounds=bounds,
             steps=steps,
             verbose=verbose,
+            epsilon=1e-9,
         )
 
         objective_function = self._get_objective_function(
@@ -797,6 +810,7 @@ class ConfidenceConformalizer(Conformalizer):
             bounds=bounds,
             steps=steps,
             verbose=verbose,
+            epsilon=1e-9,
         )
         self.lambda_plus = lambda_plus
         self.lambda_minus = lambda_minus
@@ -854,14 +868,18 @@ class ConfidenceConformalizer(Conformalizer):
             return_list=True,
         )
 
-        def compute_set_size(boxes: List[List[float]]) -> torch.Tensor:
-            set_sizes = []
-            for image_boxes in boxes:
-                set_sizes.append(len(image_boxes))
-            set_sizes = torch.tensor(set_sizes).squeeze().float()
-            return set_sizes
+        # def compute_set_size(boxes: List[List[float]]) -> torch.Tensor:
+        #     set_sizes = []
+        #     for image_boxes in boxes:
+        #         set_sizes.append(len(image_boxes))
+        #     set_sizes = torch.tensor(set_sizes).squeeze().float()
+        #     return set_sizes
 
-        set_sizes = compute_set_size(conformalized_predictions.conf_boxes)
+        # set_sizes = compute_set_size(conformalized_predictions.conf_boxes)
+
+        set_sizes = torch.tensor([sum(x>predictions.confidence_threshold) for x in predictions.confidence]).float()
+
+
         if verbose:
             logger.info(f"Risk = {torch.mean(losses)}")
             logger.info(f"Average set size = {torch.mean(set_sizes)}")
@@ -1103,15 +1121,18 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         )
 
         # TODO(leoandeol): this should vary based on object or image level
-        def compute_set_size(conf_cls: List[torch.Tensor]) -> torch.Tensor:
+        def compute_set_size(conf_cls: List[torch.Tensor], confidence, confidence_thr) -> torch.Tensor:
             set_sizes = []
-            for conf_cls_i in conf_cls:
+            for conf_cls_i, conf in zip(conf_cls, confidence):
+                keep = (conf >= confidence_thr).cpu().numpy()
+                conf_cls_i = [x for i,x in enumerate(conf_cls_i) if keep[i]]
                 for conf_cls_i_j in conf_cls_i:
                     set_sizes.append(len(conf_cls_i_j))
             set_sizes = torch.tensor(set_sizes).squeeze().float()
             return set_sizes
 
-        set_sizes = compute_set_size(conformalized_predictions.conf_cls)
+        #TODO(leo): stop it pls
+        set_sizes = compute_set_size(conformalized_predictions.conf_cls, predictions.confidence, predictions.confidence_threshold)
         if verbose:
             logger.info(f"Risk = {torch.mean(losses)}")
             logger.info(f"Average set size = {torch.mean(set_sizes)}")
@@ -1202,6 +1223,7 @@ class ODConformalizer(Conformalizer):
             None,
         ] = None,
         classification_prediction_set: str = "lac",  # Fix where we type check
+        optimizer="binary_search",
         device="cpu",
         #TODO(leo) remove if nonessential: **kwargs,
     ):
@@ -1276,6 +1298,7 @@ class ODConformalizer(Conformalizer):
                 guarantee_level=guarantee_level,
                 prediction_set=localization_prediction_set,
                 device=device,
+                optimizer=optimizer,
                 #TODO(leo) remove if nonessential: **kwargs,
             )
         elif isinstance(localization_method, LocalizationConformalizer):
@@ -1298,6 +1321,7 @@ class ODConformalizer(Conformalizer):
                 loss=classification_method,
                 prediction_set=classification_prediction_set,
                 device=device,
+                optimizer=optimizer,
             )
         elif isinstance(classification_method, ODClassificationConformalizer):
             self.classification_conformalizer = classification_method
@@ -1331,6 +1355,7 @@ class ODConformalizer(Conformalizer):
                     ]
                     if conf is not None
                 ],
+                optimizer=optimizer,
                 #TODO(leo) remove if nonessential: **kwargs,
             )
             self.confidence_method = confidence_method

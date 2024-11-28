@@ -6,9 +6,9 @@ from cods.od.data import ODConformalizedPredictions, ODPredictions
 
 
 def plot_preds(
-    predictions: ODPredictions,
-    conformalized_predictions: ODConformalizedPredictions,
     idx,
+    predictions: ODPredictions,
+    conformalized_predictions: ODConformalizedPredictions=None,
     confidence_threshold=None,
     idx_to_label: dict = None,
     save_as=None,
@@ -24,6 +24,9 @@ def plot_preds(
         confidence_threshold (float, optional): Confidence threshold for filtering predictions. If not provided, the threshold from `preds` will be used. Defaults to None.
         save_as (str, optional): File path to save the plot. Defaults to None.
     """
+    is_conformal = conformalized_predictions is not None
+
+
     img_path = predictions.image_paths[idx]
     pred_boxes = predictions.pred_boxes[idx]
     true_boxes = predictions.true_boxes[idx]
@@ -31,8 +34,9 @@ def plot_preds(
     conf = predictions.confidence[idx]
     cls_probas = predictions.pred_cls[idx]
 
-    conf_boxes = conformalized_predictions.conf_boxes[idx]
-    conf_cls = conformalized_predictions.conf_cls[idx]
+    if is_conformal:
+        conf_boxes = conformalized_predictions.conf_boxes[idx]
+        conf_cls = conformalized_predictions.conf_cls[idx]
 
     if (
         confidence_threshold is None
@@ -45,7 +49,8 @@ def plot_preds(
 
     keep = conf > confidence_threshold
     pred_boxes = pred_boxes[keep]
-    conf_boxes = conf_boxes[keep]
+    if is_conformal:
+        conf_boxes = conf_boxes[keep]
     cls_probas = cls_probas[keep]
 
     image = Image.open(img_path)
@@ -54,7 +59,7 @@ def plot_preds(
     plt.figure(figsize=(14, 14))
     plt.imshow(image)
 
-    def draw_rect(ax, box, color, proba, conf=False):
+    def draw_rect(ax, box, color, proba, conformal=False):
         """
         Draw a rectangle on the plot.
 
@@ -81,7 +86,8 @@ def plot_preds(
                 linewidth=2,
             )
         )
-        if conf:
+        #TODO(leo):conf 
+        if conformal:
             if len(proba) <= 3:
                 # Print up to the three labels of the prediction sets
                 if idx_to_label is not None:
@@ -143,9 +149,10 @@ def plot_preds(
         box = box.detach().cpu().numpy()
         draw_rect(ax, box, "red", prob)
 
-    for box, conf_cls_i in zip(conf_boxes, conf_cls):
-        box = box.detach().cpu().numpy()
-        draw_rect(ax, box, "purple", conf_cls_i, conf=True)
+    if is_conformal:
+        for box, conf_cls_i in zip(conf_boxes, conf_cls):
+            box = box.detach().cpu().numpy()
+            draw_rect(ax, box, "purple", conf_cls_i, conformal=True)
 
     plt.axis("off")
     if save_as is not None:

@@ -90,11 +90,12 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
+        #print(len(conf_boxes), len(true_boxes))
         return max(
             [
                 (
                     torch.zeros(1).to(self.device)
-                    if len(conf_boxes) >= len(true_boxes)
+                    if len(conf_boxes) >= len(true_boxes)+2
                     else torch.ones(1).to(self.device)
                 ),
             ]
@@ -152,7 +153,7 @@ class BoxCountRecallConfidenceLoss(ODLoss):
             loss = torch.zeros(1).to(self.device)
         else:
             loss = torch.maximum(
-                torch.zeros(1),
+                torch.zeros(1).to(self.device),
                 torch.tensor(
                     (len(true_boxes) - len(conf_boxes)) / len(true_boxes)
                 ),
