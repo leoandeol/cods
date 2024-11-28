@@ -1,5 +1,4 @@
 import argparse
-import concurrent.futures
 import json
 import pickle
 from itertools import product
@@ -55,7 +54,7 @@ class Benchmark:
             self.config["classification_prediction_set"],
             self.config["batch_size"],
             self.config["optimizer"],
-            self.config["iou_threshold"],
+            self.config["nms_iou_threshold"],
         )
 
         for combination in param_combinations:
@@ -72,7 +71,7 @@ class Benchmark:
                 classification_prediction_set,
                 batch_size,
                 optimizer,
-                iou_threshold,
+                nms_iou_threshold,
             ) = combination
             if dataset not in self.DATASETS:
                 raise ValueError(
@@ -96,7 +95,7 @@ class Benchmark:
                     "classification_prediction_set": classification_prediction_set,
                     "batch_size": batch_size,
                     "optimizer": optimizer,
-                    "iou_threshold": iou_threshold,
+                    "nms_iou_threshold": nms_iou_threshold,
                 }
             )
 
@@ -163,7 +162,7 @@ class Benchmark:
             batch_size=batch_size,
             collate_fn=dataset._collate_fn,
             shuffle=False,
-            iou_threshold=experiment["iou_threshold"],
+            iou_threshold=experiment["nms_iou_threshold"],
             deletion_method="bayesod"
             if experiment["localization_prediction_set"] == "uncertainty"
             else "nms",
@@ -175,7 +174,7 @@ class Benchmark:
             batch_size=batch_size,
             collate_fn=dataset._collate_fn,
             shuffle=False,
-            iou_threshold=experiment["iou_threshold"],
+            iou_threshold=experiment["nms_iou_threshold"],
             deletion_method="bayesod"
             if experiment["localization_prediction_set"] == "uncertainty"
             else "nms",
@@ -264,7 +263,7 @@ class Benchmark:
         recalls, precisions, scores = get_recall_precision(
             preds_val,
             SCORE_THRESHOLD=preds_val.confidence_threshold,
-            IOU_THRESHOLD=experiment["iou_threshold"],
+            IOU_THRESHOLD=experiment["nms_iou_threshold"],
         )
 
         metrics = {

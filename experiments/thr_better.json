@@ -43,7 +43,7 @@
     "optimizer": [
         "binary_search"
     ],
-    "iou_threshold": [
+    "nms_iou_threshold": [
         0.5,
         0.8
     ],
