@@ -1,13 +1,6 @@
 import logging
 from typing import Callable, List, Optional, Tuple, Union
 
-logger = logging.getLogger("cods")
-# FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-FORMAT = "[%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
-logging.basicConfig(format=FORMAT)
-
-import time
-
 import torch
 
 from cods.base.cp import Conformalizer
@@ -54,6 +47,11 @@ from cods.od.utils import (
     # get_conf_cls_for_od,
     match_predictions_to_true_boxes,
 )
+
+logger = logging.getLogger("cods")
+# FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+FORMAT = "[%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
+logging.basicConfig(format=FORMAT)
 
 """
 TODO:

@@ -1,8 +1,8 @@
 import matplotlib.pyplot as plt
+import torch
 from PIL import Image
 
 from cods.od.data import ODConformalizedPredictions, ODPredictions
-from cods.od.models.detr import DETRModel
 
 
 def plot_preds(
@@ -10,6 +10,7 @@ def plot_preds(
     conformalized_predictions: ODConformalizedPredictions,
     idx,
     confidence_threshold=None,
+    idx_to_label: dict = None,
     save_as=None,
 ):
     """
@@ -83,9 +84,10 @@ def plot_preds(
         if conf:
             if len(proba) <= 3:
                 # Print up to the three labels of the prediction sets
-                text = ", ".join(
-                    [f"{DETRModel.COCO_CLASSES[cl]}" for cl in proba]
-                )
+                if idx_to_label is not None:
+                    text = ", ".join([f"{idx_to_label[cl]}" for cl in proba])
+                else:
+                    text = ", ".join([f"{cl}" for cl in proba])
                 ax.text(
                     x1,
                     y1,
@@ -105,11 +107,12 @@ def plot_preds(
                 )
         else:
             if isinstance(proba, int) or len(proba.shape) == 0:
-                text = (
-                    f"{DETRModel.COCO_CLASSES[proba]}"
-                    if proba >= 0
-                    else "conf"
-                )
+                if isinstance(proba, torch.Tensor):
+                    proba = proba.item()
+                if idx_to_label is not None:
+                    text = f"{idx_to_label[proba]}" if proba >= 0 else "conf"
+                else:
+                    text = f"{proba}" if proba >= 0 else "conf"
                 ax.text(
                     x2 - 30,
                     y2,
@@ -118,8 +121,11 @@ def plot_preds(
                     bbox=dict(facecolor=color, alpha=0.5),
                 )
             else:
-                cl = proba.argmax()
-                text = f"{DETRModel.COCO_CLASSES[cl]}: {proba[cl]:0.2f}"
+                cl = proba.argmax().item()
+                if idx_to_label is not None:
+                    text = f"{idx_to_label[cl]}: {proba[cl]:0.2f}"
+                else:
+                    text = f"{cl}: {proba[cl]:0.2f}"
 
                 ax.text(
                     x1,

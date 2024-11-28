@@ -77,6 +77,7 @@ class ODPredictions(Predictions):
         self.pred_boxes_uncertainty = pred_boxes_uncertainty
 
         # ClassificationPredictions instance
+        # TODO(leo)
         self.preds_cls: Optional[Any] = None
 
         self.n_classes = len(self.pred_cls[0][0])

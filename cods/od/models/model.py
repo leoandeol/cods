@@ -29,7 +29,7 @@ class ODModel(Model):
             weights (str, optional): The path to the weights file. Defaults to None.
             device (str, optional): The device to use for computation. Defaults to "cpu".
         """
-        super(ODModel, self).__init__(
+        super().__init__(
             model_name=model_name,
             save_dir_path=save_dir_path,
             pretrained=pretrained,
@@ -131,6 +131,7 @@ class ODModel(Model):
                         pred_cls,
                         confidences,
                         iou_threshold=iou_threshold,
+                        method=deletion_method,
                     )
                 )
 
@@ -241,7 +242,7 @@ class ODModel(Model):
                 new_pred_cls.append(new_pred_cl)
                 new_confidences.append(new_confidence)
             elif method.lower() == "bayesod":
-                new_pred_boxes, new_confs, new_pred_cls = bayesod(
+                new_pred_boxes, new_confidences, new_pred_cls = bayesod(
                     pred_boxes[i],
                     confidences[i],
                     pred_cls[i],
