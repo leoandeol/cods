@@ -110,7 +110,7 @@ class LocalizationConformalizer(Conformalizer):
         optimizer: Optional[Union[str, Optimizer]] = None,
         backend: str = "auto",
         device="cpu",
-        **kwargs,
+        #TODO(leo) remove if nonessential: **kwargs,
     ):
         """Initialize the CP class.
 
@@ -890,7 +890,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         guarantee_level="image",
         optimizer="binary_search",
         device="cpu",
-        **kwargs,
+        #TODO(leo) remove if nonessential: **kwargs,
     ):
         """ """
         super().__init__(
@@ -1203,7 +1203,7 @@ class ODConformalizer(Conformalizer):
         ] = None,
         classification_prediction_set: str = "lac",  # Fix where we type check
         device="cpu",
-        **kwargs,
+        #TODO(leo) remove if nonessential: **kwargs,
     ):
         """Initialize the ODClassificationConformalizer object.
 
@@ -1276,7 +1276,7 @@ class ODConformalizer(Conformalizer):
                 guarantee_level=guarantee_level,
                 prediction_set=localization_prediction_set,
                 device=device,
-                **kwargs,
+                #TODO(leo) remove if nonessential: **kwargs,
             )
         elif isinstance(localization_method, LocalizationConformalizer):
             self.localization_conformalizer = localization_method
@@ -1331,7 +1331,7 @@ class ODConformalizer(Conformalizer):
                     ]
                     if conf is not None
                 ],
-                **kwargs,
+                #TODO(leo) remove if nonessential: **kwargs,
             )
             self.confidence_method = confidence_method
         elif isinstance(confidence_method, ConfidenceConformalizer):
