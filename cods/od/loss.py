@@ -95,7 +95,7 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
             [
                 (
                     torch.zeros(1).to(self.device)
-                    if len(conf_boxes) >= len(true_boxes)+2
+                    if len(conf_boxes) >= len(true_boxes)
                     else torch.ones(1).to(self.device)
                 ),
             ]
