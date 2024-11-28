@@ -109,7 +109,7 @@ class MSCOCODataset(Dataset):
         91: "hair brush",
     }
 
-    def __init__(self, root, split, transforms=None, image_ids=None, **kwargs):
+    def __init__(self, root, split, transforms=None, image_ids=None):
         super().__init__()
         self.name = "MSCOCO"
         self.split = split
@@ -213,7 +213,6 @@ class MSCOCODataset(Dataset):
         proportion,
         shuffle=False,
         n_calib_test: Optional[int] = None,
-        **kwargs,
     ):
         if shuffle:
             logger.info("Shuffling dataset")
@@ -232,14 +231,12 @@ class MSCOCODataset(Dataset):
             split=self._split,
             transforms=self.transforms,
             image_ids=new_image_ids_1,
-            **kwargs,
         )
         new_dataset_2 = MSCOCODataset(
             root=self.root,
             split=self._split,
             transforms=self.transforms,
             image_ids=new_image_ids_2,
-            **kwargs,
         )
 
         return new_dataset_1, new_dataset_2
