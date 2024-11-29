@@ -27,6 +27,7 @@ from cods.od.loss import (
     # MaximumLoss,
     ODLoss,
     PixelWiseRecallLoss,
+    ThresholdedBoxDistanceConfidenceLoss,
     ThresholdedRecallLoss,
 )
 from cods.od.metrics import compute_global_coverage
@@ -41,6 +42,7 @@ from cods.od.utils import (
     # compute_risk_cls_box_level,
     # compute_risk_cls_image_level,
     compute_risk_image_level,
+    compute_risk_image_level_confidence,
     compute_risk_object_level,
     # evaluate_cls_conformalizer,
     # get_classif_predictions_from_od_predictions,
@@ -110,7 +112,7 @@ class LocalizationConformalizer(Conformalizer):
         optimizer: Optional[Union[str, Optimizer]] = None,
         backend: str = "auto",
         device="cpu",
-        #TODO(leo) remove if nonessential: **kwargs,
+        # TODO(leo) remove if nonessential: **kwargs,
     ):
         """Initialize the CP class.
 
@@ -545,7 +547,7 @@ class LocalizationConformalizer(Conformalizer):
             raise ValueError(
                 "Conformalized predictions must be provided for evaluation.",
             )
-        
+
         boxes = list(
             [
                 (
@@ -575,11 +577,16 @@ class LocalizationConformalizer(Conformalizer):
             return_list=True,
         )
 
-        def compute_set_size(conf_boxes, boxes: List[torch.Tensor]) -> torch.Tensor:
+        def compute_set_size(
+            conf_boxes, boxes: List[torch.Tensor]
+        ) -> torch.Tensor:
             set_sizes = []
-            for conf_boxes_i, boxes_i in zip(conf_boxes,boxes):
+            for conf_boxes_i, boxes_i in zip(conf_boxes, boxes):
                 for conf_box, box in zip(conf_boxes_i, boxes_i):
-                    set_size = ((conf_box[2]-conf_box[0])*(conf_box[3]-conf_box[1]))/((box[2] - box[0]) * (box[3] - box[1]))
+                    set_size = (
+                        (conf_box[2] - conf_box[0])
+                        * (conf_box[3] - conf_box[1])
+                    ) / ((box[2] - box[0]) * (box[3] - box[1]))
                     set_size = torch.sqrt(set_size)
                     set_sizes.append(set_size)
             set_sizes = torch.stack(set_sizes).squeeze().float()
@@ -598,6 +605,7 @@ class ConfidenceConformalizer(Conformalizer):
     ACCEPTED_LOSSES = {
         "box_count_threshold": BoxCountThresholdConfidenceLoss,
         "box_count_recall": BoxCountRecallConfidenceLoss,
+        "box_thresholded_distance": ThresholdedBoxDistanceConfidenceLoss,
     }
 
     def __init__(
@@ -620,14 +628,16 @@ class ConfidenceConformalizer(Conformalizer):
         self.matching_function = matching_function
         self.other_losses = other_losses
         self.loss = self.ACCEPTED_LOSSES[loss](
-            other_losses=other_losses, device=self.device
+            # other_losses=other_losses,
+            device=self.device
         )
         self.guarantee_level = guarantee_level
 
         if guarantee_level == "object":
-            self.risk_function = compute_risk_object_level
+            raise ValueError("Not implemented currently for Confidence")
+            # self.risk_function = compute_risk_object_level
         elif guarantee_level == "image":
-            self.risk_function = compute_risk_image_level
+            self.risk_function = compute_risk_image_level_confidence
 
         if optimizer == "binary_search":
             self.optimizer = BinarySearchOptimizer()
@@ -699,24 +709,7 @@ class ConfidenceConformalizer(Conformalizer):
             # First enlarge bounding boxes to the max size
             # TODO(leoandeol): this is hardcoded, we should get input image size somewhere
             conf_boxes = predictions.pred_boxes
-
-            ## FIXME: MUST BE HANDLED PROPERLY FOR EACH INPUT IMAGE SIZE
-            MAGIC_BIG_MARGIN = [2500, 2500, 2500, 2500]
-            conf_boxes = apply_margins(
-                conf_boxes,
-                MAGIC_BIG_MARGIN,
-                mode="additive",
-            )
-
-            # Second, prediction sets for classification with always everything
-            n_classes = len(predictions.pred_cls[0][0].squeeze())
-            conf_cls = [
-                [
-                    torch.arange(n_classes)[None, ...].to(self.device)
-                    for _ in range(len(pred_cls_i))
-                ]
-                for _, pred_cls_i in enumerate(predictions.pred_cls)
-            ]
+            conf_cls = [cl.argmax(-1) for cl in predictions.pred_cls]
 
             tmp_parameters = ODParameters(
                 global_alpha=alpha,
@@ -729,12 +722,13 @@ class ConfidenceConformalizer(Conformalizer):
                 conf_boxes=conf_boxes,
                 conf_cls=conf_cls,
             )
+            # TODO(leo): cannot do that with with object level or can I ?
             # TODO(leoandeol): classwise risk ????
             risk = self.risk_function(
                 tmp_conformalized_predictions,
                 predictions,
-                loss=self.loss,
-                skip_matching=True,
+                confidence_loss=self.loss,
+                other_losses=self.other_losses,
             )
 
             n = len(predictions)
@@ -864,7 +858,7 @@ class ConfidenceConformalizer(Conformalizer):
         losses = self.risk_function(
             conformalized_predictions,
             predictions,
-            loss=self.loss,
+            confidence_loss=self.loss,
             return_list=True,
         )
 
@@ -877,8 +871,12 @@ class ConfidenceConformalizer(Conformalizer):
 
         # set_sizes = compute_set_size(conformalized_predictions.conf_boxes)
 
-        set_sizes = torch.tensor([sum(x>predictions.confidence_threshold) for x in predictions.confidence]).float()
-
+        set_sizes = torch.tensor(
+            [
+                sum(x > predictions.confidence_threshold)
+                for x in predictions.confidence
+            ]
+        ).float()
 
         if verbose:
             logger.info(f"Risk = {torch.mean(losses)}")
@@ -908,7 +906,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         guarantee_level="image",
         optimizer="binary_search",
         device="cpu",
-        #TODO(leo) remove if nonessential: **kwargs,
+        # TODO(leo) remove if nonessential: **kwargs,
     ):
         """ """
         super().__init__(
@@ -1121,18 +1119,24 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         )
 
         # TODO(leoandeol): this should vary based on object or image level
-        def compute_set_size(conf_cls: List[torch.Tensor], confidence, confidence_thr) -> torch.Tensor:
+        def compute_set_size(
+            conf_cls: List[torch.Tensor], confidence, confidence_thr
+        ) -> torch.Tensor:
             set_sizes = []
             for conf_cls_i, conf in zip(conf_cls, confidence):
                 keep = (conf >= confidence_thr).cpu().numpy()
-                conf_cls_i = [x for i,x in enumerate(conf_cls_i) if keep[i]]
+                conf_cls_i = [x for i, x in enumerate(conf_cls_i) if keep[i]]
                 for conf_cls_i_j in conf_cls_i:
                     set_sizes.append(len(conf_cls_i_j))
             set_sizes = torch.tensor(set_sizes).squeeze().float()
             return set_sizes
 
-        #TODO(leo): stop it pls
-        set_sizes = compute_set_size(conformalized_predictions.conf_cls, predictions.confidence, predictions.confidence_threshold)
+        # TODO(leo): stop it pls
+        set_sizes = compute_set_size(
+            conformalized_predictions.conf_cls,
+            predictions.confidence,
+            predictions.confidence_threshold,
+        )
         if verbose:
             logger.info(f"Risk = {torch.mean(losses)}")
             logger.info(f"Average set size = {torch.mean(set_sizes)}")
@@ -1225,7 +1229,7 @@ class ODConformalizer(Conformalizer):
         classification_prediction_set: str = "lac",  # Fix where we type check
         optimizer="binary_search",
         device="cpu",
-        #TODO(leo) remove if nonessential: **kwargs,
+        # TODO(leo) remove if nonessential: **kwargs,
     ):
         """Initialize the ODClassificationConformalizer object.
 
@@ -1299,7 +1303,7 @@ class ODConformalizer(Conformalizer):
                 prediction_set=localization_prediction_set,
                 device=device,
                 optimizer=optimizer,
-                #TODO(leo) remove if nonessential: **kwargs,
+                # TODO(leo) remove if nonessential: **kwargs,
             )
         elif isinstance(localization_method, LocalizationConformalizer):
             self.localization_conformalizer = localization_method
@@ -1356,7 +1360,7 @@ class ODConformalizer(Conformalizer):
                     if conf is not None
                 ],
                 optimizer=optimizer,
-                #TODO(leo) remove if nonessential: **kwargs,
+                # TODO(leo) remove if nonessential: **kwargs,
             )
             self.confidence_method = confidence_method
         elif isinstance(confidence_method, ConfidenceConformalizer):

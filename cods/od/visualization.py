@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from PIL import Image
 
@@ -8,7 +9,7 @@ from cods.od.data import ODConformalizedPredictions, ODPredictions
 def plot_preds(
     idx,
     predictions: ODPredictions,
-    conformalized_predictions: ODConformalizedPredictions=None,
+    conformalized_predictions: ODConformalizedPredictions = None,
     confidence_threshold=None,
     idx_to_label: dict = None,
     save_as=None,
@@ -25,7 +26,6 @@ def plot_preds(
         save_as (str, optional): File path to save the plot. Defaults to None.
     """
     is_conformal = conformalized_predictions is not None
-
 
     img_path = predictions.image_paths[idx]
     pred_boxes = predictions.pred_boxes[idx]
@@ -86,7 +86,7 @@ def plot_preds(
                 linewidth=2,
             )
         )
-        #TODO(leo):conf 
+        # TODO(leo):conf
         if conformal:
             if len(proba) <= 3:
                 # Print up to the three labels of the prediction sets
@@ -154,7 +154,39 @@ def plot_preds(
             box = box.detach().cpu().numpy()
             draw_rect(ax, box, "purple", conf_cls_i, conformal=True)
 
+    # Draw an arrow between the top-left corners of true and matching predicted box
+    for i, true_box in enumerate(true_boxes):
+        matching_pred_box = pred_boxes[predictions.matching[idx][i][0]]
+        ax.annotate(
+            "",
+            xy=(true_box[0], true_box[1]),
+            xytext=(matching_pred_box[0], matching_pred_box[1]),
+            arrowprops=dict(arrowstyle="->", lw=2, color="blue"),
+        )
+
     plt.axis("off")
     if save_as is not None:
         plt.savefig(save_as, bbox_inches="tight")
+    plt.show()
+
+
+def plot_histograms_predictions(predictions: ODPredictions):
+    # Plot three histograms in the same figure, with 20 bins that use lengths3 = [len(x) for x in preds_val.true_boxes] but the same also for confidence and confidence thresholded, and pu the mean length as title of the figure,
+
+    list_true = [len(x) for x in predictions.true_boxes]
+    list_pred = [len(x) for x in predictions.confidence]
+    list_pred_thresh = [
+        sum(x > predictions.confidence_threshold)
+        for x in predictions.confidence
+    ]
+
+    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+    axs[0].hist(list_true, bins=20)
+    axs[0].set_title(f"True boxes, mean size = {np.mean(list_true):.2f}")
+    axs[1].hist(list_pred, bins=20)
+    axs[1].set_title(f"Predicted boxes, mean size = {np.mean(list_pred):.2f}")
+    axs[2].hist(list_pred_thresh, bins=20)
+    axs[2].set_title(
+        f"Predicted boxes above threshold, mean size = {np.mean(list_pred_thresh):.2f}"
+    )
     plt.show()
