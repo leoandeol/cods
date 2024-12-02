@@ -130,6 +130,49 @@ def f_iou(boxA, boxB):
     return iou
 
 
+def generalized_iou(boxA, boxB):
+    """Compute the Generalized Intersection over Union (GIoU) between two bounding boxes.
+
+    Args:
+    ----
+        boxA (List[int]): First bounding box.
+        boxB (List[int]): Second bounding box.
+
+    Returns:
+    -------
+        float: Generalized Intersection over Union (GIoU) value.
+
+    """
+    # Calculate the intersection
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+    boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+
+    # Calculate the union
+    unionArea = boxAArea + boxBArea - interArea
+
+    # Calculate IoU
+    iou = interArea / (unionArea + 1e-12)
+
+    # Calculate the convex hull
+    xC1 = min(boxA[0], boxB[0])
+    yC1 = min(boxA[1], boxB[1])
+    xC2 = max(boxA[2], boxB[2])
+    yC2 = max(boxA[3], boxB[3])
+
+    convexHullArea = (xC2 - xC1 + 1) * (yC2 - yC1 + 1)
+
+    # Calculate GIoU
+    giou = iou - (convexHullArea - unionArea) / (convexHullArea + 1e-12)
+
+    return giou
+
+
 def assymetric_hausdorff_distance(true_box, pred_box):
     up_distance = pred_box[1] - true_box[1]
     down_distance = true_box[3] - pred_box[3]
@@ -154,8 +197,10 @@ def match_predictions_to_true_boxes(
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
     # TODO(leo): switch to gpu
     dist_iou = lambda x, y: -f_iou(x, y)
+    dist_generalized_iou = lambda x, y: -generalized_iou(x, y)
     DISTANCE_FUNCTIONS = {
         "iou": dist_iou,
+        "giou": dist_generalized_iou,
         "hausdorff": assymetric_hausdorff_distance,
     }
 

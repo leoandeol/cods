@@ -1205,7 +1205,7 @@ class ODConformalizer(Conformalizer):
     MULTIPLE_TESTING_CORRECTIONS = ["bonferroni"]
     BACKENDS = ["auto"]
     GUARANTEE_LEVELS = ["image", "object"]
-    MATCHINGS = ["hausdorff", "iou"]
+    MATCHINGS = ["hausdorff", "iou", "giou"]
 
     def __init__(
         self,
@@ -1516,6 +1516,9 @@ class ODConformalizer(Conformalizer):
                 )
         else:
             predictions.confidence_threshold = self.confidence_threshold
+            optimistic_confidence_threshold = self.confidence_threshold
+            lambda_confidence_minus = None
+            lambda_confidence_plus = None
 
         # Now that we fixed the confidence threshold, we need to do the matching before moving on to the next steps
 
