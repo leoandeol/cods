@@ -6,6 +6,7 @@ logger = getLogger("cods")
 
 import numpy as np
 import torch
+from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
 
 
@@ -193,6 +194,8 @@ def match_predictions_to_true_boxes(
     distance_function,
     overload_confidence_threshold=None,
     verbose=False,
+    hungarian=False,
+    class_factor=True,
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
     # TODO(leo): switch to gpu
@@ -222,43 +225,109 @@ def match_predictions_to_true_boxes(
     else:
         conf_thr = 0
     # filter pred_boxes with low objectness
-    preds_boxes = [
+    pred_boxess = [
         x.cpu().numpy()[
             y.cpu().numpy() >= conf_thr
         ]  # if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
         for x, y in zip(preds.pred_boxes, preds.confidence)
     ]
-    true_boxes = [
+    true_boxess = [
         true_boxes_i.cpu().numpy() for true_boxes_i in preds.true_boxes
     ]
-    for pred_boxes, true_boxes in tqdm(
-        zip(preds_boxes, true_boxes),
-        disable=not verbose,
-    ):
-        matching = []
 
-        for i, true_box in enumerate(true_boxes):
-            distances = []
+    preds_clss = [
+        x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
+        for x, y in zip(preds.pred_cls, preds.confidence)
+    ]
 
+    true_clss = [true_cls_i.cpu().numpy() for true_cls_i in preds.true_cls]
+
+    if hungarian:
+        for pred_boxes, true_boxes in tqdm(
+            zip(pred_boxess, true_boxess),
+            disable=not verbose,
+        ):
             if len(pred_boxes) == 0:
-                matching.append([])
+                matching = [[]] * len(true_boxes)
+                all_matching.append(matching)
+                # print(len(matching), len(true_boxes), matching)
+                continue
+            elif len(true_boxes) == 0:
+                matching = []
+                all_matching.append(matching)
+                # print(len(matching), len(true_boxes), matching)
                 continue
             else:
-                for j, pred_box in enumerate(pred_boxes):
-                    dist = f_dist(true_box, pred_box)
-                    dist = (
-                        dist.cpu().numpy()
-                        if isinstance(dist, torch.Tensor)
-                        else dist
-                    )
-                    distances.append(dist)  # .cpu().numpy())
+                image_distances = []
+                for i, true_box in enumerate(true_boxes):
+                    box_distances = []
 
-                # TODO: replace this by possible a set of matches
-                # TODO: must always be an array
-                matching.append([np.argmin(distances)])  # np.argmax(ious))
-                # print(matching[-1])
-        all_matching.append(matching)
-        # break
+                    for j, pred_box in enumerate(pred_boxes):
+                        dist = f_dist(true_box, pred_box)
+                        dist = (
+                            dist.cpu().numpy()
+                            if isinstance(dist, torch.Tensor)
+                            else dist
+                        )
+                        box_distances.append(dist)
+
+                    # TODO: replace this by possible a set of matches
+                    # TODO: must always be an array
+                    image_distances.append(
+                        np.array(box_distances).astype(float)
+                    )  # np.argmax(ious))
+                    # print(matching[-1])
+
+                image_distances = np.array(image_distances)
+                row_ind, col_ind = linear_sum_assignment(image_distances)
+                matching = [[]] * len(true_boxes)
+                # print(len)
+                for x, y in zip(row_ind, col_ind):
+                    if x < len(true_boxes) and y < len(pred_boxes):
+                        matching[x] = [y]
+                # matching = list([[x] for x in col_ind])
+                # assert len(matching) == len(
+                #     true_boxes
+                # ), f"{len(matching)}, {len(true_boxes)}, {matching}, {col_ind}"
+                all_matching.append(matching)
+
+    else:
+        for pred_boxes, true_boxes, pred_cls, true_cls in tqdm(
+            zip(pred_boxess, true_boxess, preds_clss, true_clss),
+            disable=not verbose,
+        ):
+            matching = []
+
+            for i, true_box in enumerate(true_boxes):
+                cls = true_cls[i]
+                distances = []
+
+                if len(pred_boxes) == 0:
+                    matching.append([])
+                    continue
+                else:
+                    for j, pred_box in enumerate(pred_boxes):
+                        score_true = pred_cls[j][cls]
+                        dist = f_dist(true_box, pred_box)
+                        dist = (
+                            dist.cpu().numpy()
+                            if isinstance(dist, torch.Tensor)
+                            else dist
+                        )
+                        if class_factor:
+                            c = 0
+                            dist = dist * (
+                                1 + c * (1 - score_true)
+                            )  # to rethink the factor
+                        distances.append(dist)  # .cpu().numpy())
+
+                    # TODO: replace this by possible a set of matches
+                    # TODO: must always be an array
+                    matching.append([np.argmin(distances)])  # np.argmax(ious))
+                    # print(matching[-1])
+            assert len(matching) == len(true_boxes)
+            all_matching.append(matching)
+            # break
 
     preds.matching = all_matching
     # return all_matching

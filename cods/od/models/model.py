@@ -66,7 +66,7 @@ class ODModel(Model):
         Returns:
             ODPredictions: Predictions object to use for prediction set construction.
         """
-        string_to_hash = f"{dataset.root}_{dataset_name}_{split_name}_{batch_size}_{shuffle}_object_detection_{dataset.image_ids}"
+        string_to_hash = f"{dataset.root}_{dataset_name}_{split_name}_{batch_size}_{shuffle}_{self.model_name}_object_detection_{dataset.image_ids}"
         hash = sha256(string_to_hash.encode()).hexdigest()
 
         preds = None
