@@ -88,8 +88,10 @@ def plot_preds(
         )
         # TODO(leo):conf
         if conformal:
-            if len(proba) <= 3:
+            if len(proba) <= 13:
                 # Print up to the three labels of the prediction sets
+                if isinstance(proba, torch.Tensor):
+                    proba = proba.cpu().numpy()
                 if idx_to_label is not None:
                     text = ", ".join([f"{idx_to_label[cl]}" for cl in proba])
                 else:
