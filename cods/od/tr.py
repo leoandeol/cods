@@ -1,19 +1,26 @@
-import torch
-from typing import Union, Callable, Tuple, Optional
+from typing import Callable, Optional, Tuple, Union
 
-from cods.base.tr import ToleranceRegion
-from cods.od.utils import compute_risk_image_level, compute_risk_box_level
-from cods.od.data import ODPredictions
-from cods.classif.tr import ClassificationToleranceRegion
-from cods.od.loss import PixelWiseRecallLoss, BoxWiseRecallLoss, ObjectnessLoss
+import torch
+
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
-from cods.od.utils import (
-    apply_margins,
-    get_classif_preds_from_od_preds,
-    get_conf_cls_for_od,
-    evaluate_cls_conformalizer,
+from cods.base.tr import ToleranceRegion
+from cods.classif.loss import ClassificationLoss
+from cods.classif.tr import ClassificationToleranceRegion
+from cods.od.data import ODPredictions
+from cods.od.loss import (
+    BoxWiseRecallLoss,
+    ConfidenceLoss,
+    LocalizationLoss,
+    PixelWiseRecallLoss,
 )
 from cods.od.metrics import compute_global_coverage
+from cods.od.utils import (
+    apply_margins,
+    compute_risk_box_level,
+    evaluate_cls_conformalizer,
+    get_classif_preds_from_od_preds,
+    get_conf_cls_for_od,
+)
 
 
 class LocalizationToleranceRegion(ToleranceRegion):
@@ -26,9 +33,10 @@ class LocalizationToleranceRegion(ToleranceRegion):
     def __init__(
         self,
         prediction_set: str = "additive",
-        loss: Union[str, None] = None,
+        loss: Union[str, LocalizationLoss] = "boxwise",
         optimizer: str = "binary_search",
         inequality: Union[str, Callable] = "binomial_inverse_cdf",
+        optimizer_args: dict = {},
     ):
         """
         Initialize the LocalizationToleranceRegion.
@@ -42,24 +50,28 @@ class LocalizationToleranceRegion(ToleranceRegion):
         Raises:
             ValueError: If the loss or optimizer is not accepted.
         """
-        super().__init__(inequality=inequality)
-        if loss not in self.ACCEPTED_LOSSES:
+        super().__init__(
+            inequality=inequality, optimizer=optimizer, optimizer_args=optimizer_args
+        )
+        if isinstance(loss, str):
+            if loss not in self.ACCEPTED_LOSSES:
+                raise ValueError(
+                    f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
+                )
+            self.loss_name = loss
+            self.loss = self.ACCEPTED_LOSSES[loss]()
+        elif isinstance(loss, LocalizationLoss):
+            self.loss_name = loss.__class__.__name__
+            self.loss = loss
+        else:
             raise ValueError(
-                f"loss {loss} not accepted, must be one of {self.ACCEPTED_LOSSES.keys()}"
+                f"loss must be a string or a ClassificationLoss instance, got {loss}"
             )
-        self.loss_name = loss
-        self.loss = self.ACCEPTED_LOSSES[loss]()
 
         if prediction_set not in ["additive", "multiplicative", "adaptative"]:
             raise ValueError(f"prediction_set {prediction_set} not accepted")
         self.prediction_set = prediction_set
         self.lbd = None
-        if optimizer == "binary_search":
-            self.optimizer = BinarySearchOptimizer()
-        elif optimizer in ["gaussianprocess", "gpr", "kriging"]:
-            self.optimizer = GaussianProcessOptimizer()
-        else:
-            raise ValueError(f"optimizer {optimizer} not accepted")
 
     def _get_risk_function(
         self,
@@ -109,10 +121,10 @@ class LocalizationToleranceRegion(ToleranceRegion):
 
     def _correct_risk(
         self,
-        risk: float,
+        risk: torch.Tensor,
         n: int,
         delta: float,
-    ):
+    ) -> torch.Tensor:
         """
         Correct the risk using the inequality function.
 
@@ -173,7 +185,7 @@ class LocalizationToleranceRegion(ToleranceRegion):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,
@@ -199,7 +211,6 @@ class LocalizationToleranceRegion(ToleranceRegion):
             preds.pred_boxes, [self.lbd] * 4, mode=self.prediction_set
         )
         preds.confidence_threshold = self.confidence_threshold
-        preds.conf_boxes = conf_boxes
         return conf_boxes
 
     def evaluate(self, preds: ODPredictions, conf_boxes: list, verbose=True):
@@ -216,7 +227,7 @@ class LocalizationToleranceRegion(ToleranceRegion):
         """
         if self.lbd is None:
             raise ValueError("Conformalizer must be calibrated before evaluating.")
-        if preds.conf_boxes is None:
+        if conf_boxes is None:
             raise ValueError("Predictions must be conformalized before evaluating.")
 
         conf_boxes = list(
@@ -255,14 +266,15 @@ class ConfidenceToleranceRegion(ToleranceRegion):
     Tolerance region for object confidence tasks.
     """
 
-    ACCEPTED_LOSSES = {"box_number": ObjectnessLoss}
+    ACCEPTED_LOSSES = {"box_number": ConfidenceLoss}
 
     def __init__(
         self,
-        loss: str = "box_number",
-        inequality: str = "binomial_inverse_cdf",
+        loss: Union[str, ConfidenceLoss] = "box_number",
+        inequality: Union[str, Callable] = "binomial_inverse_cdf",
         optimizer: str = "binary_search",
-    ) -> None:
+        optimizer_args: dict = {},
+    ):
         """
         Initialize the ConfidenceToleranceRegion.
 
@@ -274,20 +286,24 @@ class ConfidenceToleranceRegion(ToleranceRegion):
         Raises:
             ValueError: If the loss or optimizer is not accepted.
         """
-        super().__init__(inequality=inequality)
+        super().__init__(
+            inequality=inequality, optimizer=optimizer, optimizer_args=optimizer_args
+        )
         self.lbd = None
-        if loss not in self.ACCEPTED_LOSSES:
-            raise ValueError(
-                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
-            )
-        self.loss_name = loss
-        self.loss = self.ACCEPTED_LOSSES[loss]()
-        if optimizer == "binary_search":
-            self.optimizer = BinarySearchOptimizer()
-        elif optimizer in ["gaussianprocess", "gpr", "kriging"]:
-            self.optimizer = GaussianProcessOptimizer()
+        if isinstance(loss, str):
+            if loss not in self.ACCEPTED_LOSSES:
+                raise ValueError(
+                    f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
+                )
+            self.loss_name = loss
+            self.loss = self.ACCEPTED_LOSSES[loss]()
+        elif isinstance(loss, ConfidenceLoss):
+            self.loss_name = loss.__class__.__name__
+            self.loss = loss
         else:
-            raise ValueError(f"optimizer {optimizer} not accepted")
+            raise ValueError(
+                f"loss must be a string or a ClassificationLoss instance, got {loss}"
+            )
 
     def calibrate(
         self,
@@ -324,8 +340,6 @@ class ConfidenceToleranceRegion(ToleranceRegion):
             else:
                 preds.confidence_threshold = confidence_threshold
         self._n_classes = preds.n_classes
-        if self.loss is None:
-            self.loss = self.accepted_methods[self.loss_name]()
         risk_function = self._get_risk_function(
             preds=preds,
             alpha=alpha,
@@ -333,7 +347,7 @@ class ConfidenceToleranceRegion(ToleranceRegion):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,
@@ -377,10 +391,10 @@ class ConfidenceToleranceRegion(ToleranceRegion):
 
     def _correct_risk(
         self,
-        risk: float,
+        risk: torch.Tensor,
         n: int,
         delta: float,
-    ) -> float:
+    ) -> torch.Tensor:
         """
         Correct the risk using the inequality function.
 
@@ -459,18 +473,26 @@ class ODToleranceRegion(ToleranceRegion):
 
     def __init__(
         self,
-        localization_loss: Union[None, str, LocalizationToleranceRegion] = "boxwise",
-        confidence_loss: Union[None, str, ConfidenceToleranceRegion] = "box_number",
-        classification_loss: Union[None, str, ClassificationToleranceRegion] = "lac",
-        inequality="binomial_inverse_cdf",
-        margins=1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
-        prediction_set="additive",
+        localization_loss: Union[
+            None, str, LocalizationLoss, LocalizationToleranceRegion
+        ] = "boxwise",
+        confidence_loss: Union[
+            None, str, ConfidenceLoss, ConfidenceToleranceRegion
+        ] = "box_number",
+        classification_loss: Union[
+            None, str, ClassificationLoss, ClassificationToleranceRegion
+        ] = "lac",
+        inequality: Union[str, Callable] = "binomial_inverse_cdf",
+        margins: int = 1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
+        prediction_set: str = "additive",
         multiple_testing_correction: str = "bonferroni",
         confidence_threshold: Optional[float] = None,
         **kwargs,
     ):
         # TODO: add option of putting a loss object directly
-        if isinstance(localization_loss, str):
+        if isinstance(localization_loss, str) or isinstance(
+            localization_loss, LocalizationLoss
+        ):
             self.loc_conformalizer = LocalizationToleranceRegion(
                 loss=localization_loss,
                 inequality=inequality,
@@ -485,7 +507,10 @@ class ODToleranceRegion(ToleranceRegion):
             raise ValueError(
                 "localization_loss must be a string or a LocalizationToleranceRegion"
             )
-        if isinstance(confidence_loss, str):
+
+        if isinstance(confidence_loss, str) or isinstance(
+            confidence_loss, ConfidenceLoss
+        ):
             self.obj_conformalizer = ConfidenceToleranceRegion(
                 loss=confidence_loss, inequality="binomial_inverse_cdf"
             )
@@ -497,7 +522,10 @@ class ODToleranceRegion(ToleranceRegion):
             raise ValueError(
                 "confidence_loss must be a string or a ConfidenceToleranceRegion"
             )
-        if isinstance(classification_loss, str):
+
+        if isinstance(classification_loss, str) or isinstance(
+            classification_loss, ClassificationLoss
+        ):
             self.cls_conformalizer = ClassificationToleranceRegion(
                 loss=classification_loss, inequality="binomial_inverse_cdf"
             )
@@ -509,7 +537,7 @@ class ODToleranceRegion(ToleranceRegion):
             raise ValueError(
                 "classification_loss must be a string or a ClassificationToleranceRegion"
             )
-        self.localization_loss = localization_loss
+
         self.margins = margins
         self.kwargs = kwargs
         self.inequality_name = inequality

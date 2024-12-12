@@ -1,6 +1,7 @@
-import os
 import json
+import os
 import random
+from typing import Optional, Tuple, Union
 
 from PIL import Image
 from torch.utils.data import Dataset
@@ -68,7 +69,9 @@ class MSCOCODataset(Dataset):
     def __len__(self):
         return len(self.image_ids)
 
-    def _load_image(self, idx: int, return_path: bool = False):
+    def _load_image(
+        self, idx: int, return_path: bool = False
+    ) -> Union[Image.Image, Tuple[str, Image.Image]]:
         new_idx = self.image_ids[idx]
         image_path = os.path.join(self.images_path, self.image_files[new_idx])
 
@@ -100,8 +103,6 @@ class MSCOCODataset(Dataset):
 
     def shuffle(self):
         random.shuffle(self.image_ids)
-
-    from typing import Optional
 
     # split dataset in two dataset randomly
     def random_split(

@@ -1,8 +1,10 @@
+from typing import Any, Optional
+
 import torch
+
 from cods.base.cp import Conformalizer
 from cods.classif.data import ClassificationPredictions
-from cods.classif.score import ClassifNCScore, LACNCScore, APSNCScore
-from typing import Optional, Any
+from cods.classif.score import APSNCScore, ClassifNCScore, LACNCScore
 
 
 class ClassificationConformalizer(Conformalizer):
@@ -27,7 +29,7 @@ class ClassificationConformalizer(Conformalizer):
 
         self.preprocess = preprocess
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
-        self._score_function: Optional[Any] = None
+        self._score_function = self.ACCEPTED_METHODS[self.method](self._n_classes)
         self._quantile: Optional[Any] = None
         self._n_classes: Optional[Any] = None
 
@@ -35,8 +37,7 @@ class ClassificationConformalizer(Conformalizer):
         self, preds: ClassificationPredictions, alpha: float = 0.1, verbose: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
         self._n_classes = preds.n_classes
-        if self._score_function is None:
-            self._score_function = self.ACCEPTED_METHODS[self.method](self._n_classes)
+
         scores = []
 
         n = 0

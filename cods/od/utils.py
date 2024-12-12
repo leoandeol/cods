@@ -1,11 +1,12 @@
-import torch
+from typing import Dict, List, Tuple, Union
+
 import numpy as np
+import torch
 from tqdm import tqdm
-from typing import Union, List, Dict
 
 from cods.classif.cp import ClassificationConformalizer
-from cods.classif.tr import ClassificationToleranceRegion
 from cods.classif.data import ClassificationPredictions
+from cods.classif.tr import ClassificationToleranceRegion
 from cods.od.data import ODPredictions
 
 
@@ -65,8 +66,11 @@ def flatten_conf_cls(conf_cls: List[List[torch.Tensor]]) -> List[torch.Tensor]:
     Returns:
         List[torch.Tensor]: Flattened list.
     """
-    conf_cls = [item for sublist in conf_cls for item in sublist]
-    return conf_cls
+    new_conf_cls = []
+    for i in range(len(conf_cls)):
+        for j in range(len(conf_cls[i])):
+            new_conf_cls.append(conf_cls[i][j])
+    return new_conf_cls
 
 
 def get_conf_cls_for_od(
@@ -104,6 +108,7 @@ def get_conf_cls_for_od(
         if len(true_cls_img) == 0:
             conf_cls.append([])
             continue
+        pred_cls_img = torch.stack(pred_cls_img)
         conf_cls_img = conformalizer.conformalize(
             ClassificationPredictions(
                 dataset_name=od_preds.dataset_name,
@@ -123,7 +128,7 @@ def evaluate_cls_conformalizer(
     conf_cls: List[List[torch.Tensor]],
     conformalizer: Union[ClassificationConformalizer, ClassificationToleranceRegion],
     verbose: bool = False,
-) -> torch.Tensor:
+) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Evaluate the performance of a classification conformalizer.
 
@@ -142,6 +147,10 @@ def evaluate_cls_conformalizer(
         pre_pred_cls_img = od_preds.pred_cls[i]
         pred_cls_img = []
         for j, true_cls_box in enumerate(true_cls_img):
+            if od_preds.matching is None:
+                raise ValueError(
+                    "Warning: od_preds.matching is None [Should not happen]"
+                )
             pred_cls_box = pre_pred_cls_img[od_preds.matching[i][j]]
             pred_cls_img.append(pred_cls_box)
             if len(conf_cls[i][j]) == 0:
@@ -157,6 +166,7 @@ def evaluate_cls_conformalizer(
             )
         if len(true_cls_img) == 0:
             continue
+        pred_cls_img = torch.stack(pred_cls_img)
         coverage_cls, set_size_cls = conformalizer.evaluate(
             ClassificationPredictions(
                 dataset_name=od_preds.dataset_name,
@@ -176,7 +186,7 @@ def evaluate_cls_conformalizer(
     return covs, set_sizes
 
 
-def mesh_func(x1, y1, x2, y2, pbs):
+def mesh_func(x1: int, y1: int, x2: int, y2: int, pbs: torch.Tensor) -> torch.Tensor:
     """
     Compute mesh function.
 
@@ -185,7 +195,7 @@ def mesh_func(x1, y1, x2, y2, pbs):
         y1 (int): y-coordinate of the top-left corner of the bounding box.
         x2 (int): x-coordinate of the bottom-right corner of the bounding box.
         y2 (int): y-coordinate of the bottom-right corner of the bounding box.
-        pbs (List[List[int]]): List of predicted bounding boxes.
+        pbs (torch.Tensor): List of predicted bounding boxes.
 
     Returns:
         torch.Tensor: Mesh function.
@@ -202,17 +212,19 @@ def mesh_func(x1, y1, x2, y2, pbs):
         yy.reshape((1, -1)) <= (pbs[:, 3, None])
     )
 
-    Z = torch.any(outxx & outyy, axis=0).reshape((x2 - x1 + 1, y2 - y1 + 1))
+    Z = torch.any(outxx & outyy, dim=0).reshape((x2 - x1 + 1, y2 - y1 + 1))
     return Z
 
 
-def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
+def get_covered_areas_of_gt_union(
+    pred_boxes: torch.Tensor, true_boxes: torch.Tensor
+) -> torch.Tensor:
     """
-    Compute the covered areas of ground truth bounding boxes using union.
+    Compute the covered areas of ground truth bounding boxes using union for a given image.
 
     Args:
-        pred_boxes (List[List[int]]): List of predicted bounding boxes.
-        true_boxes (List[List[int]]): List of ground truth bounding boxes.
+        pred_boxes (torch.Tensor): List of predicted bounding boxes.
+        true_boxes (torch.Tensor): List of ground truth bounding boxes.
 
     Returns:
         torch.Tensor: Covered areas of ground truth bounding boxes.
@@ -230,13 +242,15 @@ def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
     return areas
 
 
-def get_covered_areas_of_gt_max(pred_boxes, true_boxes):
+def get_covered_areas_of_gt_max(
+    pred_boxes: torch.Tensor, true_boxes: torch.Tensor
+) -> torch.Tensor:
     """
-    Compute the covered areas of ground truth bounding boxes using maximum.
+    Compute the covered areas of ground truth bounding boxes using maximum for a given image.
 
     Args:
-        pred_boxes (List[List[int]]): List of predicted bounding boxes.
-        true_boxes (List[List[int]]): List of ground truth bounding boxes.
+        pred_boxes (torch.Tensor): List of predicted bounding boxes.
+        true_boxes (torch.Tensor): List of ground truth bounding boxes.
 
     Returns:
         torch.Tensor: Covered areas of ground truth bounding boxes.
@@ -248,10 +262,11 @@ def get_covered_areas_of_gt_max(pred_boxes, true_boxes):
 
         p_areas = []
         for pb in pred_boxes:
-            Z = mesh_func(x1, y1, x2, y2, [pb])
+            Z = mesh_func(x1, y1, x2, y2, pb[None, ...])
 
             p_area = Z.sum() / ((x2 - x1 + 1) * (y2 - y1 + 1))
             p_areas.append(p_area)
+        p_areas = torch.stack(p_areas)
         area = torch.max(p_areas)
         areas.append(area)
     areas = torch.stack(areas)
@@ -356,23 +371,26 @@ def matching_by_iou(preds, verbose=False):
     return all_matching
 
 
-def apply_margins(pred_boxes, Qs, mode="additive"):
+def apply_margins(
+    pred_boxes: List[torch.Tensor], Qs: list, mode: str = "additive"
+) -> List[torch.Tensor]:
     n = len(pred_boxes)
-    new_boxes = [None] * n
+    new_boxes = []
     # print(Qs)
     Qst = torch.FloatTensor([Qs]).cuda()
     for i in range(n):
         # print(pred_boxes[i].shape, Qst.shape)
         if mode == "additive":
-            new_boxes[i] = pred_boxes[i] + torch.mul(
+            new_boxs = pred_boxes[i] + torch.mul(
                 torch.FloatTensor([[-1, -1, 1, 1]]).cuda(), Qst
             )
         elif mode == "multiplicative":
             w = pred_boxes[i][:, 2] - pred_boxes[i][:, 0]
             h = pred_boxes[i][:, 3] - pred_boxes[i][:, 1]
-            new_boxes[i] = pred_boxes[i] + torch.mul(
-                torch.stack((-w, -h, w, h), axis=-1), Qst
+            new_boxs = pred_boxes[i] + torch.mul(
+                torch.stack((-w, -h, w, h), dim=-1), Qst
             )
+            new_boxes.append(new_boxs)
     return new_boxes
 
 
