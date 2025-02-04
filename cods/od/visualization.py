@@ -31,7 +31,7 @@ def plot_preds(
     pred_boxes = predictions.pred_boxes[idx]
     true_boxes = predictions.true_boxes[idx]
     true_cls = predictions.true_cls[idx]
-    conf = predictions.confidence[idx]
+    conf = predictions.confidences[idx]
     cls_probas = predictions.pred_cls[idx]
 
     if is_conformal:
@@ -176,7 +176,7 @@ def plot_histograms_predictions(predictions: ODPredictions):
     # Plot three histograms in the same figure, with 20 bins that use lengths3 = [len(x) for x in preds_val.true_boxes] but the same also for confidence and confidence thresholded, and pu the mean length as title of the figure,
 
     list_true = [len(x) for x in predictions.true_boxes]
-    list_pred = [len(x) for x in predictions.confidence]
+    list_pred = [len(x) for x in predictions.confidences]
     list_pred_thresh = [
         sum(x > predictions.confidence_threshold)
         for x in predictions.confidence

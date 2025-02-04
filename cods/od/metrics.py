@@ -61,7 +61,7 @@ def compute_global_coverage(
             conf_loss = (
                 0
                 if (
-                    predictions.confidence[i]
+                    predictions.confidences[i]
                     >= predictions.confidence_threshold
                 ).sum()
                 >= len(predictions.true_boxes[i])
@@ -87,11 +87,11 @@ def compute_global_coverage(
                 # conf_boxes_i = [
                 #     box
                 #     for k, box in enumerate(conf_boxes[i])
-                #     if predictions.confidence[i][k] >= predictions.confidence_threshold
+                #     if predictions.confidences[i][k] >= predictions.confidence_threshold
                 # ]
                 # Tensor style
                 conf_boxes_i = conf_boxes[i][
-                    predictions.confidence[i]
+                    predictions.confidences[i]
                     >= predictions.confidence_threshold
                 ]
                 if loss is None:

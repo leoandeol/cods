@@ -1,7 +1,6 @@
 from logging import getLogger
-from typing import List, Optional
+from typing import List
 
-import numpy as np
 import torch
 
 from cods.base.loss import Loss
@@ -223,7 +222,7 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
-        distance_threshold: float = 50,
+        distance_threshold: float = 100,
         device: str = "cpu",
         **kwargs,
     ):
@@ -267,6 +266,7 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
             shortest_distances = []
             for true_box in true_boxes:
                 # search for closest box
+                # TODO(leo):add classes
                 dist = torch.min(
                     torch.stack(
                         [
@@ -330,14 +330,17 @@ class ClassificationLossWrapper(ODLoss):
         true_cls: torch.Tensor,
         conf_boxes: torch.Tensor,
         conf_cls: torch.Tensor,
+        verbose: bool = False,
     ) -> torch.Tensor:
         """ """
         losses = []
         if len(true_cls) == 0:
-            logger.warning(f"true_cls is empty : {true_cls}")
+            if verbose:
+                logger.warning(f"true_cls is empty : {true_cls}")
             return torch.zeros(1).to(self.device)
         if len(conf_cls) == 0:
-            logger.warning(f"conf_cls is empty : {conf_cls}")
+            if verbose:
+                logger.warning(f"conf_cls is empty : {conf_cls}")
             return torch.ones(1).to(self.device)
         for i in range(len(conf_cls)):
             loss = self.classification_loss(conf_cls[i], true_cls[i])

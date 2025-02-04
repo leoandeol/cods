@@ -23,16 +23,17 @@ class ClassificationConformalizer(Conformalizer):
                 f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}"
             )
 
-        self.method = method
-        if isinstance(method, ClassifNCScore):
-            self._score_function = method
-
         self.preprocess = preprocess
-        self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
-        self._score_function: Optional[Any] = None
+        self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]      
         self._quantile: Optional[Any] = None
         self._n_classes: Optional[Any] = None
         self.device = device
+
+        self.method = method
+        if isinstance(method, ClassifNCScore):
+            self._score_function = method
+        elif method in self.ACCEPTED_METHODS.keys():
+            self._score_function = None
 
     def calibrate(
         self,

@@ -50,27 +50,17 @@ def mesh_func(
 
 
 def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
-    """Compute the covered areas of ground truth bounding boxes using union.
-
-    Args:
-    ----
-        pred_boxes (List[List[int]]): List of predicted bounding boxes.
-        true_boxes (List[List[int]]): List of ground truth bounding boxes.
-
-    Returns:
-    -------
-        torch.Tensor: Covered areas of ground truth bounding boxes.
-
-    """
+    """ """
     device = pred_boxes[0].device
     areas = []
     for tb, pbs in zip(true_boxes, pred_boxes):
         if len(pbs) == 0:
             areas.append(torch.tensor(0).float().to(device))
             continue
+        if len(pbs.shape) == 1:
+            pbs = pbs.unsqueeze(0)
         x1, y1, x2, y2 = tb
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-
         Z = mesh_func(x1, y1, x2, y2, pbs)
 
         area = Z.sum() / ((x2 - x1 + 1) * (y2 - y1 + 1))
@@ -174,7 +164,7 @@ def generalized_iou(boxA, boxB):
     return giou
 
 
-def assymetric_hausdorff_distance(true_box, pred_box):
+def assymetric_hausdorff_distance_old(true_box, pred_box):
     up_distance = pred_box[1] - true_box[1]
     down_distance = true_box[3] - pred_box[3]
     left_distance = pred_box[0] - true_box[0]
@@ -188,6 +178,13 @@ def assymetric_hausdorff_distance(true_box, pred_box):
         right_distance,
     )
 
+def assymetric_hausdorff_distance(true_boxes, pred_boxes):
+    true_boxes[:, :2] *= -1
+    pred_boxes[:, 2:] *= -1
+    distances = true_boxes[:, None, :] + pred_boxes[None, :, :]
+    distances = torch.max(distances, dim=-1).values
+    return distances
+
 
 def match_predictions_to_true_boxes(
     preds,
@@ -195,7 +192,8 @@ def match_predictions_to_true_boxes(
     overload_confidence_threshold=None,
     verbose=False,
     hungarian=False,
-    class_factor=True,
+    idx=None,
+    class_factor: float = 5,
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
     # TODO(leo): switch to gpu
@@ -204,7 +202,8 @@ def match_predictions_to_true_boxes(
     DISTANCE_FUNCTIONS = {
         "iou": dist_iou,
         "giou": dist_generalized_iou,
-        "hausdorff": assymetric_hausdorff_distance,
+        "hausdorff": assymetric_hausdorff_distance_old,
+        "lac": None,
     }
 
     if verbose and distance_function is None:
@@ -224,23 +223,41 @@ def match_predictions_to_true_boxes(
         conf_thr = preds.confidence_threshold
     else:
         conf_thr = 0
-    # filter pred_boxes with low objectness
-    pred_boxess = [
-        x.cpu().numpy()[
-            y.cpu().numpy() >= conf_thr
-        ]  # if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
-        for x, y in zip(preds.pred_boxes, preds.confidence)
-    ]
-    true_boxess = [
-        true_boxes_i.cpu().numpy() for true_boxes_i in preds.true_boxes
-    ]
 
-    preds_clss = [
-        x.cpu().numpy()[y.cpu().numpy() >= conf_thr]
-        for x, y in zip(preds.pred_cls, preds.confidence)
-    ]
+    if not isinstance(conf_thr, torch.Tensor):
+        conf_thr = torch.tensor(conf_thr)
 
-    true_clss = [true_cls_i.cpu().numpy() for true_cls_i in preds.true_cls]
+    device = preds.pred_boxes[0].device
+
+    # To only update it on a single image
+    if idx is not None:
+        # filter pred_boxes with low objectness
+        pred_boxess = [
+            preds.pred_boxes[idx][preds.confidences[idx] >= conf_thr]
+        ]
+        true_boxess = [preds.true_boxes[idx]]
+
+        preds_clss = [
+            preds.pred_cls[idx][preds.confidences[idx] >= conf_thr]
+        ]
+
+        true_clss = [preds.true_cls[idx]]
+
+    else:
+        pred_boxess = [
+            x[y >= conf_thr]
+            for x, y in zip(preds.pred_boxes, preds.confidences)
+        ]  
+        true_boxess = [
+            true_boxes_i for true_boxes_i in preds.true_boxes
+        ]
+
+        preds_clss = [
+            x[y >= conf_thr]
+            for x, y in zip(preds.pred_cls, preds.confidences)
+        ]
+
+        true_clss = [true_cls_i for true_cls_i in preds.true_cls]
 
     if hungarian:
         for pred_boxes, true_boxes in tqdm(
@@ -296,41 +313,57 @@ def match_predictions_to_true_boxes(
             zip(pred_boxess, true_boxess, preds_clss, true_clss),
             disable=not verbose,
         ):
-            matching = []
+            if len(true_boxes) == 0:
+                matching = []
+            elif len(pred_boxes) == 0:
+                matching = [[]] * len(true_boxes)
+            else:
+                # Assumption: pred_boxes and true_boxes are torch tensors of dimensions [n, 4] and [m,4]
+                # where n is the number of predicted boxes and m is the number of true boxes
+                # up_distance = pred_box[1] - true_box[1]
+                # down_distance = true_box[3] - pred_box[3]
+                # left_distance = pred_box[0] - true_box[0]
+                # right_distance = true_box[2] - pred_box[2]
+                
+                true_boxes = true_boxes.clone()
+                pred_boxes = pred_boxes.clone()
+                distance_matrix = assymetric_hausdorff_distance(true_boxes, pred_boxes)
+                matching = torch.argmin(distance_matrix, dim=1).cpu().numpy().reshape(-1, 1).tolist()
+                
 
-            for i, true_box in enumerate(true_boxes):
-                cls = true_cls[i]
-                distances = []
-
-                if len(pred_boxes) == 0:
-                    matching.append([])
-                    continue
-                else:
-                    for j, pred_box in enumerate(pred_boxes):
-                        score_true = pred_cls[j][cls]
-                        dist = f_dist(true_box, pred_box)
-                        dist = (
-                            dist.cpu().numpy()
-                            if isinstance(dist, torch.Tensor)
-                            else dist
-                        )
-                        if class_factor:
-                            c = 0
-                            dist = dist * (
-                                1 + c * (1 - score_true)
-                            )  # to rethink the factor
-                        distances.append(dist)  # .cpu().numpy())
-
-                    # TODO: replace this by possible a set of matches
-                    # TODO: must always be an array
-                    matching.append([np.argmin(distances)])  # np.argmax(ious))
-                    # print(matching[-1])
+                #OLD, PROBABLY SLOWER
+                # true_boxes = true_boxes.cpu().numpy()
+                # pred_boxes = pred_boxes.cpu().numpy()
+                # matching = []
+                # for i, true_box in enumerate(true_boxes):
+                #     cls = true_cls[i]
+                #     distances = []
+                #     for j, pred_box in enumerate(pred_boxes):
+                #         score_true = pred_cls[j][cls].cpu().numpy()
+                #         if distance_function == "lac":
+                #             dist = 1-score_true
+                #         else:
+                #             dist = f_dist(true_box, pred_box)
+                #         dist = (
+                #             dist.cpu().numpy()
+                #             if isinstance(dist, torch.Tensor)
+                #             else dist
+                #         )
+                #         if class_factor is not None:
+                #             c = class_factor  # 2 #TODO clarify this
+                #             dist = dist * (
+                #                 1 + c * (1 - score_true)
+                #             )  # to rethink the factor
+                #         distances.append(dist)  
+                #     matching.append([np.argmin(distances)])  
             assert len(matching) == len(true_boxes)
             all_matching.append(matching)
-            # break
 
-    preds.matching = all_matching
-    # return all_matching
+    if idx is not None:
+        return all_matching[0]
+    else:
+        preds.matching = all_matching
+        return all_matching
 
 
 def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):

@@ -31,6 +31,10 @@ from cods.od.loss import (
     ThresholdedRecallLoss,
 )
 from cods.od.metrics import compute_global_coverage
+from cods.od.optim import (
+    FirstStepMonotonizingOptimizer,
+    SecondStepMonotonizingOptimizer,
+)
 from cods.od.score import (
     MinAdditiveSignedAssymetricHausdorffNCScore,
     MinMultiplicativeSignedAssymetricHausdorffNCScore,
@@ -108,6 +112,7 @@ class LocalizationConformalizer(Conformalizer):
         loss: Union[str, ODLoss],
         prediction_set: str,
         guarantee_level: str,
+        matching_function,
         number_of_margins: int = 1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
         optimizer: Optional[Union[str, Optimizer]] = None,
         backend: str = "auto",
@@ -138,6 +143,7 @@ class LocalizationConformalizer(Conformalizer):
         """
         super().__init__()
         self.device = device
+        self.matching_function = matching_function
         if isinstance(loss, str) and loss in self.LOSSES:
             self.loss = self.LOSSES[loss](device=self.device)
             self.loss_name = loss
@@ -237,7 +243,7 @@ class LocalizationConformalizer(Conformalizer):
     #             enumerate(predictions.true_boxes), disable=not verbose
     #         ):
     #             for j, true_box in enumerate(true_box_img):
-    #                 confidences = predictions.confidence[i]
+    #                 confidences = predictions.confidences[i]
     #                 pred_boxes = (
     #                     predictions.pred_boxes[i][confidences >= predictions.confidence_threshold]
     #                     if len(
@@ -327,7 +333,9 @@ class LocalizationConformalizer(Conformalizer):
                     # if len(x[y >= confidence_threshold]) > 0
                     # else x[None, y.argmax()]
                 )
-                for x, y in zip(predictions.pred_boxes, predictions.confidence)
+                for x, y in zip(
+                    predictions.pred_boxes, predictions.confidences
+                )
             ],
         )
 
@@ -411,7 +419,7 @@ class LocalizationConformalizer(Conformalizer):
         predictions: ODPredictions,
         alpha: float,
         steps: int = 13,
-        bounds: List[float] = [0, 1000],
+        bounds: List[float] = [0, 1000], #TODO: currently ignored by new optimizer
         verbose: bool = True,
         overload_confidence_threshold: Optional[float] = None,
     ) -> float:
@@ -449,20 +457,54 @@ class LocalizationConformalizer(Conformalizer):
                 f"Using overload confidence threshold: {overload_confidence_threshold:.4f}",
             )
             confidence_threshold = overload_confidence_threshold
+        new_opt = True
 
-        objective_function = self._get_objective_function(
-            predictions=predictions,
-            alpha=alpha,
-            confidence_threshold=confidence_threshold,
-        )
+        if new_opt:
 
-        lambda_localization = self.optimizer.optimize(
-            objective_function=objective_function,
-            alpha=alpha,
-            bounds=bounds,
-            steps=steps,
-            verbose=verbose,
-        )
+            def build_predictions(
+                matched_pred_boxes_i, matched_pred_cls_i, lbd
+            ):
+                conf_boxes = apply_margins(
+                    [matched_pred_boxes_i],
+                    [lbd, lbd, lbd, lbd],
+                    mode=self.prediction_set,
+                )[0]
+                # TODO: rethink this, why do we regenerate it everytime, make it default somehwo
+                n_classes = len(predictions.pred_cls[0][0].squeeze())
+                conf_cls = [
+                    torch.arange(n_classes)[None, ...].to(self.device)
+                    for pred_cls_i_j in matched_pred_cls_i
+                ]
+                return conf_boxes, conf_cls
+
+            self.optimizer2 = SecondStepMonotonizingOptimizer()
+            lambda_localization = self.optimizer2.optimize(
+                predictions,
+                build_predictions,
+                loss=self.loss,
+                matching_function=self.matching_function,
+                alpha=alpha,
+                device=self.device,
+                B=1,
+                bounds=[0, 1000] if self.prediction_set == "additive" else [0, 50],
+                steps=13,
+                epsilon=1e-9,
+                verbose=verbose,
+            )
+        else:
+            objective_function = self._get_objective_function(
+                predictions=predictions,
+                alpha=alpha,
+                confidence_threshold=confidence_threshold,
+            )
+
+            lambda_localization = self.optimizer.optimize(
+                objective_function=objective_function,
+                alpha=alpha,
+                bounds=bounds,
+                steps=steps,
+                verbose=verbose,
+            )
 
         if verbose:
             logger.info(
@@ -555,7 +597,9 @@ class LocalizationConformalizer(Conformalizer):
                     if len(x[y >= predictions.confidence_threshold]) > 0
                     else x[None, y.argmax()]
                 )
-                for x, y in zip(predictions.pred_boxes, predictions.confidence)
+                for x, y in zip(
+                    predictions.pred_boxes, predictions.confidences
+                )
             ],
         )
 
@@ -566,7 +610,7 @@ class LocalizationConformalizer(Conformalizer):
                     if len(x[y >= predictions.confidence_threshold]) > 0
                     else x[None, y.argmax()]
                 )
-                for x, y in zip(conf_boxes, predictions.confidence)
+                for x, y in zip(conf_boxes, predictions.confidences)
             ],
         )
 
@@ -701,7 +745,7 @@ class ConfidenceConformalizer(Conformalizer):
             #         # else x[None, y.argmax()]
             #         for x, y in zip(
             #             predictions.pred_boxes,
-            #             predictions.confidence,
+            #             predictions.confidences,
             #         )
             #     ],
             # )
@@ -776,36 +820,69 @@ class ConfidenceConformalizer(Conformalizer):
         if self.lambda_plus is not None:
             logger.info("Replacing previously computed λ")
 
-        objective_function = self._get_objective_function(
-            predictions=predictions,
-            alpha=alpha,
-            objectness_threshold=predictions.confidence_threshold,
-            overload_B=0,
-        )
+        new_optim = True
 
-        lambda_minus = self.optimizer.optimize(
-            objective_function=objective_function,
-            alpha=alpha,
-            bounds=bounds,
-            steps=steps,
-            verbose=verbose,
-            epsilon=1e-9,
-        )
+        if new_optim:
+            logger.debug("Optimizing for lambda_plus")
+            self.optimizer2_plus = FirstStepMonotonizingOptimizer()
+            lambda_plus = self.optimizer2_plus.optimize(
+                predictions,
+                self.loss,
+                self.other_losses[0],
+                self.other_losses[1],
+                self.matching_function,
+                alpha,
+                self.device,
+                B=1,
+                bounds=[0, 1],
+                verbose=False,
+            )
+            logger.debug("Optimizing for lambda_minus")
+            self.optimizer2_minus = FirstStepMonotonizingOptimizer()
+            lambda_minus = self.optimizer2_minus.optimize(
+                predictions,
+                self.loss,
+                self.other_losses[0],
+                self.other_losses[1],
+                self.matching_function,
+                alpha,
+                self.device,
+                B=0,
+                bounds=[0, 1],
+                #init_lambda=lambda_plus,
+                verbose=False,
+            )
+        else:
+            objective_function = self._get_objective_function(
+                predictions=predictions,
+                alpha=alpha,
+                objectness_threshold=predictions.confidence_threshold,
+                overload_B=0,
+            )
 
-        objective_function = self._get_objective_function(
-            predictions=predictions,
-            alpha=alpha,
-            objectness_threshold=predictions.confidence_threshold,
-        )
+            lambda_minus = self.optimizer.optimize(
+                objective_function=objective_function,
+                alpha=alpha,
+                bounds=bounds,
+                steps=steps,
+                verbose=verbose,
+                epsilon=1e-9,
+            )
 
-        lambda_plus = self.optimizer.optimize(
-            objective_function=objective_function,
-            alpha=alpha,
-            bounds=bounds,
-            steps=steps,
-            verbose=verbose,
-            epsilon=1e-9,
-        )
+            objective_function = self._get_objective_function(
+                predictions=predictions,
+                alpha=alpha,
+                objectness_threshold=predictions.confidence_threshold,
+            )
+
+            lambda_plus = self.optimizer.optimize(
+                objective_function=objective_function,
+                alpha=alpha,
+                bounds=bounds,
+                steps=steps,
+                verbose=verbose,
+                epsilon=1e-9,
+            )
         self.lambda_plus = lambda_plus
         self.lambda_minus = lambda_minus
         return lambda_minus, lambda_plus
@@ -874,7 +951,7 @@ class ConfidenceConformalizer(Conformalizer):
         set_sizes = torch.tensor(
             [
                 sum(x > predictions.confidence_threshold)
-                for x in predictions.confidence
+                for x in predictions.confidences
             ]
         ).float()
 
@@ -899,9 +976,9 @@ class ODClassificationConformalizer(ClassificationConformalizer):
 
     def __init__(
         self,
+        matching_function: str,
         loss="binary",
         prediction_set="lac",
-        preprocess="softmax",
         backend="auto",
         guarantee_level="image",
         optimizer="binary_search",
@@ -909,9 +986,16 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         # TODO(leo) remove if nonessential: **kwargs,
     ):
         """ """
+        self.matching_function = matching_function
+        # TODO(leo): tmp
+        preprocess = "softmax"
         super().__init__(
             method=prediction_set, preprocess=preprocess, device=device
         )
+        if loss not in self.LOSSES:
+            raise ValueError(
+                f"loss {loss} not accepted, must be one of {self.LOSSES.keys()}",
+            )
         if guarantee_level not in self.GUARANTEE_LEVELS:
             raise ValueError(
                 f"guarantee_level {guarantee_level} not accepted, must be one of {self.GUARANTEE_LEVELS}",
@@ -966,17 +1050,26 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             corrected_risk (float): The corrected risk.
 
             """
+            n_classes = len(predictions.pred_cls[0][0].squeeze())
+            if self._score_function is None:
+                self._score_function = self.ACCEPTED_METHODS[self.method](
+                    n_classes
+                )
 
+            # TODO(leo): filter for confidence here!
             def get_conf_cls():
                 conf_cls = []
                 for i, pred_cls_i in enumerate(predictions.pred_cls):
                     conf_cls_i = []
                     for j, pred_cls_i_j in enumerate(pred_cls_i):
-                        conf_cls_i_j = torch.where(
-                            pred_cls_i_j >= 1 - lbd
-                        )[
-                            0
-                        ]  # .to(self.device) #TODO(leo): shouldn't need to do that here
+                        conf_cls_i_j = self._score_function.get_set(
+                            pred_cls=pred_cls_i_j, quantile=lbd
+                        )
+                        # conf_cls_i_j = torch.where(
+                        #     pred_cls_i_j >= 1 - lbd
+                        # )[
+                        #     0
+                        # ]
                         conf_cls_i.append(conf_cls_i_j)
                     conf_cls.append(conf_cls_i)
                 return conf_cls
@@ -1060,20 +1153,68 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         logger.warning(
             "Currently considering that there is only one matching prediction to each true box for classification pruposes. To add later how to aggregate if multiple preidctions matched."
         )
-        objective_function = self._get_objective_function(
-            predictions=predictions,
-            alpha=alpha,
-            confidence_threshold=confidence_threshold,
-        )
 
-        lambda_classification = self.optimizer.optimize(
-            objective_function=objective_function,
-            alpha=alpha,
-            bounds=bounds,
-            steps=steps,
-            verbose=verbose,
-            epsilon=1e-10,
-        )
+        new_opt = True
+
+        if new_opt:
+
+            def build_predictions(
+                matched_pred_boxes_i, matched_pred_cls_i, lbd
+            ):
+                conf_boxes = matched_pred_boxes_i
+                n_classes = len(predictions.pred_cls[0][0].squeeze())
+                if self._score_function is None:
+                    self._score_function = self.ACCEPTED_METHODS[self.method](
+                        n_classes
+                    )
+
+                # TODO(leo): filter for confidence here!
+                def get_conf_cls():
+                    conf_cls_i = []
+                    for j, pred_cls_i_j in enumerate(matched_pred_cls_i):
+                        conf_cls_i_j = self._score_function.get_set(
+                            pred_cls=pred_cls_i_j, quantile=lbd
+                        )
+                        # conf_cls_i_j = torch.where(
+                        #     pred_cls_i_j >= 1 - lbd
+                        # )[
+                        #     0
+                        # ]
+                        conf_cls_i.append(conf_cls_i_j)
+                    return conf_cls_i
+
+                conf_cls = get_conf_cls()
+                return conf_boxes, conf_cls
+
+            self.optimizer2 = SecondStepMonotonizingOptimizer()
+            lambda_classification = self.optimizer2.optimize(
+                predictions,
+                build_predictions,
+                loss=self.loss,
+                matching_function=self.matching_function,
+                alpha=alpha,
+                device=self.device,
+                B=1,
+                bounds=[0, 1],
+                steps=25,
+                epsilon=1e-10,
+                verbose=verbose,
+            )
+        else:
+            objective_function = self._get_objective_function(
+                predictions=predictions,
+                alpha=alpha,
+                confidence_threshold=confidence_threshold,
+            )
+
+            lambda_classification = self.optimizer.optimize(
+                objective_function=objective_function,
+                alpha=alpha,
+                bounds=bounds,
+                steps=steps,
+                verbose=verbose,
+                epsilon=1e-10,
+            )
 
         if verbose:
             logger.info(
@@ -1134,7 +1275,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         # TODO(leo): stop it pls
         set_sizes = compute_set_size(
             conformalized_predictions.conf_cls,
-            predictions.confidence,
+            predictions.confidences,
             predictions.confidence_threshold,
         )
         if verbose:
@@ -1298,6 +1439,7 @@ class ODConformalizer(Conformalizer):
             self.localization_method = localization_method
             self.localization_prediction_set = localization_prediction_set
             self.localization_conformalizer = LocalizationConformalizer(
+                matching_function=matching_function,
                 loss=localization_method,
                 guarantee_level=guarantee_level,
                 prediction_set=localization_prediction_set,
@@ -1321,6 +1463,7 @@ class ODConformalizer(Conformalizer):
             self.classification_method = classification_method
             self.classification_prediction_set = classification_prediction_set
             self.classification_conformalizer = ODClassificationConformalizer(
+                matching_function=matching_function,
                 guarantee_level=guarantee_level,
                 loss=classification_method,
                 prediction_set=classification_prediction_set,
@@ -2064,7 +2207,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                     if len(x[y >= predictions.confidence_threshold]) > 0
                     else x[None, y.argmax()]
                 )
-                for x, y in zip(conf_boxes, predictions.confidence)
+                for x, y in zip(conf_boxes, predictions.confidences)
             ],
         )
         set_size_loc = compute_set_size(conf_boxes)

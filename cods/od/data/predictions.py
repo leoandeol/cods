@@ -70,7 +70,7 @@ class ODPredictions(Predictions):
         self.image_shapes = image_shapes
         self.true_boxes = true_boxes
         self.pred_boxes = pred_boxes
-        self.confidence = confidences
+        self.confidences = confidences
         self.true_cls = true_cls
         self.pred_cls = pred_cls
         self.names = names
@@ -101,7 +101,7 @@ class ODPredictions(Predictions):
         """
         self.true_boxes = [box.to(device) for box in self.true_boxes]
         self.pred_boxes = [box.to(device) for box in self.pred_boxes]
-        self.confidence = [conf.to(device) for conf in self.confidence]
+        self.confidences = [conf.to(device) for conf in self.confidences]
         self.true_cls = [cls.to(device) for cls in self.true_cls]
         self.pred_cls = [cls.to(device) for cls in self.pred_cls]
         if self.pred_boxes_uncertainty is not None:

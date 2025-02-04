@@ -1,11 +1,9 @@
 import numpy as np
 import torch
-import torch.nn.functional as F
 import torchvision.transforms as T
 from ultralytics import YOLO
 
 from cods.od.models.model import ODModel
-from cods.od.models.utils import ResizeChannels
 
 
 def xywh2xyxy_scaled(x, width_scale, height_scale):
@@ -109,7 +107,7 @@ class YOLOModel(ODModel):
             out_boxes = box_output[:, :4]
             boxes = xywh2xyxy_scaled(out_boxes, width_scale, height_scale)
 
-            temp = 0.05
+            temp = 1#0.2
             cls_probs = torch.softmax(box_output[:, 4:]/temp, dim=-1)
 
             # Extend to be of size 91 :
@@ -208,6 +206,12 @@ class YOLOModel(ODModel):
             final_confidence, predicted_class = torch.max(
                 box_output[:, 4:], dim=-1
             )
+            print(cls_probs_new.sum(dim=-1)[torch.abs(cls_probs_new.sum(dim=-1)-1)>1e-9])
+            for i in range(cls_probs_new.shape[0]):
+                if torch.abs(cls_probs_new[i].sum()-1)>1e-9:
+                    print(f"{cls_probs_new[i].sum():10f} : {torch.abs(cls_probs_new[i].sum()-1)}")
+            print("\n")
+            assert (torch.abs(cls_probs_new.sum(dim=-1)-1)<1e-6).all()
 
             all_boxes.append(boxes)
             all_confs.append(final_confidence)
