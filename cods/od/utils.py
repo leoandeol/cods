@@ -68,8 +68,45 @@ def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
     areas = torch.stack(areas)
     return areas
 
+def fast_covered_areas_of_gt(pred_boxes, true_boxes):
+    #device = pred_boxes[0].device
+    #areas = []
+    # for tb, pb in zip(true_boxes, pred_boxes):
+    #     if len(pb) == 0:
+    #         areas.append(torch.tensor(0).float().to(device))
+    #         continue
+    #     if len(pb.shape) > 1:
+    #         pb = pb[0]
+    #     if tb.shape[0] != 4 or pb.shape[0] != 4:
+    #         assert False
+    #     area = contained(tb, pb)
+    #     areas.append(area)
+    #areas = torch.stack(areas)
+    areas = contained(true_boxes, pred_boxes)
+    return areas
 
-def contained(tb, pb):
+def contained(tb: torch.Tensor, pb: torch.Tensor) -> torch.Tensor:
+    """Compute the intersection over union (IoU) between two bounding boxes.
+    
+    Args:
+        tb (torch.Tensor): Ground truth bounding boxes (N, 4).
+        pb (torch.Tensor): Predicted bounding boxes (N, 4).
+    
+    Returns:
+        torch.Tensor: IoU values (N,).
+    """
+    xA = torch.maximum(tb[:, 0], pb[:, 0])
+    yA = torch.maximum(tb[:, 1], pb[:, 1])
+    xB = torch.minimum(tb[:, 2], pb[:, 2])
+    yB = torch.minimum(tb[:, 3], pb[:, 3])
+    
+    interArea = (xB - xA).clamp(min=0) * (yB - yA).clamp(min=0)
+    tbArea = (tb[:, 2] - tb[:, 0]) * (tb[:, 3] - tb[:, 1])
+    
+    return interArea / tbArea
+
+
+def contained_old(tb, pb):
     """Compute the intersection over union (IoU) between two bounding boxes.
 
     Args:
@@ -90,7 +127,7 @@ def contained(tb, pb):
     interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
     tbArea = (tb[2] - tb[0] + 1) * (tb[3] - tb[1] + 1)
 
-    iou = interArea / float(tbArea)
+    iou = interArea / tbArea
     return iou
 
 

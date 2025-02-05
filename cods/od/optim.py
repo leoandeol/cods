@@ -486,6 +486,8 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             losses.append(loss_i)
 
         risk = torch.mean(torch.stack(losses))
+        
+        n_losses = len(losses)
 
         previous_lbd = lambda_conf
         previous_risk = risk
@@ -552,10 +554,13 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 matched_conf_cls_i,
             )
 
-            losses.append(loss_i)
-            
-            risk = torch.mean(torch.stack(losses))
 
+            old_loss_i = losses[i]
+            losses[i] = loss_i
+            
+            #risk = torch.mean(torch.stack(losses))
+            #Faster
+            risk = risk + (loss_i - old_loss_i)/n_losses
 
             self.all_risks_raw.append(risk.detach().cpu().numpy())
 
@@ -624,8 +629,8 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
             corrected_risk = self._correct_risk(risk, len(predictions), B)
 
-            corrected_risk = corrected_risk.detach().cpu().numpy()
-
+            corrected_risk = corrected_risk.detach().cpu().numpy().item()
+            
             pbar.set_description(
                 f"[{left:.2f}, {right:.2f}] -> {lbd}. Corrected Risk = {corrected_risk:.2f}"
             )
