@@ -84,33 +84,51 @@ def compute_global_coverage(
             else:
                 cls_loss = 0
             if localization:
-                # conf_boxes_i = [
-                #     box
-                #     for k, box in enumerate(conf_boxes[i])
-                #     if predictions.confidences[i][k] >= predictions.confidence_threshold
-                # ]
-                # Tensor style
-                conf_boxes_i = conf_boxes[i][
-                    predictions.confidences[i]
-                    >= predictions.confidence_threshold
-                ]
-                if loss is None:
+                try:
+                    conf_boxes_i = conf_boxes[i][
+                        predictions.confidences[i]
+                        >= predictions.confidence_threshold
+                    ]
                     true_box = predictions.true_boxes[i][j]
-                    loc_loss = 1
-                    for conf_box in conf_boxes_i:
+                    
+                    if (
+                        predictions.matching[i] is None
+                        or predictions.matching[i][j] is None
+                        or len(predictions.matching[i][j]) == 0
+                    ):
+                        conf_box_i = torch.tensor([])
+                    else:
+                        conf_box_i = conf_boxes_i[predictions.matching[i][j][0]]
+                    
+                    if loss is None:
                         if (
-                            true_box[0] >= conf_box[0]
-                            and true_box[1] >= conf_box[1]
-                            and true_box[2] <= conf_box[2]
-                            and true_box[3] <= conf_box[3]
+                            true_box[0] >= conf_box_i[0]
+                            and true_box[1] >= conf_box_i[1]
+                            and true_box[2] <= conf_box_i[2]
+                            and true_box[3] <= conf_box_i[3]
                         ):
                             loc_loss = 0
-                            break
-                else:
-                    true_box = predictions.true_boxes[i][j]
-                    loc_loss = loss(
-                        [true_box], None, [conf_boxes_i], None
-                    ).item()
+                        else:
+                            loc_loss = 1
+                    else:
+                        #TODO: partly redundant, to be improved
+                        conf_box_i = conf_box_i[None, :] if conf_box_i.shape[0] == 4 and len(conf_box_i.shape) == 1 else torch.tensor([])
+                        loc_loss = loss(
+                            true_box[None, :], None, conf_box_i, None
+                        ).item()
+                except:  
+                    print(f"Number of ground truth boxes: {len(predictions.true_boxes[i])}")
+                    print(predictions.pred_boxes[i].shape)
+                    print(predictions.pred_boxes[i][
+                        predictions.confidences[i]
+                        >= predictions.confidence_threshold
+                    ].shape)
+                    print(conf_boxes[i].shape)
+                    print(conf_boxes_i.shape)  
+                    print(predictions.matching[i][j][0])
+                    print(predictions.matching[i])
+                    assert False
+
             else:
                 loc_loss = 0
 

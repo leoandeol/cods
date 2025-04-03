@@ -56,8 +56,9 @@ from cods.od.utils import (
 
 logger = logging.getLogger("cods")
 # FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-FORMAT = "[%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
-logging.basicConfig(format=FORMAT)
+FORMAT = "[%(asctime)s:%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
+logging.basicConfig(format=FORMAT,
+     datefmt='%Y-%m-%d %H:%M:%S')
 
 """
 TODO:
@@ -594,21 +595,17 @@ class LocalizationConformalizer(Conformalizer):
             [
                 (
                     x[y >= predictions.confidence_threshold]
-                    if len(x[y >= predictions.confidence_threshold]) > 0
-                    else x[None, y.argmax()]
                 )
                 for x, y in zip(
                     predictions.pred_boxes, predictions.confidences
                 )
-            ],
+            ]
         )
 
         conf_boxes = list(
             [
                 (
                     x[y >= predictions.confidence_threshold]
-                    if len(x[y >= predictions.confidence_threshold]) > 0
-                    else x[None, y.argmax()]
                 )
                 for x, y in zip(conf_boxes, predictions.confidences)
             ],
@@ -656,7 +653,7 @@ class ConfidenceConformalizer(Conformalizer):
         self,
         guarantee_level: str,
         matching_function: str,
-        loss: str = "nb_boxes",
+        loss: str = "box_count_threshold",
         other_losses: Optional[List] = None,
         optimizer: str = "binary_search",
         device="cpu",
@@ -887,7 +884,7 @@ class ConfidenceConformalizer(Conformalizer):
         self.lambda_minus = lambda_minus
         return lambda_minus, lambda_plus
 
-    def conformalize(self, predictions: ODPredictions) -> float:
+    def conformalize(self, predictions: ODPredictions, verbose: bool = True) -> float:
         """Conformalize the object detection predictions.
 
         Parameters
@@ -904,6 +901,7 @@ class ConfidenceConformalizer(Conformalizer):
                 "Conformalizer must be calibrated before conformalizing.",
             )
         predictions.confidence_threshold = 1 - self.lambda_plus
+        predictions.matching = None
         return 1 - self.lambda_plus
 
     def evaluate(
@@ -1224,7 +1222,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         self.lambda_classification = lambda_classification
         return lambda_classification
 
-    def conformalize(self, predictions: ODPredictions) -> List:
+    def conformalize(self, predictions: ODPredictions, verbose: bool = True) -> List:
         # TODO: add od parameters to function signature
         # NO MATCHING HERE
         def get_conf_cls():
@@ -1266,6 +1264,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             set_sizes = []
             for conf_cls_i, conf in zip(conf_cls, confidence):
                 keep = (conf >= confidence_thr).cpu().numpy()
+                #TODO: check if this is correct
                 conf_cls_i = [x for i, x in enumerate(conf_cls_i) if keep[i]]
                 for conf_cls_i_j in conf_cls_i:
                     set_sizes.append(len(conf_cls_i_j))
@@ -1346,7 +1345,7 @@ class ODConformalizer(Conformalizer):
     MULTIPLE_TESTING_CORRECTIONS = ["bonferroni"]
     BACKENDS = ["auto"]
     GUARANTEE_LEVELS = ["image", "object"]
-    MATCHINGS = ["hausdorff", "iou", "giou"]
+    MATCHINGS = ["hausdorff", "iou", "giou", "lac", "mix"]
 
     def __init__(
         self,
@@ -1646,7 +1645,7 @@ class ODConformalizer(Conformalizer):
             )
             # Unique to Confidence due to dependence
             logger.info("Setting Confidence Threshold of Predictions")
-            self.confidence_conformalizer.conformalize(predictions)
+            self.confidence_conformalizer.conformalize(predictions, verbose=verbose)
             self.confidence_threshold = (
                 1 - lambda_confidence_plus
             )  # predictions.confidence_threshold
@@ -1659,6 +1658,7 @@ class ODConformalizer(Conformalizer):
                 )
         else:
             predictions.confidence_threshold = self.confidence_threshold
+            predictions.matching = None
             optimistic_confidence_threshold = self.confidence_threshold
             lambda_confidence_minus = None
             lambda_confidence_plus = None
@@ -1673,7 +1673,7 @@ class ODConformalizer(Conformalizer):
         match_predictions_to_true_boxes(
             predictions,  # ref to predictions object, modified in place within func call
             distance_function=self.matching_function,
-            verbose=True,
+            verbose=verbose,
             overload_confidence_threshold=optimistic_confidence_threshold,
         )
 
@@ -1775,22 +1775,26 @@ class ODConformalizer(Conformalizer):
                 logger.info("Conformalizing Confidence")
             self.confidence_conformalizer.conformalize(
                 predictions,
+                verbose=verbose,
                 # TODO: parameters=parameters,
             )
         elif parameters is not None:
             if verbose:
                 logger.info("Using provided confidence threshold")
             predictions.confidence_threshold = parameters.confidence_threshold
+            predictions.matching = None
         else:
             if verbose:
                 logger.info("Using last confidence threshold")
             predictions.confidence_threshold = self.confidence_threshold
+            predictions.matching = None
 
         if self.localization_conformalizer is not None:
             if verbose:
                 logger.info("Conformalizing Localization")
             conf_boxes = self.localization_conformalizer.conformalize(
                 predictions,
+                verbose=verbose,
                 # TODO:parameters=parameters,
             )
         else:
@@ -1801,6 +1805,7 @@ class ODConformalizer(Conformalizer):
                 logger.info("Conformalizing Classification")
             conf_cls = self.classification_conformalizer.conformalize(
                 predictions,
+                verbose=verbose,
                 # parameters=parameters,
             )
         else:
@@ -1829,6 +1834,8 @@ class ODConformalizer(Conformalizer):
         include_confidence_in_global: bool,
         verbose: bool = True,
     ) -> ODResults:
+        print(f"Confidence threshold is {predictions.confidence_threshold}")
+        print(f"Matching is : {predictions.matching is None}")
         if predictions.matching is None:
             match_predictions_to_true_boxes(
                 predictions,
@@ -1836,6 +1843,7 @@ class ODConformalizer(Conformalizer):
                 verbose=False,
                 # TODO: overload_confidence_threshold=parameters.confidence_threshold,
             )
+        print(f"Confidence threshold is {predictions.confidence_threshold}")
         if self.confidence_conformalizer is not None:
             if verbose:
                 logger.info("Evaluating Confidence Conformalizer")
@@ -1849,6 +1857,7 @@ class ODConformalizer(Conformalizer):
             )
         else:
             coverage_obj, set_size_obj = None, None
+        print(f"Confidence threshold is {predictions.confidence_threshold}")
         if self.localization_conformalizer is not None:
             if verbose:
                 logger.info("Evaluating Localization Conformalizer")
@@ -1889,6 +1898,7 @@ class ODConformalizer(Conformalizer):
             localization=self.localization_conformalizer is not None,
             loss=self.localization_conformalizer.loss,
         )
+        new_global_coverage = torch.maximum(coverage_loc, coverage_cls)
 
         # TODO: Use parameters to compare distance to ideal coverage and other things
 
@@ -1915,9 +1925,10 @@ class ODConformalizer(Conformalizer):
                 )
             if global_coverage is not None:
                 logger.info("\t Global:")
-                logger.info(
-                    f"\t\t Risk: {torch.mean(global_coverage):.2f}",
-                )
+                #logger.info(
+                #    f"\t\t Risk: {torch.mean(global_coverage):.2f}",
+                #)
+                logger.info(f"\t\t Risk: {torch.mean(new_global_coverage)}")
 
         # TODO: Coverage is not the right word
         results = ODResults(
@@ -1930,7 +1941,7 @@ class ODConformalizer(Conformalizer):
             localization_coverages=coverage_loc,
             classification_set_sizes=set_size_cls,
             classification_coverages=coverage_cls,
-            global_coverage=global_coverage,
+            global_coverage=new_global_coverage,
         )
         # to rename coverage to risks
         return results
@@ -2106,7 +2117,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         self.lbd = lbd
         return lbd
 
-    def conformalize(self, predictions: ODPredictions):
+    def conformalize(self, predictions: ODPredictions, verbose:bool = True):
         """Conformalizes the predictions using the calibrated lambda values.
 
         Args:
@@ -2132,6 +2143,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             mode=self.prediction_set,
         )
         predictions.confidence_threshold = 1 - self.lbd[1]
+        predictions.matching = None
         predictions.conf_boxes = conf_boxes
         return conf_boxes
 

@@ -336,6 +336,12 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                     [confidence_risk, localization_risk, classification_risk]
                 )
             )
+            # idddd = torch.argmax(
+            #     torch.stack(
+            #         [confidence_risk, localization_risk, classification_risk]
+            #     )
+            # )
+            # logger.info(f"maximizing risk : {idddd} where 0 is confidence, 1 is localization and 2 is classification")
 
             self.all_lbds.append(lambda_conf)
             self.all_risks_raw.append(max_risk.detach().cpu().numpy())

@@ -567,7 +567,11 @@ class BoxWiseRecallLoss(ODLoss):
             return torch.zeros(1).to(self.device)
         if len(conf_boxes) == 0:
             return torch.ones(1).to(self.device)
-        areas = self.get_covered_areas(conf_boxes, true_boxes)
+        try:
+            areas = self.get_covered_areas(conf_boxes, true_boxes)
+        except:
+            #print shapes
+            print(conf_boxes.shape, true_boxes.shape)
         is_not_covered = (
             areas < 0.999
         ).float()  # because doubt on the computation of the overlap, check formula TODO
@@ -623,7 +627,7 @@ class PixelWiseRecallLoss(ODLoss):
         """
         if len(true_boxes) == 0:
             return torch.zeros(1).to(self.device)
-        if len(conf_boxes) == 0:
+        elif len(conf_boxes) == 0:
             return torch.ones(1).to(self.device)
         areas = self.get_covered_areas(conf_boxes, true_boxes)
         loss = torch.ones(1).to(self.device) - torch.mean(areas)

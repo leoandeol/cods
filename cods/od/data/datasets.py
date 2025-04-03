@@ -2,9 +2,15 @@ import json
 import os
 import random
 from logging import getLogger
+from typing import Optional, Tuple, Any
 
 from PIL import Image
 from torch.utils.data import Dataset
+from  torchvision.datasets import VOCDetection
+try:
+    from defusedxml.ElementTree import parse as ET_parse
+except ImportError:
+    from xml.etree.ElementTree import parse as ET_parse
 
 logger = getLogger("cods")
 
@@ -206,8 +212,6 @@ class MSCOCODataset(Dataset):
     def shuffle(self):
         random.shuffle(self.image_ids)
 
-    from typing import Optional
-
     def split_dataset(
         self,
         proportion,
@@ -244,3 +248,31 @@ class MSCOCODataset(Dataset):
     def _collate_fn(self, batch):
         return list([list(x) for x in zip(*batch)])
         # didn't check the above
+
+class VOCDataset(VOCDetection):
+    
+    VOC_CLASSES = [
+        'aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
+        'bus', 'car', 'cat', 'chair', 'cow',
+        'diningtable', 'dog', 'horse', 'motorbike', 'person',
+        'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'
+    ]
+    
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (image, target) where target is a dictionary of the XML tree.
+        """
+        img_path = self.images[index]
+        img = Image.open(img_path).convert("RGB")
+        target = self.parse_voc_xml(ET_parse(self.annotations[index]).getroot())
+
+        if self.transforms is not None:
+            img, target = self.transforms(img, target)
+
+        image_size = img.size
+
+        return img_path, image_size, img, target
