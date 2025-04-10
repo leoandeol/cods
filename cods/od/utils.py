@@ -242,7 +242,7 @@ def match_predictions_to_true_boxes(
     verbose=False,
     hungarian=False,
     idx=None,
-    class_factor: float = 0.4,
+    class_factor: float = 0.25,
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
     # TODO(leo): switch to gpu

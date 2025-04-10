@@ -678,7 +678,8 @@ class ConfidenceConformalizer(Conformalizer):
             raise ValueError("Not implemented currently for Confidence")
             # self.risk_function = compute_risk_object_level
         elif guarantee_level == "image":
-            self.risk_function = compute_risk_image_level_confidence
+            #self.risk_function = compute_risk_image_level_confidence
+            pass
 
         if optimizer == "binary_search":
             self.optimizer = BinarySearchOptimizer()
@@ -765,12 +766,12 @@ class ConfidenceConformalizer(Conformalizer):
             )
             # TODO(leo): cannot do that with with object level or can I ?
             # TODO(leoandeol): classwise risk ????
-            risk = self.risk_function(
-                tmp_conformalized_predictions,
-                predictions,
-                confidence_loss=self.loss,
-                other_losses=self.other_losses,
-            )
+            # risk = self.risk_function(
+            #     tmp_conformalized_predictions,
+            #     predictions,
+            #     confidence_loss=self.loss,
+            #     other_losses=self.other_losses,
+            # )
 
             n = len(predictions)
             B = overload_B if overload_B is not None else self.loss.upper_bound
@@ -930,21 +931,29 @@ class ConfidenceConformalizer(Conformalizer):
                 "Conformalizer must be calibrated before evaluating.",
             )
 
-        losses = self.risk_function(
-            conformalized_predictions,
-            predictions,
-            confidence_loss=self.loss,
-            return_list=True,
-        )
+        # losses = self.risk_function(
+        #     conformalized_predictions,
+        #     predictions,
+        #     confidence_loss=self.loss,
+        #     return_list=True,
+        # )
+        losses = []
+        for i in range(len(predictions)):
+            true_boxes_i = predictions.true_boxes[i]
+            pred_boxes_i = predictions.pred_boxes[i]
+            confidences_i = predictions.confidences[i]
+            true_cls_i = predictions.true_cls[i]
+            pred_cls_i = predictions.pred_cls[i]
+            matching_i = predictions.matching[i]
 
-        # def compute_set_size(boxes: List[List[float]]) -> torch.Tensor:
-        #     set_sizes = []
-        #     for image_boxes in boxes:
-        #         set_sizes.append(len(image_boxes))
-        #     set_sizes = torch.tensor(set_sizes).squeeze().float()
-        #     return set_sizes
+            pred_boxes_i = pred_boxes_i[confidences_i >= predictions.confidence_threshold]
+            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= predictions.confidence_threshold]
 
-        # set_sizes = compute_set_size(conformalized_predictions.conf_boxes)
+            confidence_loss_i = self.loss(
+                true_boxes_i, true_cls_i, pred_boxes_i, pred_cls_i
+            )
+            losses.append(confidence_loss_i)
+        losses = torch.stack(losses).squeeze().float()
 
         set_sizes = torch.tensor(
             [
