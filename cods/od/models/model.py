@@ -7,7 +7,7 @@ import tqdm
 
 from cods.base.models import Model
 from cods.od.data import ODPredictions
-from cods.od.models.utils import bayesod
+from cods.od.models.utils import bayesod, filter_preds
 
 
 class ODModel(Model):
@@ -48,6 +48,7 @@ class ODModel(Model):
         force_recompute: bool = False,
         deletion_method: str = "nms",
         iou_threshold: float = 0.5,
+        filter_preds_by_confidence: Optional[float] = None,
         **kwargs,
     ) -> ODPredictions:
         """
@@ -82,6 +83,11 @@ class ODModel(Model):
                     print("Predictions already exist, loading them...")
                 if isinstance(preds, ODPredictions):
                     # Make sure the predictions are on the right device
+                    if filter_preds_by_confidence is not None:
+                        preds = filter_preds(
+                            preds,
+                            confidence_threshold=filter_preds_by_confidence,
+                        )
                     preds.to(self.device)
                     return preds
                 else:
@@ -203,6 +209,14 @@ class ODModel(Model):
             pred_boxes_uncertainty=all_pred_boxes_unc,
         )
         self._save_preds(preds, hash)
+
+        # Done after saving : we always save and therefore load all predictions without filtering
+        if filter_preds_by_confidence is not None:
+            preds = filter_preds(
+                preds,
+                confidence_threshold=filter_preds_by_confidence,
+            )
+
         return preds
 
     def _filter_preds(

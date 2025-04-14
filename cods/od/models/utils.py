@@ -31,6 +31,9 @@ def bayesod(
         iou_threshold (float): _description_
     """
 
+    # TODO
+    raise NotImplementedError("BayesOD is not implemented yet")
+
     # Sort the predictions by confidence in descending order
     args = torch.argsort(confidences, descending=True)
     pred_boxes = pred_boxes[args]
@@ -99,3 +102,21 @@ def bayesod(
         torch.stack(new_pred_cls),
         torch.stack(new_pred_boxes_unc),
     )
+
+
+# Filter the preds_cal and preds_val with confidence below 0.001
+
+
+def filter_preds(preds, confidence_threshold=0.001):
+    filters = [
+        conf > confidence_threshold
+        if (conf > confidence_threshold).any()
+        else conf.argmin(0)[None]
+        for conf in preds.confidences
+    ]
+    preds.pred_boxes = [pbs[f] for pbs, f in zip(preds.pred_boxes, filters)]
+    preds.pred_cls = [pcs[f] for pcs, f in zip(preds.pred_cls, filters)]
+    preds.confidences = [
+        conf[f] for conf, f in zip(preds.confidences, filters)
+    ]
+    return preds

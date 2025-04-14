@@ -512,7 +512,10 @@ class ClassBoxWiseRecallLoss(ODLoss):
         )  # TODO: bugfix
         return miscoverage
 
+
 from cods.od.utils import fast_covered_areas_of_gt
+
+
 class BoxWiseRecallLoss(ODLoss):
     """Box-wise recall loss: 1 - mean(areas of the union of the boxes),
 
@@ -538,7 +541,9 @@ class BoxWiseRecallLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = fast_covered_areas_of_gt#get_covered_areas_of_gt_union
+        self.get_covered_areas = (
+            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
+        )
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",
@@ -567,11 +572,13 @@ class BoxWiseRecallLoss(ODLoss):
             return torch.zeros(1).to(self.device)
         if len(conf_boxes) == 0:
             return torch.ones(1).to(self.device)
-        try:
-            areas = self.get_covered_areas(conf_boxes, true_boxes)
-        except:
-            #print shapes
-            print(conf_boxes.shape, true_boxes.shape)
+        # try:
+        areas = self.get_covered_areas(conf_boxes, true_boxes)
+        # except Exception as e:
+        #     # print shapes
+        #     print(conf_boxes.shape, true_boxes.shape)
+        #     print(f"Error in get_covered_areas: {e}")
+        #     raise e
         is_not_covered = (
             areas < 0.999
         ).float()  # because doubt on the computation of the overlap, check formula TODO
@@ -600,7 +607,9 @@ class PixelWiseRecallLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = fast_covered_areas_of_gt#get_covered_areas_of_gt_union
+        self.get_covered_areas = (
+            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
+        )
         if not union_of_boxes:
             raise NotImplementedError(
                 "Pixel-wise Recall Loss only supports union of boxes.",

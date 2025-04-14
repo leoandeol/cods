@@ -37,7 +37,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         - corrected_risk (torch.Tensor): The corrected risk tensor.
 
         """
-        return (n / (n + 1)) * torch.mean(torch.stack(risk)) + B / (n + 1)
+        return (torch.sum(torch.stack(risk)) + B) / (n + 1)
 
     def optimize(
         self,
@@ -49,8 +49,8 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         alpha: float,
         device: str,
         B: float = 1,
-        bounds: List[float] = [0, 1], #deprecated
-        init_lambda:float = 1,
+        bounds: List[float] = [0, 1],  # deprecated
+        init_lambda: float = 1,
         verbose: bool = False,
     ):
         true_boxes = predictions.true_boxes
@@ -61,7 +61,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         confidences = predictions.confidences
 
         stacked_confidences = torch.concatenate(
-            [x for x in confidences] #.squeeze()
+            [x for x in confidences]  # .squeeze()
         )
         confidence_image_idx = torch.concatenate(
             [
@@ -100,8 +100,12 @@ class FirstStepMonotonizingOptimizer(Optimizer):
 
             matching_i = predictions.matching[i]
 
-            pred_boxes_i = pred_boxes_i[confidences_i >= 1- lambda_conf]
-            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1- lambda_conf]
+            pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
+            pred_cls_i = [
+                x
+                for x, c in zip(pred_cls_i, confidences_i)
+                if c >= 1 - lambda_conf
+            ]
 
             # no confidence filtering here because lambda_conf = 1 for this first loop
             confidence_loss_i = confidence_loss(
@@ -121,23 +125,25 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            #print(matched_pred_boxes_i.shape)
+            # print(matched_pred_boxes_i.shape)
             matched_pred_cls_i = list(
                 [
                     (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]#TODO zero here ?
+                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[
+                            0
+                        ]  # TODO zero here ?
                         if len(matching_i[j]) > 0
                         else torch.tensor([]).float().to(device)
                     )
                     for j in range(len(true_boxes_i))
                 ],
             )
-            
+
             margin = np.concatenate((image_shape, image_shape))
             matched_conf_boxes_i = apply_margins(
                 [matched_pred_boxes_i],
                 margin,
-                mode="additive", #TODO fix this
+                mode="additive",  # TODO fix this
             )[0]
 
             n_classes = len(predictions.pred_cls[0][0].squeeze())
@@ -145,6 +151,9 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 torch.arange(n_classes)[None, ...].to(device)
                 for _ in range(len(matched_pred_cls_i))
             ]
+
+            # if matched_conf_boxes_i.size() == 0:
+            #     matched_conf_boxes_i = torch.tensor([]).float().to(device)
 
             localization_loss_i = localization_loss(
                 true_boxes_i,
@@ -213,8 +222,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         self.all_risks_mon_cls = [classification_risk.detach().cpu().numpy()]
         self.all_lbds = [lambda_conf]
 
-
-
         # self.all_lbds = []
         # self.all_risks_raw = []
         # self.all_risks_raw_conf = []
@@ -229,7 +236,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         for image_id, conf_score in pbar:
             previous_lbd = lambda_conf
             lambda_conf = 1 - conf_score.cpu().numpy()
-            if lambda_conf>init_lambda:
+            if lambda_conf > init_lambda:
                 continue
 
             i = image_id
@@ -249,9 +256,13 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             )
 
             predictions.matching[i] = matching_i
-            
-            pred_boxes_i = pred_boxes_i[confidences_i >= 1- lambda_conf]
-            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1- lambda_conf]
+
+            pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
+            pred_cls_i = [
+                x
+                for x, c in zip(pred_cls_i, confidences_i)
+                if c >= 1 - lambda_conf
+            ]
 
             confidence_loss_i = confidence_loss(
                 true_boxes_i, true_cls_i, pred_boxes_i, pred_cls_i
@@ -285,7 +296,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             matched_conf_boxes_i = apply_margins(
                 [matched_pred_boxes_i],
                 margin,
-                mode="additive", #TODO: fix this
+                mode="additive",  # TODO: fix this
             )[0]
 
             n_classes = len(predictions.pred_cls[0][0].squeeze())
@@ -345,8 +356,12 @@ class FirstStepMonotonizingOptimizer(Optimizer):
 
             self.all_lbds.append(lambda_conf)
             self.all_risks_raw.append(max_risk.detach().cpu().numpy())
-            self.all_risks_raw_conf.append(confidence_risk.detach().cpu().numpy())
-            self.all_risks_raw_loc.append(localization_risk.detach().cpu().numpy())
+            self.all_risks_raw_conf.append(
+                confidence_risk.detach().cpu().numpy()
+            )
+            self.all_risks_raw_loc.append(
+                localization_risk.detach().cpu().numpy()
+            )
             self.all_risks_raw_cls.append(
                 classification_risk.detach().cpu().numpy()
             )
@@ -355,8 +370,12 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 max_risk = previous_risk
 
             self.all_risks_mon.append(max_risk.detach().cpu().numpy())
-            self.all_risks_mon_conf.append(confidence_risk.detach().cpu().numpy())
-            self.all_risks_mon_loc.append(localization_risk.detach().cpu().numpy())
+            self.all_risks_mon_conf.append(
+                confidence_risk.detach().cpu().numpy()
+            )
+            self.all_risks_mon_loc.append(
+                localization_risk.detach().cpu().numpy()
+            )
             self.all_risks_mon_cls.append(
                 classification_risk.detach().cpu().numpy()
             )
@@ -462,7 +481,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            #print(matched_pred_boxes_i.shape)
+            # print(matched_pred_boxes_i.shape)
             matched_pred_cls_i = list(
                 [
                     (
@@ -492,7 +511,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             losses.append(loss_i)
 
         risk = torch.mean(torch.stack(losses))
-        
+
         n_losses = len(losses)
 
         previous_lbd = lambda_conf
@@ -520,7 +539,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
             predictions.matching[i] = matching_i
 
-            #TODO: currently only support matching to a single box
+            # TODO: currently only support matching to a single box
             tmp_matched_boxes_i = [
                 (
                     torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
@@ -529,7 +548,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 )
                 for j in range(len(true_boxes_i))
             ]
-            #print([x.shape for x in tmp_matched_boxes_i])
+            # print([x.shape for x in tmp_matched_boxes_i])
             matched_pred_boxes_i = (
                 torch.stack(tmp_matched_boxes_i)
                 if len(tmp_matched_boxes_i) > 0
@@ -546,8 +565,8 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 ],
             )
 
-            #print(matched_pred_boxes_i.shape)
-            #print(matched_pred_boxes_i)
+            # print(matched_pred_boxes_i.shape)
+            # print(matched_pred_boxes_i)
 
             matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
                 matched_pred_boxes_i, matched_pred_cls_i, lbd
@@ -560,13 +579,12 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 matched_conf_cls_i,
             )
 
-
             old_loss_i = losses[i]
             losses[i] = loss_i
-            
-            #risk = torch.mean(torch.stack(losses))
-            #Faster
-            risk = risk + (loss_i - old_loss_i)/n_losses
+
+            # risk = torch.mean(torch.stack(losses))
+            # Faster
+            risk = risk + (loss_i - old_loss_i) / n_losses
 
             self.all_risks_raw.append(risk.detach().cpu().numpy())
 
@@ -598,7 +616,6 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         epsilon=1e-10,
         verbose: bool = False,
     ):
-        
         self.all_risks_raw = []
         self.all_risks_mon = []
         self.all_lbds_cnf = []
@@ -636,7 +653,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             corrected_risk = self._correct_risk(risk, len(predictions), B)
 
             corrected_risk = corrected_risk.detach().cpu().numpy().item()
-            
+
             pbar.set_description(
                 f"[{left:.2f}, {right:.2f}] -> {lbd}. Corrected Risk = {corrected_risk:.2f}"
             )

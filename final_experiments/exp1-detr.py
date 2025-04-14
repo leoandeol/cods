@@ -1,11 +1,12 @@
 import logging
 import os
+import pickle
+import traceback
+from itertools import product
 
+from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
 from cods.od.models import DETRModel
-from cods.od.cp import ODConformalizer
-from itertools import product
-import pickle
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = (
@@ -23,7 +24,14 @@ calibration_ratio = (
     0.5  # set 0.5 to use 50% for calibration and 50% for testing
 )
 
-data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)
+use_smaller_subset = False  # TODO: Temp
+
+if use_smaller_subset:
+    data_cal, data_val = data.split_dataset(
+        calibration_ratio, shuffle=False, n_calib_test=800
+    )
+else:
+    data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)
 
 # model and weights are downloaded from https://github.com/facebookresearch/detr
 model = DETRModel(model_name="detr_resnet50", pretrained=True, device="cpu")
@@ -57,9 +65,13 @@ preds_val = model.build_predictions(
 
 results = {}
 
-alphas = [[0.1, 0.1, 0.1]]
-matching_functions = ["mix"]#, "hausdorff", "lac"]#["giou", "hausdorff"]
-confidence_methods = ["box_count_threshold", "box_count_recall", "box_thresholded_distance"]
+alphas = [[0.03, 0.1, 0.1]]
+matching_functions = ["mix"]  # , "hausdorff", "lac"]#["giou", "hausdorff"]
+confidence_methods = [
+    "box_count_threshold",
+    "box_count_recall",
+    "box_thresholded_distance",
+]
 localization_methods = ["pixelwise", "boxwise"]
 classification_prediction_sets = ["lac", "aps"]
 localization_prediction_sets = ["additive", "multiplicative"]
@@ -69,16 +81,22 @@ for alpha in alphas:
     for matching_function in matching_functions:
         for confidence_method in confidence_methods:
             for localization_method in localization_methods:
-                for classification_prediction_set in classification_prediction_sets:
-                    for localization_prediction_set in localization_prediction_sets:
-                        configs.append({
-                            "alpha": alpha, 
-                            "matching_function": matching_function,
-                            "confidence_method": confidence_method,
-                            "localization_method": localization_method,
-                            "classification_prediction_set": classification_prediction_set,
-                            "localization_prediction_set": localization_prediction_set,
-                        })
+                for (
+                    classification_prediction_set
+                ) in classification_prediction_sets:
+                    for (
+                        localization_prediction_set
+                    ) in localization_prediction_sets:
+                        configs.append(
+                            {
+                                "alpha": alpha,
+                                "matching_function": matching_function,
+                                "confidence_method": confidence_method,
+                                "localization_method": localization_method,
+                                "classification_prediction_set": classification_prediction_set,
+                                "localization_prediction_set": localization_prediction_set,
+                            }
+                        )
 for config in configs:
     try:
         conf = ODConformalizer(
@@ -89,31 +107,44 @@ for config in configs:
             localization_method=config["localization_method"],
             localization_prediction_set=config["localization_prediction_set"],
             classification_method="binary",
-            classification_prediction_set=config["classification_prediction_set"],
+            classification_prediction_set=config[
+                "classification_prediction_set"
+            ],
             backend="auto",
             optimizer="binary_search",
         )
-        
+
         parameters = conf.calibrate(
             preds_cal,
             alpha_confidence=config["alpha"][0],
             alpha_localization=config["alpha"][1],
             alpha_classification=config["alpha"][2],
         )
-        
+
+        conformal_preds_cal = conf.conformalize(
+            preds_cal, parameters=parameters
+        )
+
+        results_cal = conf.evaluate(
+            preds_cal,
+            parameters=parameters,
+            conformalized_predictions=conformal_preds_cal,
+            include_confidence_in_global=False,
+        )
+
         conformal_preds = conf.conformalize(preds_val, parameters=parameters)
-        
+
         results_val = conf.evaluate(
             preds_val,
             parameters=parameters,
             conformalized_predictions=conformal_preds,
             include_confidence_in_global=False,
         )
-        
+
         config_str = f"alpha-{config['alpha']}-{config['matching_function']}_{config['confidence_method']}_{config['localization_method']}_{config['classification_prediction_set']}_{config['localization_prediction_set']}"
-        
+
         results[config_str] = results_val
-        
+
         print(f"Results for config {config_str}:")
         print(f"  {results_val}")
         # Save results to a pickle file
@@ -125,4 +156,5 @@ for config in configs:
         print(f"Results have been pickled to {output_path}")
     except Exception as e:
         print(f"Error with config {config}: {e}")
+        print(traceback.format_exc())
         continue

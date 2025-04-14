@@ -10,6 +10,7 @@ from cods.od.data import (
     ODConformalizedPredictions,
     ODParameters,
     ODPredictions,
+    ODResults,
 )
 from cods.od.utils import f_iou
 
@@ -90,7 +91,7 @@ def compute_global_coverage(
                         >= predictions.confidence_threshold
                     ]
                     true_box = predictions.true_boxes[i][j]
-                    
+
                     if (
                         predictions.matching[i] is None
                         or predictions.matching[i][j] is None
@@ -98,8 +99,10 @@ def compute_global_coverage(
                     ):
                         conf_box_i = torch.tensor([])
                     else:
-                        conf_box_i = conf_boxes_i[predictions.matching[i][j][0]]
-                    
+                        conf_box_i = conf_boxes_i[
+                            predictions.matching[i][j][0]
+                        ]
+
                     if loss is None:
                         if (
                             true_box[0] >= conf_box_i[0]
@@ -111,20 +114,29 @@ def compute_global_coverage(
                         else:
                             loc_loss = 1
                     else:
-                        #TODO: partly redundant, to be improved
-                        conf_box_i = conf_box_i[None, :] if conf_box_i.shape[0] == 4 and len(conf_box_i.shape) == 1 else torch.tensor([])
+                        # TODO: partly redundant, to be improved
+                        conf_box_i = (
+                            conf_box_i[None, :]
+                            if conf_box_i.shape[0] == 4
+                            and len(conf_box_i.shape) == 1
+                            else torch.tensor([])
+                        )
                         loc_loss = loss(
                             true_box[None, :], None, conf_box_i, None
                         ).item()
-                except:  
-                    print(f"Number of ground truth boxes: {len(predictions.true_boxes[i])}")
+                except:
+                    print(
+                        f"Number of ground truth boxes: {len(predictions.true_boxes[i])}"
+                    )
                     print(predictions.pred_boxes[i].shape)
-                    print(predictions.pred_boxes[i][
-                        predictions.confidences[i]
-                        >= predictions.confidence_threshold
-                    ].shape)
+                    print(
+                        predictions.pred_boxes[i][
+                            predictions.confidences[i]
+                            >= predictions.confidence_threshold
+                        ].shape
+                    )
                     print(conf_boxes[i].shape)
-                    print(conf_boxes_i.shape)  
+                    print(conf_boxes_i.shape)
                     print(predictions.matching[i][j][0])
                     print(predictions.matching[i])
                     assert False
@@ -346,3 +358,225 @@ def unroll_metrics(
         "total_precisions_conf": total_precisions_conf,
         "threshes_objectness_conf": threshes_objectness_conf,
     }
+
+
+class ODEvaluator:
+    def __init__(
+        self, confidence_loss, localization_loss, classification_loss
+    ):
+        self.confidence_loss = confidence_loss
+        self.localization_loss = localization_loss
+        self.classification_loss = classification_loss
+
+    def evaluate(
+        self,
+        predictions: ODPredictions,
+        parameters: ODParameters,
+        conformalized_predictions: ODConformalizedPredictions,
+    ):
+        # TODO: handle ODParameters
+        confidence_losses = []
+        classification_losses = []
+        localization_losses = []
+
+        confidence_set_sizes = []
+        classification_set_sizes = []
+        localization_set_sizes = []
+
+        true_boxes = predictions.true_boxes
+        true_cls = predictions.true_cls
+        confidences = predictions.confidences
+        image_shapes = predictions.image_shapes
+
+        pred_boxes = predictions.pred_boxes
+
+        conf_boxes = conformalized_predictions.conf_boxes
+        conf_cls = conformalized_predictions.conf_cls
+
+        device = predictions.pred_boxes[0].device
+        confidence_threshold = predictions.confidence_threshold
+        print(f"Confidence threshold: {confidence_threshold}")
+        try:
+            # printer parameters
+            print("ODParameters")
+            print(f"global_alpha: {parameters.global_alpha}")
+            print(f"alpha_confidence: {parameters.alpha_confidence}")
+            print(f"alpha_localization: {parameters.alpha_localization}")
+            print(f"alpha_classification: {parameters.alpha_classification}")
+            print(
+                f"lambda_confidence_plus: {parameters.lambda_confidence_plus}"
+            )
+            print(
+                f"lambda_confidence_minus: {parameters.lambda_confidence_minus}"
+            )
+            print(f"lambda_localization: {parameters.lambda_localization}")
+            print(f"lambda_classification: {parameters.lambda_classification}")
+            print(f"confidence_threshold: {parameters.confidence_threshold}")
+        except Exception as e:
+            print("Error printing parameters")
+            print(e)
+            print("Parameters are not printed")
+
+        for i in range(len(predictions)):
+            true_boxes_i = true_boxes[i]
+            pred_boxes_i = pred_boxes[i]
+            conf_boxes_i = conf_boxes[i]
+            confidences_i = confidences[i]
+            true_cls_i = true_cls[i]
+            conf_cls_i = conf_cls[i]
+
+            matching_i = predictions.matching[i]
+
+            conf_boxes_i = conf_boxes_i[confidences_i >= confidence_threshold]
+            pred_boxes_i = pred_boxes_i[confidences_i >= confidence_threshold]
+            conf_cls_i = [
+                x
+                for x, c in zip(conf_cls_i, confidences_i)
+                if c >= confidence_threshold
+            ]
+
+            if self.confidence_loss is not None:
+                confidence_loss_i = self.confidence_loss(
+                    true_boxes_i, true_cls_i, conf_boxes_i, conf_cls_i
+                )
+                confidence_set_size_i = conf_boxes_i.shape[0]
+
+                confidence_losses.append(confidence_loss_i)
+                confidence_set_sizes.append(confidence_set_size_i)
+
+            tmp_matched_boxes_i = [
+                (
+                    torch.stack([conf_boxes_i[m] for m in matching_i[j]])[0]
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
+            matched_conf_boxes_i = (
+                torch.stack(tmp_matched_boxes_i)
+                if len(tmp_matched_boxes_i) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            matched_conf_cls_i = list(
+                [
+                    (
+                        torch.stack([conf_cls_i[m] for m in matching_i[j]])[
+                            0
+                        ]  # TODO zero here ?
+                        if len(matching_i[j]) > 0
+                        else torch.tensor([]).float().to(device)
+                    )
+                    for j in range(len(true_boxes_i))
+                ],
+            )
+
+            # if matched_conf_boxes_i.size() == 0:
+            #     matched_conf_boxes_i = torch.tensor([]).float().to(device)
+
+            if self.localization_loss is not None:
+                # try:
+                localization_loss_i = self.localization_loss(
+                    true_boxes_i,
+                    true_cls_i,
+                    matched_conf_boxes_i,
+                    matched_conf_cls_i,
+                )
+                # except:
+                #     print(len(matched_conf_boxes_i))
+                #     print(matched_conf_boxes_i.shape)
+                #     print(matched_conf_boxes_i)
+                localization_set_size_i = []
+                for conf_box_i_j, pred_box_i_j in zip(
+                    conf_boxes_i, pred_boxes_i
+                ):
+                    set_size = (
+                        (conf_box_i_j[2] - conf_box_i_j[0])
+                        * (conf_box_i_j[3] - conf_box_i_j[1])
+                    ) / (
+                        (pred_box_i_j[2] - pred_box_i_j[0])
+                        * (pred_box_i_j[3] - pred_box_i_j[1])
+                    )
+                    set_size = torch.sqrt(set_size)
+                    localization_set_size_i.append(set_size)
+                if len(localization_set_size_i) == 0:
+                    localization_set_size_i = torch.tensor(
+                        [0.0], dtype=torch.float
+                    ).to(conf_boxes_i.device)[0]
+                else:
+                    localization_set_size_i = torch.mean(
+                        torch.stack(localization_set_size_i)
+                    )
+
+                localization_losses.append(localization_loss_i)
+                localization_set_sizes.append(localization_set_size_i)
+
+            if self.classification_loss is not None:
+                classification_loss_i = self.classification_loss(
+                    true_boxes_i,
+                    true_cls_i,
+                    matched_conf_boxes_i,
+                    matched_conf_cls_i,
+                )
+
+                classification_losses.append(classification_loss_i)
+
+                classification_set_size_i = []
+                for conf_cls_i_j in conf_cls_i:
+                    classification_set_size_i.append(conf_cls_i_j.shape[0])
+                if len(classification_set_size_i) == 0:
+                    classification_set_size_i = torch.tensor(
+                        [0.0], dtype=torch.float
+                    ).to(conf_boxes_i.device)[0]
+                else:
+                    classification_set_size_i = torch.mean(
+                        torch.tensor(
+                            classification_set_size_i, dtype=torch.float
+                        )
+                    )
+                classification_set_sizes.append(classification_set_size_i)
+
+        if self.localization_loss is not None:
+            localization_losses = torch.stack(localization_losses)
+        else:
+            localization_losses = None
+        if self.classification_loss is not None:
+            classification_losses = torch.stack(classification_losses)
+        else:
+            classification_losses = None
+
+        results = ODResults(
+            predictions=predictions,
+            parameters=parameters,
+            conformalized_predictions=conformalized_predictions,
+            confidence_coverages=torch.stack(confidence_losses)
+            if len(confidence_losses) > 0
+            else None,
+            classification_coverages=classification_losses,
+            localization_coverages=localization_losses,
+            confidence_set_sizes=torch.tensor(
+                confidence_set_sizes, dtype=torch.float
+            )
+            if len(confidence_set_sizes) > 0
+            else None,
+            classification_set_sizes=torch.stack(classification_set_sizes)
+            if len(classification_set_sizes) > 0
+            else None,
+            localization_set_sizes=torch.stack(localization_set_sizes)
+            if len(localization_set_sizes) > 0
+            else None,
+            global_coverage=torch.maximum(
+                localization_losses, classification_losses
+            )
+            if self.localization_loss is not None
+            and self.classification_loss is not None
+            else (
+                localization_losses
+                if self.localization_loss is not None
+                else (
+                    classification_losses
+                    if self.classification_loss is not None
+                    else None
+                )
+            ),
+        )
+        return results
