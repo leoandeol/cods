@@ -1591,9 +1591,15 @@ class ODConformalizer(Conformalizer):
             self.confidence_method.matching_function = matching_function
 
         self.evaluator = ODEvaluator(
-            confidence_loss=self.confidence_conformalizer.loss,
-            localization_loss=self.localization_conformalizer.loss,
-            classification_loss=self.classification_conformalizer.loss,
+            confidence_loss=self.confidence_conformalizer.loss
+            if self.confidence_conformalizer
+            else None,
+            localization_loss=self.localization_conformalizer.loss
+            if self.localization_conformalizer
+            else None,
+            classification_loss=self.classification_conformalizer.loss
+            if self.classification_conformalizer
+            else None,
         )
 
     def calibrate(

@@ -31,7 +31,7 @@ if use_smaller_subset:
         calibration_ratio, shuffle=False, n_calib_test=800
     )
 else:
-    data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)
+    data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=True)
 
 # model and weights are downloaded from https://github.com/facebookresearch/detr
 model = DETRModel(model_name="detr_resnet50", pretrained=True, device="cpu")

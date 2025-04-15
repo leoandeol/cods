@@ -386,7 +386,6 @@ class ODEvaluator:
         true_boxes = predictions.true_boxes
         true_cls = predictions.true_cls
         confidences = predictions.confidences
-        image_shapes = predictions.image_shapes
 
         pred_boxes = predictions.pred_boxes
 

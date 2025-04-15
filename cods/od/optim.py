@@ -222,16 +222,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         self.all_risks_mon_cls = [classification_risk.detach().cpu().numpy()]
         self.all_lbds = [lambda_conf]
 
-        # self.all_lbds = []
-        # self.all_risks_raw = []
-        # self.all_risks_raw_conf = []
-        # self.all_risks_raw_loc = []
-        # self.all_risks_raw_cls = []
-        # self.all_risks_mon = []
-        # self.all_risks_mon_conf = []
-        # self.all_risks_mon_loc = []
-        # self.all_risks_mon_cls = []
-
         # Step 2: Update one loss at a time
         for image_id, conf_score in pbar:
             previous_lbd = lambda_conf
@@ -381,15 +371,56 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             )
 
             pbar.set_description(
-                f"{lambda_conf}. Corrected Risk = {max_risk.detach().cpu().numpy():.4f}"
+                f"λ={lambda_conf}. Corrected Risk = {max_risk.detach().cpu().numpy():.4f}"
             )
 
             if max_risk.detach().cpu().numpy() > alpha:
                 logger.info(
                     f"Solution Found: {previous_lbd} with risk {max_risk}"
                 )
-                return previous_lbd
 
+                print("--------------------------------------------------")
+                print("All risks raw (precomputed):")
+                confidence_risk_raw = self.all_risks_raw_conf[-2]
+                localization_risk_raw = self.all_risks_raw_loc[-2]
+                classification_risk_raw = self.all_risks_raw_cls[-2]
+                max_risk_raw = self.all_risks_raw[-2]
+                print(f"Confidence Risk: {confidence_risk_raw}")
+                print(f"Localization Risk: {localization_risk_raw}")
+                print(f"Classification Risk: {classification_risk_raw}")
+                print(f"Max Risk: {max_risk_raw}")
+                print("All risks monotonized (precomputed):")
+                confidence_risk_mon = self.all_risks_mon_conf[-2]
+                localization_risk_mon = self.all_risks_mon_loc[-2]
+                classification_risk_mon = self.all_risks_mon_cls[-2]
+                max_risk_mon = self.all_risks_mon[-2]
+                print(f"Confidence Risk: {confidence_risk_mon}")
+                print(f"Localization Risk: {localization_risk_mon}")
+                print(f"Classification Risk: {classification_risk_mon}")
+                print(f"Max Risk: {max_risk_mon}")
+                print("Confidence risk (recomputed):")
+                conf_losses = []
+                for i in range(len(predictions)):
+                    true_boxes_i = true_boxes[i]
+                    pred_boxes_i = pred_boxes[i]
+                    pred_cls_i = pred_cls[i]
+                    confidences_i = confidences[i]
+                    true_cls_i = true_cls[i]
+
+                    matching_i = predictions.matching[i]
+
+                    pred_boxes_i = pred_boxes_i[
+                        confidences_i >= 1 - previous_lbd
+                    ]
+                    confidence_loss_i = confidence_loss(
+                        true_boxes_i, true_cls_i, pred_boxes_i, pred_cls_i
+                    )
+
+                    conf_losses.append(confidence_loss_i)
+                print(
+                    f"Confidence Risk: {torch.mean(torch.stack(conf_losses))}"
+                )
+                return previous_lbd
             previous_risk = max_risk
         return lambda_conf
 
@@ -655,7 +686,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             corrected_risk = corrected_risk.detach().cpu().numpy().item()
 
             pbar.set_description(
-                f"[{left:.2f}, {right:.2f}] -> {lbd}. Corrected Risk = {corrected_risk:.2f}"
+                f"[{left:.2f}, {right:.2f}] -> λ={lbd}. Corrected Risk = {corrected_risk:.2f}"
             )
 
             if risk <= alpha:
