@@ -51,6 +51,7 @@ preds_cal = model.build_predictions(
     shuffle=False,
     force_recompute=False,  # False,
     deletion_method="nms",
+    filter_preds_by_confidence=1e-3,
 )
 preds_val = model.build_predictions(
     data_val,
@@ -61,6 +62,7 @@ preds_val = model.build_predictions(
     shuffle=False,
     force_recompute=False,  # False,
     deletion_method="nms",
+    filter_preds_by_confidence=1e-3,
 )
 
 results = {}
