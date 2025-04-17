@@ -72,6 +72,11 @@ class FirstStepMonotonizingOptimizer(Optimizer):
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
         sorted_confidence_image_indices = confidence_image_idx[indices]
+        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[
+            0:-1
+        ].clone()
+        # We let the first be, it should occur no change anyways ?
+        # sorted_confidence_image_indices[0] = ???
 
         lambda_conf = init_lambda
 
@@ -225,7 +230,8 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         # Step 2: Update one loss at a time
         for image_id, conf_score in pbar:
             previous_lbd = lambda_conf
-            lambda_conf = 1 - conf_score.cpu().numpy()
+            previous_risk = max_risk
+            lambda_conf = 1 - conf_score.cpu().numpy()  # - 1e-7  # Test
             if lambda_conf > init_lambda:
                 continue
 
@@ -257,6 +263,19 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             confidence_loss_i = confidence_loss(
                 true_boxes_i, true_cls_i, pred_boxes_i, pred_cls_i
             )
+
+            # if i in [14, 74, 199, 213, 225, 234]:
+            #     print("--------------------------------------------------")
+            #     print(f"Image {i}")
+            #     print(
+            #         f"Confidence Loss: {confidence_loss_i.detach().cpu().numpy()}"
+            #     )  # .tolist:.4f}")
+            #     print(f"Number of ground truths: {len(true_boxes_i)}")
+            #     print(f"Number of predictions: {len(pred_boxes_i)}")
+            #     print(f"Confidences ({confidences_i.dtype}):")
+            #     for c in confidences_i:
+            #         print(f"\t{c}")
+            #     print(f"Lambda and confidence: {lambda_conf} and {conf_score}")
 
             tmp_matched_boxes_i = [
                 (
@@ -318,9 +337,9 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             #     print(f"Localization Loss: {localization_loss_i.detach().cpu().numpy()}")#:.4f}")
             #     print(f"Classification Loss: {classification_loss_i.detach().cpu().numpy()}")#:.4f}")
 
-            confidence_losses[i] = confidence_loss_i
-            localization_losses[i] = localization_loss_i
-            classification_losses[i] = classification_loss_i
+            confidence_losses[i] = confidence_loss_i.detach().clone()
+            localization_losses[i] = localization_loss_i.detach().clone()
+            classification_losses[i] = classification_loss_i.detach().clone()
 
             confidence_risk = self._correct_risk(
                 confidence_losses, len(predictions), B
@@ -356,18 +375,28 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 classification_risk.detach().cpu().numpy()
             )
 
+            # Monotonization
             if max_risk < previous_risk:
                 max_risk = previous_risk
+                confidence_risk = self.all_risks_mon_conf[-1]
+                localization_risk = self.all_risks_mon_loc[-1]
+                classification_risk = self.all_risks_mon_cls[-1]
 
             self.all_risks_mon.append(max_risk.detach().cpu().numpy())
             self.all_risks_mon_conf.append(
                 confidence_risk.detach().cpu().numpy()
+                if isinstance(confidence_risk, torch.Tensor)
+                else confidence_risk
             )
             self.all_risks_mon_loc.append(
                 localization_risk.detach().cpu().numpy()
+                if isinstance(localization_risk, torch.Tensor)
+                else localization_risk
             )
             self.all_risks_mon_cls.append(
                 classification_risk.detach().cpu().numpy()
+                if isinstance(classification_risk, torch.Tensor)
+                else classification_risk
             )
 
             pbar.set_description(
@@ -380,24 +409,29 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 )
 
                 print("--------------------------------------------------")
+                print("Lambdas")
+                print(f"\tprevious_lbd = {previous_lbd}")
+                print(f"\tLast Lambda = {lambda_conf}")
+                print(f"\tOther previous lbd = {self.all_lbds[-2]}")
+                print(f"\tOther current lbd = {self.all_lbds[-1]}")
                 print("All risks raw (precomputed):")
                 confidence_risk_raw = self.all_risks_raw_conf[-2]
                 localization_risk_raw = self.all_risks_raw_loc[-2]
                 classification_risk_raw = self.all_risks_raw_cls[-2]
                 max_risk_raw = self.all_risks_raw[-2]
-                print(f"Confidence Risk: {confidence_risk_raw}")
-                print(f"Localization Risk: {localization_risk_raw}")
-                print(f"Classification Risk: {classification_risk_raw}")
-                print(f"Max Risk: {max_risk_raw}")
+                print(f"\tConfidence Risk: {confidence_risk_raw}")
+                print(f"\tLocalization Risk: {localization_risk_raw}")
+                print(f"\tClassification Risk: {classification_risk_raw}")
+                print(f"\tMax Risk: {max_risk_raw}")
                 print("All risks monotonized (precomputed):")
                 confidence_risk_mon = self.all_risks_mon_conf[-2]
                 localization_risk_mon = self.all_risks_mon_loc[-2]
                 classification_risk_mon = self.all_risks_mon_cls[-2]
                 max_risk_mon = self.all_risks_mon[-2]
-                print(f"Confidence Risk: {confidence_risk_mon}")
-                print(f"Localization Risk: {localization_risk_mon}")
-                print(f"Classification Risk: {classification_risk_mon}")
-                print(f"Max Risk: {max_risk_mon}")
+                print(f"\tConfidence Risk: {confidence_risk_mon}")
+                print(f"\tLocalization Risk: {localization_risk_mon}")
+                print(f"\tClassification Risk: {classification_risk_mon}")
+                print(f"\tMax Risk: {max_risk_mon}")
                 print("Confidence risk (recomputed):")
                 conf_losses = []
                 for i in range(len(predictions)):
@@ -412,16 +446,46 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                     pred_boxes_i = pred_boxes_i[
                         confidences_i >= 1 - previous_lbd
                     ]
+                    pred_cls_i = [
+                        x
+                        for x, c in zip(pred_cls_i, confidences_i)
+                        if c >= 1 - previous_lbd
+                    ]
                     confidence_loss_i = confidence_loss(
                         true_boxes_i, true_cls_i, pred_boxes_i, pred_cls_i
                     )
 
                     conf_losses.append(confidence_loss_i)
+                conf_losses = torch.stack(conf_losses)
+                print(f"\tConfidence Risk: {torch.mean(conf_losses)}")
+                confidence_losses = torch.stack(confidence_losses)
+                print("Comparison of the two :")
                 print(
-                    f"Confidence Risk: {torch.mean(torch.stack(conf_losses))}"
+                    f"\t (isclose) {torch.isclose(conf_losses, confidence_losses).float().mean()}"
                 )
+                print(
+                    f"\t (eq) {torch.eq(conf_losses, confidence_losses).float().mean()}"
+                )
+                # now get the indices of where the losses differ, and print the image id as well as the two losses, for about 20 images
+                diff_indices = torch.where(
+                    torch.ne(conf_losses, confidence_losses)
+                )[0]
+                for i in diff_indices[:10]:
+                    print(
+                        f"\tImage {i} loss: {conf_losses[i]} (eval) vs {confidence_losses[i]} (opti)"
+                    )
+                    print(
+                        f"\tImage {i} confidence: {predictions.confidences[i]}"
+                    )
+                    # print number of ground truths
+                    print(
+                        f"\tImage {i} number of ground truths: {len(predictions.true_boxes[i])}"
+                    )
+                    print(
+                        f"\tImage {i} number of predictions: {len(predictions.pred_boxes[i][predictions.confidences[i] >= 1 - previous_lbd])}"
+                    )
+                print("--------------------------------------------------")
                 return previous_lbd
-            previous_risk = max_risk
         return lambda_conf
 
 
@@ -477,6 +541,11 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
         sorted_confidence_image_indices = confidence_image_idx[indices]
+        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[
+            0:-1
+        ].clone()
+        # We let the first be, it should occur no change anyways ?
+        # sorted_confidence_image_indices[0] = ???
 
         lambda_conf = 1
 
@@ -496,7 +565,6 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             pred_boxes_i = pred_boxes[i]
             true_cls_i = true_cls[i]
             pred_cls_i = pred_cls[i]
-            image_shape = image_shapes[i]
             matching_i = predictions.matching[i]
 
             tmp_matched_boxes_i = [
@@ -545,14 +613,12 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
         n_losses = len(losses)
 
-        previous_lbd = lambda_conf
-        previous_risk = risk
-
         # Step 2: Update one loss at a time
         for image_id, conf_score in zip(
             sorted_confidence_image_indices, sorted_stacked_confidences
         ):
-            lambda_conf = 1 - conf_score
+            previous_risk = risk
+            lambda_conf = 1 - conf_score.cpu().numpy()
 
             i = image_id
             true_boxes_i = true_boxes[i]
@@ -630,8 +696,6 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             # Stopping condition: when we reached desired lbd_conf
             if final_lbd_conf >= lambda_conf:
                 return risk
-
-            previous_risk = risk
 
     def optimize(
         self,

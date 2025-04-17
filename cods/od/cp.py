@@ -1189,7 +1189,8 @@ class ODClassificationConformalizer(ClassificationConformalizer):
                     conf_cls_i = []
                     for j, pred_cls_i_j in enumerate(matched_pred_cls_i):
                         conf_cls_i_j = self._score_function.get_set(
-                            pred_cls=pred_cls_i_j, quantile=lbd
+                            pred_cls=pred_cls_i_j,
+                            quantile=lbd,
                         )
                         # conf_cls_i_j = torch.where(
                         #     pred_cls_i_j >= 1 - lbd

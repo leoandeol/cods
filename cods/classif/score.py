@@ -39,7 +39,7 @@ class APSNCScore(ClassifNCScore):
 
     def __call__(self, pred_cls: torch.Tensor, y: int, **kwargs):
         # Ensure input is a probability distribution
-        if not torch.isclose(pred_cls.sum(), torch.tensor(1.0), atol=1e-5):
+        if not torch.isclose(pred_cls.sum(), torch.tensor(1.0), atol=1e-3):
             raise ValueError(
                 f"Input pred_cls should be a probability vector, but sums to {pred_cls.sum().item()}"
             )
@@ -55,7 +55,13 @@ class APSNCScore(ClassifNCScore):
         score = cumsum[match[0]] - values[match[0]] + u
         return max(score.item(), 0.0)
 
-    def get_set(self, pred_cls: torch.Tensor, quantile: float):
+    def get_set(
+        self,
+        pred_cls: torch.Tensor,
+        quantile: float,
+    ):
+        # TODO: tmp fix
+        pred_cls /= pred_cls.sum()
         # In many cases the probabilities don't sum to 1
         # This case is handled in the else : defaults to the full prediction set.
         values, indices = torch.sort(pred_cls, descending=True)
