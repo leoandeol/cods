@@ -202,7 +202,7 @@ def experiment_losses():
 
 
 def experiment_matchings():
-    MATCHING = ["giou", "hausdorff", "lac", "mix"]
+    MATCHING = ["hausdorff", "lac", "mix"] #"giou",
     pass
 
 
