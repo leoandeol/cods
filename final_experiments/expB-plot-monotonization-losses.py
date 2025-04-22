@@ -40,7 +40,10 @@ def setup_experiment(
     if model_name not in MODEL_NAMES:
         raise ValueError(f"Model name {model_name} not in {MODEL_NAMES}")
 
-    model = DETRModel(model_name=model_name, pretrained=True, device="cpu")
+    if model_name == "yolov8x.pt":
+        model = YOLOModel(model_name=model_name, pretrained=True, device="cpu")
+    else:
+        model = DETRModel(model_name=model_name, pretrained=True, device="cpu")
 
     preds_cal = model.build_predictions(
         data_cal,
@@ -76,7 +79,7 @@ def setup_experiment(
     )
 
     # First step: confidence, all risks
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(10, 6))
     plt.plot(
         conf.confidence_conformalizer.optimizer2_minus.all_lbds,
         conf.confidence_conformalizer.optimizer2_minus.all_risks_raw,
@@ -101,16 +104,18 @@ def setup_experiment(
         conf.confidence_conformalizer.optimizer2_plus.all_lbds,
         conf.confidence_conformalizer.optimizer2_plus.all_risks_mon,
         c="r",
-        linewidth=3,
+        linewidth=2,
         label="Maximum of risks, monotonized",
     )
 
     plt.yscale("log")
     plt.legend()
-    plt.savefig(f"figs/monotization_conf_{name_of_experiment}.png")
+    plt.savefig(
+        f"./final_experiments/figs/monotization_conf_{name_of_experiment}.png"
+    )
 
     # Second step: localization
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(10, 6))
     n = len(conf.localization_conformalizer.optimizer2.all_risks_raw) / 13
     n = int(n)
     for i in range(13):
@@ -139,11 +144,13 @@ def setup_experiment(
             label="Monotonized Loss" if i == 0 else None,
         )
     plt.legend()
-    plt.savefig(f"figs/monotization_loc_{name_of_experiment}.png")
+    plt.savefig(
+        f"./final_experiments/figs/monotization_loc_{name_of_experiment}.png"
+    )
     plt.close()
 
     # Second step bis: classification
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(10, 6))
     n = len(conf.classification_conformalizer.optimizer2.all_risks_raw) // 25
     for i in range(25):
         plt.plot(
@@ -171,7 +178,9 @@ def setup_experiment(
             label="Monotonized Loss" if i == 0 else None,
         )
     plt.legend()
-    plt.savefig(f"figs/monotization_cls_{model_name}_{name_of_experiment}.png")
+    plt.savefig(
+        f"./final_experiments/figs/monotization_cls_{name_of_experiment}.png"
+    )
     plt.close()
 
 
@@ -197,13 +206,45 @@ def experiment_models():
 
 
 def experiment_losses():
-    LOSSES = []  # TODO: TBD
-    pass
+    LOSSES = [["boxwise", "aps"], ["pixelwise", "lac"]]
+    for loc_loss, cls_loss in LOSSES:
+        config = {
+            "matching_function": "mix",
+            "localization_method": loc_loss,
+            "localization_prediction_set": "multiplicative",
+            "classification_prediction_set": cls_loss,
+            "confidence_method": "box_count_recall",
+            "alpha_confidence": 0.03,
+            "alpha_localization": 0.05,
+            "alpha_classification": 0.05,
+        }
+        setup_experiment(
+            model_name="detr_resnet50",
+            filter_by_confidence=1e-3,
+            config=config,
+            name_of_experiment=f"comparing_losses_{loc_loss}_{cls_loss}",
+        )
 
 
 def experiment_matchings():
-    MATCHING = ["hausdorff", "lac", "mix"] #"giou",
-    pass
+    MATCHING = ["hausdorff", "lac", "mix", "giou"]
+    for matching in MATCHING:
+        config = {
+            "matching_function": matching,
+            "localization_method": "pixelwise",
+            "localization_prediction_set": "multiplicative",
+            "classification_prediction_set": "lac",
+            "confidence_method": "box_count_recall",
+            "alpha_confidence": 0.03,
+            "alpha_localization": 0.05,
+            "alpha_classification": 0.05,
+        }
+        setup_experiment(
+            model_name="detr_resnet50",
+            filter_by_confidence=1e-3,
+            config=config,
+            name_of_experiment=f"comparing_matchings_{matching}",
+        )
 
 
 def experiment_filtering():

@@ -206,11 +206,11 @@ class YOLOModel(ODModel):
             final_confidence, predicted_class = torch.max(
                 box_output[:, 4:], dim=-1
             )
-            print(cls_probs_new.sum(dim=-1)[torch.abs(cls_probs_new.sum(dim=-1)-1)>1e-9])
-            for i in range(cls_probs_new.shape[0]):
-                if torch.abs(cls_probs_new[i].sum()-1)>1e-9:
-                    print(f"{cls_probs_new[i].sum():10f} : {torch.abs(cls_probs_new[i].sum()-1)}")
-            print("\n")
+            #print(cls_probs_new.sum(dim=-1)[torch.abs(cls_probs_new.sum(dim=-1)-1)>1e-9])
+            #for i in range(cls_probs_new.shape[0]):
+            #    if torch.abs(cls_probs_new[i].sum()-1)>1e-9:
+            #        print(f"{cls_probs_new[i].sum():10f} : {torch.abs(cls_probs_new[i].sum()-1)}")
+            #print("\n")
             assert (torch.abs(cls_probs_new.sum(dim=-1)-1)<1e-6).all()
 
             all_boxes.append(boxes)

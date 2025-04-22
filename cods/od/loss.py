@@ -7,6 +7,7 @@ from cods.base.loss import Loss
 from cods.classif.loss import ClassificationLoss
 from cods.od.utils import (
     assymetric_hausdorff_distance,
+    f_lac,
     # get_covered_areas_of_gt_max,
     get_covered_areas_of_gt_union,
 )
@@ -222,7 +223,7 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
-        distance_threshold: float = 100,
+        distance_threshold: float = 0.2,
         device: str = "cpu",
         **kwargs,
     ):
@@ -262,24 +263,17 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
         """
         if len(true_boxes) == 0:
             loss = torch.zeros(1).to(self.device)
+        elif len(conf_boxes) == 0:
+            loss = torch.ones(1).to(self.device)
         else:
-            shortest_distances = []
-            for true_box in true_boxes:
-                # search for closest box
-                # TODO(leo):add classes
-                dist = torch.min(
-                    torch.stack(
-                        [
-                            assymetric_hausdorff_distance(true_box, conf_box)
-                            for conf_box in conf_boxes
-                        ]
-                    )
-                )
-                shortest_distances.append(dist)
+            class_factor = 0.75
+            l_lac = f_lac(true_cls, conf_cls)
+            l_ass = assymetric_hausdorff_distance(true_boxes, conf_boxes)
+            l_ass /= torch.max(l_ass)
+            distance_matrix = class_factor * l_lac + (1 - class_factor) * l_ass
+            shortest_distances, _ = torch.min(distance_matrix, dim=1)
             loss = torch.mean(
-                (
-                    torch.stack(shortest_distances) > self.distance_threshold
-                ).float()
+                (shortest_distances > self.distance_threshold).float()
             ).expand(1)
         return loss
 

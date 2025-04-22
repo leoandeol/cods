@@ -209,6 +209,115 @@ def generalized_iou(boxA, boxB):
     return giou
 
 
+def vectorized_generalized_iou(
+    boxesA: np.ndarray, boxesB: np.ndarray
+) -> np.ndarray:
+    """Compute the Generalized Intersection over Union (GIoU) between two sets of
+    bounding boxes.
+
+    Calculates the GIoU for every pair of boxes between boxesA and boxesB.
+
+    Args:
+    ----
+        boxesA (np.ndarray): A NumPy array of shape (N, 4) representing N bounding boxes.
+                             Each row is [x1, y1, x2, y2].
+        boxesB (np.ndarray): A NumPy array of shape (M, 4) representing M bounding boxes.
+                             Each row is [x1, y1, x2, y2].
+
+    Returns:
+    -------
+        np.ndarray: A NumPy array of shape (N, M) containing the GIoU values for
+                    each pair of boxes (boxesA[i], boxesB[j]).
+
+    Raises:
+    ------
+        ValueError: If input arrays do not have shape (N, 4) or (M, 4).
+    """
+    if boxesA.ndim != 2 or boxesA.shape[1] != 4:
+        raise ValueError(
+            f"boxesA must have shape (N, 4), but got {boxesA.shape}"
+        )
+    if boxesB.ndim != 2 or boxesB.shape[1] != 4:
+        raise ValueError(
+            f"boxesB must have shape (M, 4), but got {boxesB.shape}"
+        )
+
+    # Ensure inputs are float arrays for calculations
+    boxesA = boxesA.astype(np.float64)
+    boxesB = boxesB.astype(np.float64)
+
+    # Add a dimension to boxesA and boxesB for broadcasting
+    # boxesA becomes (N, 1, 4), boxesB becomes (1, M, 4)
+    boxesA_reshaped = boxesA[:, np.newaxis, :]
+    boxesB_reshaped = boxesB[np.newaxis, :, :]
+
+    # --- Calculate Intersection ---
+    # Top-left corner of intersection (xA, yA)
+    # Shape: (N, M)
+    xA = np.maximum(boxesA_reshaped[:, :, 0], boxesB_reshaped[:, :, 0])
+    yA = np.maximum(boxesA_reshaped[:, :, 1], boxesB_reshaped[:, :, 1])
+
+    # Bottom-right corner of intersection (xB, yB)
+    # Shape: (N, M)
+    xB = np.minimum(boxesA_reshaped[:, :, 2], boxesB_reshaped[:, :, 2])
+    yB = np.minimum(boxesA_reshaped[:, :, 3], boxesB_reshaped[:, :, 3])
+
+    # Area of intersection
+    # Add 1 because coordinates are inclusive (as in the original code)
+    # Use np.maximum(0, ...) to handle cases with no overlap
+    # Shape: (N, M)
+    interWidth = np.maximum(0, xB - xA + 1)
+    interHeight = np.maximum(0, yB - yA + 1)
+    interArea = interWidth * interHeight
+
+    # --- Calculate Individual Box Areas ---
+    # Add 1 because coordinates are inclusive
+    # Shape: (N, 1) and (1, M) - will broadcast correctly later
+    boxAArea = (boxesA_reshaped[:, :, 2] - boxesA_reshaped[:, :, 0] + 1) * (
+        boxesA_reshaped[:, :, 3] - boxesA_reshaped[:, :, 1] + 1
+    )
+    boxBArea = (boxesB_reshaped[:, :, 2] - boxesB_reshaped[:, :, 0] + 1) * (
+        boxesB_reshaped[:, :, 3] - boxesB_reshaped[:, :, 1] + 1
+    )
+
+    # --- Calculate Union ---
+    # Shape: (N, M)
+    unionArea = boxAArea + boxBArea - interArea
+
+    # Add a small epsilon to avoid division by zero
+    epsilon = 1e-12
+
+    # --- Calculate IoU ---
+    # Shape: (N, M)
+    iou = interArea / (unionArea + epsilon)
+
+    # --- Calculate Convex Hull (Enclosing Box) ---
+    # Top-left corner of convex hull (xC1, yC1)
+    # Shape: (N, M)
+    xC1 = np.minimum(boxesA_reshaped[:, :, 0], boxesB_reshaped[:, :, 0])
+    yC1 = np.minimum(boxesA_reshaped[:, :, 1], boxesB_reshaped[:, :, 1])
+
+    # Bottom-right corner of convex hull (xC2, yC2)
+    # Shape: (N, M)
+    xC2 = np.maximum(boxesA_reshaped[:, :, 2], boxesB_reshaped[:, :, 2])
+    yC2 = np.maximum(boxesA_reshaped[:, :, 3], boxesB_reshaped[:, :, 3])
+
+    # Area of convex hull
+    # Add 1 because coordinates are inclusive
+    # Shape: (N, M)
+    convexHullWidth = np.maximum(
+        0, xC2 - xC1 + 1
+    )  # Max with 0 just in case of weird inputs
+    convexHullHeight = np.maximum(0, yC2 - yC1 + 1)
+    convexHullArea = convexHullWidth * convexHullHeight
+
+    # --- Calculate GIoU ---
+    # Shape: (N, M)
+    giou = iou - (convexHullArea - unionArea) / (convexHullArea + epsilon)
+
+    return giou
+
+
 def assymetric_hausdorff_distance_old(true_box, pred_box):
     up_distance = pred_box[1] - true_box[1]
     down_distance = true_box[3] - pred_box[3]
@@ -317,88 +426,46 @@ def match_predictions_to_true_boxes(
 
         true_clss = [true_cls_i for true_cls_i in preds.true_cls]
 
-    if hungarian:
-        for pred_boxes, true_boxes in tqdm(
-            zip(pred_boxess, true_boxess),
-            disable=not verbose,
-        ):
-            if len(pred_boxes) == 0:
-                matching = [[]] * len(true_boxes)
-                all_matching.append(matching)
-                # print(len(matching), len(true_boxes), matching)
-                continue
-            elif len(true_boxes) == 0:
-                matching = []
-                all_matching.append(matching)
-                # print(len(matching), len(true_boxes), matching)
-                continue
+    for pred_boxes, true_boxes, pred_cls, true_cls in tqdm(
+        zip(pred_boxess, true_boxess, preds_clss, true_clss),
+        disable=not verbose,
+    ):
+        if len(true_boxes) == 0:
+            matching = []
+        elif len(pred_boxes) == 0:
+            matching = [[]] * len(true_boxes)
+        else:
+            true_boxes = true_boxes.clone()
+            pred_boxes = pred_boxes.clone()
+            if distance_function == "hausdorff":
+                distance_matrix = assymetric_hausdorff_distance(
+                    true_boxes, pred_boxes
+                )
+            elif distance_function == "lac":
+                distance_matrix = f_lac(true_cls, pred_cls)
+            elif distance_function == "mix":
+                l_lac = f_lac(true_cls, pred_cls)
+                l_ass = assymetric_hausdorff_distance(true_boxes, pred_boxes)
+                l_ass /= torch.max(l_ass)
+                distance_matrix = (
+                    class_factor * l_lac + (1 - class_factor) * l_ass
+                )
+            elif distance_function == "giou":
+                distance_matrix = vectorized_generalized_iou(
+                    true_boxes, pred_boxes
+                )
             else:
-                image_distances = []
-                for i, true_box in enumerate(true_boxes):
-                    box_distances = []
-
-                    for j, pred_box in enumerate(pred_boxes):
-                        dist = f_dist(true_box, pred_box)
-                        dist = (
-                            dist.cpu().numpy()
-                            if isinstance(dist, torch.Tensor)
-                            else dist
-                        )
-                        box_distances.append(dist)
-
-                    # TODO: replace this by possible a set of matches
-                    # TODO: must always be an array
-                    image_distances.append(
-                        np.array(box_distances).astype(float)
-                    )  # np.argmax(ious))
-                    # print(matching[-1])
-
-                image_distances = np.array(image_distances)
-                row_ind, col_ind = linear_sum_assignment(image_distances)
+                raise NotImplementedError(
+                    "Only hausdorff and lac are supported"
+                )
+            if hungarian:
+                # TODO: to test
+                row_ind, col_ind = linear_sum_assignment(distance_matrix)
                 matching = [[]] * len(true_boxes)
-                # print(len)
                 for x, y in zip(row_ind, col_ind):
                     if x < len(true_boxes) and y < len(pred_boxes):
                         matching[x] = [y]
-                # matching = list([[x] for x in col_ind])
-                # assert len(matching) == len(
-                #     true_boxes
-                # ), f"{len(matching)}, {len(true_boxes)}, {matching}, {col_ind}"
-                all_matching.append(matching)
-
-    else:
-        for pred_boxes, true_boxes, pred_cls, true_cls in tqdm(
-            zip(pred_boxess, true_boxess, preds_clss, true_clss),
-            disable=not verbose,
-        ):
-            if len(true_boxes) == 0:
-                matching = []
-            elif len(pred_boxes) == 0:
-                matching = [[]] * len(true_boxes)
             else:
-                true_boxes = true_boxes.clone()
-                pred_boxes = pred_boxes.clone()
-                if distance_function == "hausdorff":
-                    distance_matrix = assymetric_hausdorff_distance(
-                        true_boxes, pred_boxes
-                    )
-                elif distance_function == "lac":
-                    distance_matrix = f_lac(true_cls, pred_cls)
-                elif distance_function == "mix":
-                    l_lac = f_lac(true_cls, pred_cls)
-                    l_ass = assymetric_hausdorff_distance(
-                        true_boxes, pred_boxes
-                    )
-                    l_ass /= torch.max(l_ass)
-                    distance_matrix = (
-                        class_factor * l_lac + (1 - class_factor) * l_ass
-                    )
-                    # product
-                    # distance_matrix = ((1+f_lac(true_cls, pred_cls))**4) * assymetric_hausdorff_distance(true_boxes, pred_boxes)
-                else:
-                    raise NotImplementedError(
-                        "Only hausdorff and lac are supported"
-                    )
                 matching = (
                     torch.argmin(distance_matrix, dim=1)
                     .cpu()
@@ -407,8 +474,8 @@ def match_predictions_to_true_boxes(
                     .tolist()
                 )
 
-            assert len(matching) == len(true_boxes)
-            all_matching.append(matching)
+        assert len(matching) == len(true_boxes)
+        all_matching.append(matching)
 
     if idx is not None:
         return all_matching[0]
