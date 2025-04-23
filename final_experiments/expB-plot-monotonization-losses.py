@@ -31,8 +31,24 @@ MODEL_NAMES = ["yolov8x.pt", "detr_resnet50", "detr_resnet101"]
 
 
 def setup_experiment(
-    model_name, filter_by_confidence, config, name_of_experiment
+    model_name,
+    filter_by_confidence,
+    config,
+    name_of_experiment,
+    override=False,
 ):
+    # Check if file exists:
+    if (
+        os.path.exists(
+            f"./final_experiments/figs/monotization_conf_{name_of_experiment}.png"
+        )
+        and not override
+    ):
+        logger.info(
+            f"File {name_of_experiment} already exists. Set override=True to overwrite."
+        )
+        return
+
     data = MSCOCODataset(root=COCO_PATH, split="val")
     calibration_ratio = 0.5
     data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)

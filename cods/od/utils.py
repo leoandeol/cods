@@ -243,31 +243,31 @@ def vectorized_generalized_iou(
         )
 
     # Ensure inputs are float arrays for calculations
-    boxesA = boxesA.astype(np.float64)
-    boxesB = boxesB.astype(np.float64)
+    boxesA = boxesA.float()
+    boxesB = boxesB.float()
 
     # Add a dimension to boxesA and boxesB for broadcasting
     # boxesA becomes (N, 1, 4), boxesB becomes (1, M, 4)
-    boxesA_reshaped = boxesA[:, np.newaxis, :]
-    boxesB_reshaped = boxesB[np.newaxis, :, :]
+    boxesA_reshaped = boxesA[:, None, :]
+    boxesB_reshaped = boxesB[None, :, :]
 
     # --- Calculate Intersection ---
     # Top-left corner of intersection (xA, yA)
     # Shape: (N, M)
-    xA = np.maximum(boxesA_reshaped[:, :, 0], boxesB_reshaped[:, :, 0])
-    yA = np.maximum(boxesA_reshaped[:, :, 1], boxesB_reshaped[:, :, 1])
+    xA = torch.maximum(boxesA_reshaped[:, :, 0], boxesB_reshaped[:, :, 0])
+    yA = torch.maximum(boxesA_reshaped[:, :, 1], boxesB_reshaped[:, :, 1])
 
     # Bottom-right corner of intersection (xB, yB)
     # Shape: (N, M)
-    xB = np.minimum(boxesA_reshaped[:, :, 2], boxesB_reshaped[:, :, 2])
-    yB = np.minimum(boxesA_reshaped[:, :, 3], boxesB_reshaped[:, :, 3])
+    xB = torch.minimum(boxesA_reshaped[:, :, 2], boxesB_reshaped[:, :, 2])
+    yB = torch.minimum(boxesA_reshaped[:, :, 3], boxesB_reshaped[:, :, 3])
 
     # Area of intersection
     # Add 1 because coordinates are inclusive (as in the original code)
     # Use np.maximum(0, ...) to handle cases with no overlap
     # Shape: (N, M)
-    interWidth = np.maximum(0, xB - xA + 1)
-    interHeight = np.maximum(0, yB - yA + 1)
+    interWidth = torch.maximum(0, xB - xA + 1)
+    interHeight = torch.maximum(0, yB - yA + 1)
     interArea = interWidth * interHeight
 
     # --- Calculate Individual Box Areas ---
@@ -294,21 +294,21 @@ def vectorized_generalized_iou(
     # --- Calculate Convex Hull (Enclosing Box) ---
     # Top-left corner of convex hull (xC1, yC1)
     # Shape: (N, M)
-    xC1 = np.minimum(boxesA_reshaped[:, :, 0], boxesB_reshaped[:, :, 0])
-    yC1 = np.minimum(boxesA_reshaped[:, :, 1], boxesB_reshaped[:, :, 1])
+    xC1 = torch.minimum(boxesA_reshaped[:, :, 0], boxesB_reshaped[:, :, 0])
+    yC1 = torch.minimum(boxesA_reshaped[:, :, 1], boxesB_reshaped[:, :, 1])
 
     # Bottom-right corner of convex hull (xC2, yC2)
     # Shape: (N, M)
-    xC2 = np.maximum(boxesA_reshaped[:, :, 2], boxesB_reshaped[:, :, 2])
-    yC2 = np.maximum(boxesA_reshaped[:, :, 3], boxesB_reshaped[:, :, 3])
+    xC2 = torch.maximum(boxesA_reshaped[:, :, 2], boxesB_reshaped[:, :, 2])
+    yC2 = torch.maximum(boxesA_reshaped[:, :, 3], boxesB_reshaped[:, :, 3])
 
     # Area of convex hull
     # Add 1 because coordinates are inclusive
     # Shape: (N, M)
-    convexHullWidth = np.maximum(
+    convexHullWidth = torch.maximum(
         0, xC2 - xC1 + 1
     )  # Max with 0 just in case of weird inputs
-    convexHullHeight = np.maximum(0, yC2 - yC1 + 1)
+    convexHullHeight = torch.maximum(0, yC2 - yC1 + 1)
     convexHullArea = convexHullWidth * convexHullHeight
 
     # --- Calculate GIoU ---
