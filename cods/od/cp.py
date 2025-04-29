@@ -1252,9 +1252,13 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             for i, pred_cls_i in enumerate(predictions.pred_cls):
                 conf_cls_i = []
                 for j, pred_cls_i_j in enumerate(pred_cls_i):
-                    conf_cls_i_j = torch.where(
-                        pred_cls_i_j >= 1 - self.lambda_classification
-                    )[0]
+                    # conf_cls_i_j = torch.where(
+                    #     pred_cls_i_j >= 1 - self.lambda_classification
+                    # )[0]
+                    conf_cls_i_j = self._score_function.get_set(
+                            pred_cls=pred_cls_i_j,
+                            quantile=self.lambda_classification,
+                        )
                     conf_cls_i.append(conf_cls_i_j)
                 # not all same size : conf_cls_i = torch.stack(conf_cls_i)
                 conf_cls.append(conf_cls_i)

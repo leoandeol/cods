@@ -66,7 +66,7 @@ class APSNCScore(ClassifNCScore):
         # This case is handled in the else : defaults to the full prediction set.
         values, indices = torch.sort(pred_cls, descending=True)
         cumsum = torch.cumsum(values, dim=0)
-        idxs = torch.where(cumsum >= quantile)[0]
+        idxs = torch.where(cumsum > quantile)[0]
         if len(idxs) > 0:
             k = idxs[0]
         else:

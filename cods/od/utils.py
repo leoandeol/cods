@@ -242,6 +242,8 @@ def vectorized_generalized_iou(
             f"boxesB must have shape (M, 4), but got {boxesB.shape}"
         )
 
+    zero_tensor = torch.tensor(0).to(boxesA.device)
+
     # Ensure inputs are float arrays for calculations
     boxesA = boxesA.float()
     boxesB = boxesB.float()
@@ -266,8 +268,8 @@ def vectorized_generalized_iou(
     # Add 1 because coordinates are inclusive (as in the original code)
     # Use np.maximum(0, ...) to handle cases with no overlap
     # Shape: (N, M)
-    interWidth = torch.maximum(0, xB - xA + 1)
-    interHeight = torch.maximum(0, yB - yA + 1)
+    interWidth = torch.maximum(zero_tensor, xB - xA + 1)
+    interHeight = torch.maximum(zero_tensor, yB - yA + 1)
     interArea = interWidth * interHeight
 
     # --- Calculate Individual Box Areas ---
@@ -306,9 +308,9 @@ def vectorized_generalized_iou(
     # Add 1 because coordinates are inclusive
     # Shape: (N, M)
     convexHullWidth = torch.maximum(
-        0, xC2 - xC1 + 1
+        zero_tensor, xC2 - xC1 + 1
     )  # Max with 0 just in case of weird inputs
-    convexHullHeight = torch.maximum(0, yC2 - yC1 + 1)
+    convexHullHeight = torch.maximum(zero_tensor, yC2 - yC1 + 1)
     convexHullArea = convexHullWidth * convexHullHeight
 
     # --- Calculate GIoU ---

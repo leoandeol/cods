@@ -243,7 +243,7 @@ def experiment_losses():
 
 
 def experiment_matchings():
-    MATCHING = ["hausdorff", "lac", "mix", "giou"]
+    MATCHING = ["hausdorff", "lac", "mix"]  # , "giou"]
     for matching in MATCHING:
         config = {
             "matching_function": matching,
@@ -280,7 +280,7 @@ def experiment_filtering():
             model_name="detr_resnet50",
             filter_by_confidence=filtering,
             config=config,
-            name_of_experiment=f"comparing_filterings_{filtering:.3e}",
+            name_of_experiment=f"comparing_filterings_{filtering}",
         )
 
 
