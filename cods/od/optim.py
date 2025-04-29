@@ -111,6 +111,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 for x, c in zip(pred_cls_i, confidences_i)
                 if c >= 1 - lambda_conf
             ]
+            pred_cls_i = torch.stack(pred_cls_i)
 
             # no confidence filtering here because lambda_conf = 1 for this first loop
             confidence_loss_i = confidence_loss(
