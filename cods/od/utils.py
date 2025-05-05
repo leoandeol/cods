@@ -336,6 +336,8 @@ def assymetric_hausdorff_distance_old(true_box, pred_box):
 
 
 def assymetric_hausdorff_distance(true_boxes, pred_boxes):
+    true_boxes = true_boxes.clone()
+    pred_boxes = pred_boxes.clone()
     true_boxes[:, :2] *= -1
     pred_boxes[:, 2:] *= -1
     distances = true_boxes[:, None, :] + pred_boxes[None, :, :]
@@ -366,7 +368,7 @@ def match_predictions_to_true_boxes(
     verbose=False,
     hungarian=False,
     idx=None,
-    class_factor: float = 0.25,
+    class_factor: float = 0.22,
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
     # TODO(leo): switch to gpu

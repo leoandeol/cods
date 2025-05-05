@@ -223,7 +223,7 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
-        distance_threshold: float = 0.2,
+        distance_threshold: float = 0.5,
         device: str = "cpu",
         **kwargs,
     ):
@@ -266,15 +266,17 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
         elif len(conf_boxes) == 0:
             loss = torch.ones(1).to(self.device)
         else:
-            class_factor = 0.75
+            class_factor = 0.22
             l_lac = f_lac(true_cls, conf_cls)
             l_ass = assymetric_hausdorff_distance(true_boxes, conf_boxes)
             l_ass /= torch.max(l_ass)
             distance_matrix = class_factor * l_lac + (1 - class_factor) * l_ass
             shortest_distances, _ = torch.min(distance_matrix, dim=1)
+            # print("Distances", shortest_distances)
             loss = torch.mean(
                 (shortest_distances > self.distance_threshold).float()
             ).expand(1)
+            # print("Final Loss", loss)
         return loss
 
 
@@ -340,7 +342,7 @@ class ClassificationLossWrapper(ODLoss):
             loss = self.classification_loss(conf_cls[i], true_cls[i])
             # print(f"loss: {loss}")
             losses.append(loss)
-        return torch.zeros(1).to(self.device) + torch.mean(torch.stack(losses))
+        return torch.mean(torch.stack(losses)).expand(1)
 
 
 # # MaximumLoss : maximum of a list of losses with a list of parameters
@@ -576,9 +578,9 @@ class BoxWiseRecallLoss(ODLoss):
         is_not_covered = (
             areas < 0.999
         ).float()  # because doubt on the computation of the overlap, check formula TODO
-        miscoverage = torch.zeros(1).to(self.device) + torch.mean(
+        miscoverage = torch.mean(
             is_not_covered,
-        )  # TODO: tmp for bugfix
+        ).expand(1)  # TODO: tmp for bugfix
         return miscoverage
 
 

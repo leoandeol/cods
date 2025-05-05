@@ -77,6 +77,8 @@ localization_methods = ["thresholded", "pixelwise", "boxwise"]
 classification_prediction_sets = ["lac", "aps"]
 localization_prediction_sets = ["additive", "multiplicative"]
 
+force_recompute = False
+
 configs = []
 for alpha in alphas:
     for matching_function in matching_functions:
@@ -98,8 +100,18 @@ for alpha in alphas:
                                 "localization_prediction_set": localization_prediction_set,
                             }
                         )
+
+output_path = "./final_experiments/results-exp1-detr.pkl"
 for config in configs:
     try:
+        config_str = f"alpha-{config['alpha']}-{config['matching_function']}_{config['confidence_method']}_{config['localization_method']}_{config['classification_prediction_set']}_{config['localization_prediction_set']}"
+        # Load pickle if exists
+        if os.path.exists(output_path):
+            with open(output_path, "rb") as f:
+                results = pickle.load(f)
+            if config_str in results and not force_recompute:
+                print(f"Already computed {config_str}, skipping...")
+                continue
         conf = ODConformalizer(
             guarantee_level="image",
             matching_function=config["matching_function"],
@@ -142,15 +154,12 @@ for config in configs:
             include_confidence_in_global=False,
         )
 
-        config_str = f"alpha-{config['alpha']}-{config['matching_function']}_{config['confidence_method']}_{config['localization_method']}_{config['classification_prediction_set']}_{config['localization_prediction_set']}"
-
         results[config_str] = results_val
 
         print(f"Results for config {config_str}:")
         print(f"  {results_val}")
         # Save results to a pickle file
 
-        output_path = "./final_experiments/results-exp1-detr.pkl"
         with open(output_path, "wb") as f:
             pickle.dump(results, f)
 

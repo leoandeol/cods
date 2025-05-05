@@ -144,7 +144,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                     for j in range(len(true_boxes_i))
                 ],
             )
-
             margin = np.concatenate((image_shape, image_shape))
             matched_conf_boxes_i = apply_margins(
                 [matched_pred_boxes_i],
@@ -200,6 +199,11 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         )
         print(f"First risk: {max_risk.detach().cpu().numpy()}")
         if max_risk.detach().cpu().numpy() > alpha:
+            # Debug: all three risks to see why there isn't any solution
+            logger.debug(f"Confidence risk: {confidence_risk}")
+            logger.debug(f"Localization risk: {localization_risk}")
+            logger.debug(f"Classification risk: {classification_risk}")
+            logger.debug(f"Max risk: {max_risk} > {alpha}. No solution found.")
             raise ValueError(
                 "There does not exist any solution satisfying the constraints."
             )
