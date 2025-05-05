@@ -71,7 +71,7 @@ matching_functions = ["mix", "hausdorff", "lac", "giou"]
 confidence_methods = [
     "box_count_threshold",
     "box_count_recall",
-    "box_thresholded_distance",
+#    "box_thresholded_distance",
 ]
 localization_methods = ["thresholded", "pixelwise", "boxwise"]
 classification_prediction_sets = ["lac", "aps"]

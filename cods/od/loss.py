@@ -219,11 +219,12 @@ class BoxCountRecallConfidenceLoss(ODLoss):
         # )
 
 
+# This loss just doesn't make sense: all the boxes have maximum margins and are the size of the image ....
 class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
-        distance_threshold: float = 0.5,
+        distance_threshold: float = 200,
         device: str = "cpu",
         **kwargs,
     ):
@@ -266,11 +267,11 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
         elif len(conf_boxes) == 0:
             loss = torch.ones(1).to(self.device)
         else:
-            class_factor = 0.22
-            l_lac = f_lac(true_cls, conf_cls)
             l_ass = assymetric_hausdorff_distance(true_boxes, conf_boxes)
-            l_ass /= torch.max(l_ass)
-            distance_matrix = class_factor * l_lac + (1 - class_factor) * l_ass
+            # l_ass /= torch.max(l_ass)
+            distance_matrix = (
+                l_ass  # class_factor * l_lac + (1 - class_factor) * l_ass
+            )
             shortest_distances, _ = torch.min(distance_matrix, dim=1)
             # print("Distances", shortest_distances)
             loss = torch.mean(
