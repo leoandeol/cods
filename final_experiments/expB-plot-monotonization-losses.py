@@ -215,7 +215,7 @@ def experiment_models():
         }
         setup_experiment(
             model_name=model,
-            filter_by_confidence=1e-3,
+            filter_by_confidence=None,  # 1e-3,
             config=config,
             name_of_experiment=f"comparing_models_{model}",
         )
@@ -236,7 +236,7 @@ def experiment_losses():
         }
         setup_experiment(
             model_name="detr_resnet50",
-            filter_by_confidence=1e-3,
+            filter_by_confidence=None,  # 1e-3,
             config=config,
             name_of_experiment=f"comparing_losses_{loc_loss}_{cls_loss}",
         )
@@ -257,7 +257,7 @@ def experiment_matchings():
         }
         setup_experiment(
             model_name="detr_resnet50",
-            filter_by_confidence=1e-3,
+            filter_by_confidence=None,  # 1e-3,
             config=config,
             name_of_experiment=f"comparing_matchings_{matching}",
         )
@@ -302,7 +302,7 @@ def experiment_alphas():
         }
         setup_experiment(
             model_name="detr_resnet50",
-            filter_by_confidence=1e-3,
+            filter_by_confidence=None,  # 1e-3,
             config=config,
             name_of_experiment=f"comparing_alphas_{alphas[0]}_{alphas[1]}_{alphas[2]}",
         )
