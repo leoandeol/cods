@@ -22,20 +22,23 @@ class ClassificationConformalizer(Conformalizer):
             )
 
         self.method = method
-        if isinstance(method, ClassifNCScore):
-            self._score_function = method
-
         self.preprocess = preprocess
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
-        self._score_function: Optional[Any] = None
-        self._quantile: Optional[Any] = None
-        self._n_classes: Optional[Any] = None
+
+        self._score_function: Optional[ClassifNCScore] = None
+        if isinstance(method, ClassifNCScore):
+            self._score_function = method
+        
+        self._quantile: Optional[torch.Tensor] = None
+        self._n_classes: Optional[int] = None
 
     def calibrate(
         self, preds: ClassificationPredictions, alpha: float = 0.1, verbose: bool = True
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        self._n_classes = preds.n_classes
+        self._n_classes = preds.n_classes # type: ignore
         if self._score_function is None:
+            # If method was a string, self._score_function would be None here.
+            # So, initialize it based on the string method name.
             self._score_function = self.ACCEPTED_METHODS[self.method](self._n_classes)
         scores = []
 

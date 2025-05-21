@@ -45,5 +45,15 @@ class APSNCScore(ClassifNCScore):
     def get_set(self, pred_cls: torch.Tensor, quantile: float):
         values, indices = torch.sort(pred_cls, descending=True)
         cumsum = torch.cumsum(values, dim=0)
-        k = torch.where(cumsum >= quantile)[0][0]
+        
+        # Robustly determine k
+        indices_where = torch.where(cumsum >= quantile)[0]
+        if len(indices_where) == 0:
+            # If quantile is higher than any cumsum value, include all classes
+            # This means k should be the index of the last element.
+            k = len(cumsum) - 1 
+        else:
+            # Otherwise, take the first index where cumsum meets quantile
+            k = indices_where[0]
+            
         return indices[: k + 1]
