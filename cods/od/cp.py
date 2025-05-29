@@ -21,6 +21,9 @@ from cods.od.loss import (
     # ClassBoxWiseRecallLoss,
     BoxCountRecallConfidenceLoss,
     BoxCountThresholdConfidenceLoss,
+    BoxCountTwosidedConfidenceLoss,
+    BoxWiseIoULoss,
+    BoxWisePrecisionLoss,
     BoxWiseRecallLoss,
     ClassificationLossWrapper,
     ODBinaryClassificationLoss,
@@ -100,6 +103,8 @@ class LocalizationConformalizer(Conformalizer):
         "pixelwise": PixelWiseRecallLoss,
         "boxwise": BoxWiseRecallLoss,
         "thresholded": ThresholdedRecallLoss,
+        "boxwise-precision": BoxWisePrecisionLoss,
+        "boxwise-iou": BoxWiseIoULoss,
     }
     OPTIMIZERS = {
         "binary_search": BinarySearchOptimizer,
@@ -496,7 +501,7 @@ class LocalizationConformalizer(Conformalizer):
                 B=1,
                 bounds=[0, 1000]
                 if self.prediction_set == "additive"
-                else [0, 50],
+                else [0, 100],
                 steps=13,
                 epsilon=1e-9,
                 verbose=verbose,
@@ -653,6 +658,7 @@ class ConfidenceConformalizer(Conformalizer):
         "box_count_threshold": BoxCountThresholdConfidenceLoss,
         "box_count_recall": BoxCountRecallConfidenceLoss,
         "box_thresholded_distance": ThresholdedBoxDistanceConfidenceLoss,
+        "box_count_twosided_recall": BoxCountTwosidedConfidenceLoss,
     }
 
     def __init__(
@@ -1256,9 +1262,9 @@ class ODClassificationConformalizer(ClassificationConformalizer):
                     #     pred_cls_i_j >= 1 - self.lambda_classification
                     # )[0]
                     conf_cls_i_j = self._score_function.get_set(
-                            pred_cls=pred_cls_i_j,
-                            quantile=self.lambda_classification,
-                        )
+                        pred_cls=pred_cls_i_j,
+                        quantile=self.lambda_classification,
+                    )
                     conf_cls_i.append(conf_cls_i_j)
                 # not all same size : conf_cls_i = torch.stack(conf_cls_i)
                 conf_cls.append(conf_cls_i)

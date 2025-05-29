@@ -95,7 +95,7 @@ def setup_experiment(
     )
 
     # First step: confidence, all risks
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(16, 9))
     plt.plot(
         conf.confidence_conformalizer.optimizer2_minus.all_lbds,
         conf.confidence_conformalizer.optimizer2_minus.all_risks_raw,
@@ -123,6 +123,8 @@ def setup_experiment(
         linewidth=2,
         label="Maximum of risks, monotonized",
     )
+    ##TODO: temporary test
+    plt.xlim(0.99, 1.0)
 
     plt.yscale("log")
     plt.legend()
@@ -131,7 +133,7 @@ def setup_experiment(
     )
 
     # Second step: localization
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(16, 9))
     n = len(conf.localization_conformalizer.optimizer2.all_risks_raw) / 13
     n = int(n)
     for i in range(13):
@@ -166,7 +168,7 @@ def setup_experiment(
     plt.close()
 
     # Second step bis: classification
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(16, 9))
     n = len(conf.classification_conformalizer.optimizer2.all_risks_raw) // 25
     for i in range(25):
         plt.plot(
@@ -209,9 +211,9 @@ def experiment_models():
             "localization_prediction_set": "multiplicative",
             "classification_prediction_set": "lac",
             "confidence_method": "box_count_recall",
-            "alpha_confidence": 0.03,
-            "alpha_localization": 0.05,
-            "alpha_classification": 0.05,
+            "alpha_confidence": 0.06,
+            "alpha_localization": 0.1,
+            "alpha_classification": 0.1,
         }
         setup_experiment(
             model_name=model,
@@ -222,28 +224,34 @@ def experiment_models():
 
 
 def experiment_losses():
-    LOSSES = [["boxwise", "aps"], ["pixelwise", "lac"]]
-    for loc_loss, cls_loss in LOSSES:
+    LOSSES = [
+        ["box_count_twosided_recall", "pixelwise", "lac"],
+        ["box_count_recall", "boxwise", "aps"],
+        ["box_count_threshold", "pixelwise", "lac"],
+        # ["boxwise-precision", "lac"],
+        # ["boxwise-iou", "aps"],
+    ]
+    for cnf_loss, loc_loss, cls_loss in LOSSES:
         config = {
             "matching_function": "mix",
             "localization_method": loc_loss,
             "localization_prediction_set": "multiplicative",
             "classification_prediction_set": cls_loss,
-            "confidence_method": "box_count_recall",
-            "alpha_confidence": 0.03,
-            "alpha_localization": 0.05,
-            "alpha_classification": 0.05,
+            "confidence_method": cnf_loss,
+            "alpha_confidence": 0.06,
+            "alpha_localization": 0.1,
+            "alpha_classification": 0.1,
         }
         setup_experiment(
             model_name="detr_resnet50",
             filter_by_confidence=None,  # 1e-3,
             config=config,
-            name_of_experiment=f"comparing_losses_{loc_loss}_{cls_loss}",
+            name_of_experiment=f"comparing_losses_{cnf_loss}_{loc_loss}_{cls_loss}",
         )
 
 
 def experiment_matchings():
-    MATCHING = ["hausdorff", "lac", "mix"]  # , "giou"]
+    MATCHING = ["hausdorff", "lac", "mix", "giou"]
     for matching in MATCHING:
         config = {
             "matching_function": matching,
@@ -251,9 +259,9 @@ def experiment_matchings():
             "localization_prediction_set": "multiplicative",
             "classification_prediction_set": "lac",
             "confidence_method": "box_count_recall",
-            "alpha_confidence": 0.03,
-            "alpha_localization": 0.05,
-            "alpha_classification": 0.05,
+            "alpha_confidence": 0.06,
+            "alpha_localization": 0.1,
+            "alpha_classification": 0.1,
         }
         setup_experiment(
             model_name="detr_resnet50",
@@ -272,9 +280,9 @@ def experiment_filtering():
             "localization_prediction_set": "multiplicative",
             "classification_prediction_set": "lac",
             "confidence_method": "box_count_recall",
-            "alpha_confidence": 0.03,
-            "alpha_localization": 0.05,
-            "alpha_classification": 0.05,
+            "alpha_confidence": 0.06,
+            "alpha_localization": 0.1,
+            "alpha_classification": 0.1,
         }
         setup_experiment(
             model_name="detr_resnet50",
@@ -309,8 +317,9 @@ def experiment_alphas():
 
 
 if __name__ == "__main__":
-    logger.info("Starting Model Experiments")
-    experiment_models()
+    logger.debug("Skipping Model Experiments")
+    # logger.info("Starting Model Experiments")
+    # experiment_models()
     logger.info("Starting Losses Experiments")
     experiment_losses()
     logger.info("Starting Matchings Experiments")

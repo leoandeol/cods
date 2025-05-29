@@ -111,7 +111,11 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 for x, c in zip(pred_cls_i, confidences_i)
                 if c >= 1 - lambda_conf
             ]
-            pred_cls_i = torch.stack(pred_cls_i)
+            pred_cls_i = (
+                torch.stack(pred_cls_i)
+                if len(pred_cls_i) > 0
+                else torch.tensor([]).float().to(device)
+            )
 
             # no confidence filtering here because lambda_conf = 1 for this first loop
             confidence_loss_i = confidence_loss(
@@ -248,6 +252,22 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             pred_cls_i = pred_cls[i]
             image_shape = image_shapes[i]
 
+            pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
+            pred_cls_i = [
+                x
+                for x, c in zip(pred_cls_i, confidences_i)
+                if c >= 1 - lambda_conf
+            ]
+            pred_cls_i = (
+                torch.stack(pred_cls_i)
+                if len(pred_cls_i) > 0
+                else torch.tensor([]).float().to(device)
+            )
+
+            confidence_loss_i = confidence_loss(
+                true_boxes_i, true_cls_i, pred_boxes_i, pred_cls_i
+            )
+
             matching_i = match_predictions_to_true_boxes(
                 predictions,
                 distance_function=matching_function,
@@ -257,17 +277,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             )
 
             predictions.matching[i] = matching_i
-
-            pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [
-                x
-                for x, c in zip(pred_cls_i, confidences_i)
-                if c >= 1 - lambda_conf
-            ]
-
-            confidence_loss_i = confidence_loss(
-                true_boxes_i, true_cls_i, pred_boxes_i, pred_cls_i
-            )
 
             # if i in [14, 74, 199, 213, 225, 234]:
             #     print("--------------------------------------------------")
@@ -369,6 +378,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             # logger.info(f"maximizing risk : {idddd} where 0 is confidence, 1 is localization and 2 is classification")
 
             self.all_lbds.append(lambda_conf)
+            # _tmp_max_risk =
             self.all_risks_raw.append(max_risk.detach().cpu().numpy())
             self.all_risks_raw_conf.append(
                 confidence_risk.detach().cpu().numpy()
@@ -383,9 +393,24 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             # Monotonization
             if max_risk < previous_risk:
                 max_risk = previous_risk
-                confidence_risk = self.all_risks_mon_conf[-1]
-                localization_risk = self.all_risks_mon_loc[-1]
-                classification_risk = self.all_risks_mon_cls[-1]
+                confidence_risk = np.max(
+                    [
+                        self.all_risks_mon_conf[-1],
+                        confidence_risk.detach().cpu().numpy(),
+                    ]
+                )
+                localization_risk = np.max(
+                    [
+                        self.all_risks_mon_loc[-1],
+                        localization_risk.detach().cpu().numpy(),
+                    ]
+                )
+                classification_risk = np.max(
+                    [
+                        self.all_risks_mon_cls[-1],
+                        classification_risk.detach().cpu().numpy(),
+                    ]
+                )
 
             self.all_risks_mon.append(max_risk.detach().cpu().numpy())
             self.all_risks_mon_conf.append(

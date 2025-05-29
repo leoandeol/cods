@@ -1,9 +1,9 @@
-from cods.od.data import MSCOCODataset
-from cods.od.models import DETRModel
+import argparse
 import logging
 import os
-import argparse
 
+from cods.od.data import MSCOCODataset
+from cods.od.models import DETRModel
 
 parser = argparse.ArgumentParser()
 # add argument for matching_function, localization_method, localization_prediction_set, confidence_method, classification_prediction_set
@@ -79,7 +79,7 @@ preds_cal = model.build_predictions(
     batch_size=12,
     collate_fn=data._collate_fn,  # TODO: make this a default for COCO
     shuffle=False,
-    force_recompute=False,#False,
+    force_recompute=False,  # False,
     deletion_method="nms",
 )
 preds_val = model.build_predictions(
@@ -89,7 +89,7 @@ preds_val = model.build_predictions(
     batch_size=12,
     collate_fn=data._collate_fn,
     shuffle=False,
-    force_recompute=False,#False,
+    force_recompute=False,  # False,
     deletion_method="nms",
 )
 
@@ -102,7 +102,11 @@ confidence_method = args.confidence_method
 classification_prediction_set = args.classification_prediction_set
 
 from contextlib import redirect_stdout
-with open(f"monotonicity_{matching_function}_{localization_method}_{localization_prediction_set}_{confidence_method}_{classification_prediction_set}.txt", "w") as f:
+
+with open(
+    f"monotonicity_{matching_function}_{localization_method}_{localization_prediction_set}_{confidence_method}_{classification_prediction_set}.txt",
+    "w",
+) as f:
     with redirect_stdout(f):
         print(f"{matching_function = }")
         print(f"{localization_method = }")
@@ -121,68 +125,187 @@ with open(f"monotonicity_{matching_function}_{localization_method}_{localization
             backend="auto",
             optimizer="binary_search",
         )
-        conf.calibrate(data_cal, preds_cal)
-        conf.evaluate(data_val, preds_val)
+        parameters = conf.calibrate(
+            preds_cal,
+            alpha_confidence=0.02,
+            alpha_classification=0.05,
+            alpha_localization=0.05,
+        )
+        conf_preds_val = conf.conformalize(preds_val, parameters)
+        conf.evaluate(
+            preds_val,
+            parameters,
+            conf_preds_val,
+            include_confidence_in_global=False,
+        )
 
 import matplotlib.pyplot as plt
 
-n = len(conf.localization_conformalizer.optimizer2.all_risks_raw)/13
+n = len(conf.localization_conformalizer.optimizer2.all_risks_raw) / 13
 n = int(n)
-plt.figure(figsize=(16,9))
+plt.figure(figsize=(16, 9))
 for i in range(13):
     if i == 0:
-        plt.plot(conf.localization_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.localization_conformalizer.optimizer2.all_risks_raw[i*n:(i+1)*n], c="b", label="Raw Loss")
-        plt.plot(conf.localization_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.localization_conformalizer.optimizer2.all_risks_mon[i*n:(i+1)*n], c="r", label="Monotonized Loss")
+        plt.plot(
+            conf.localization_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.localization_conformalizer.optimizer2.all_risks_raw[
+                i * n : (i + 1) * n
+            ],
+            c="b",
+            label="Raw Loss",
+        )
+        plt.plot(
+            conf.localization_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.localization_conformalizer.optimizer2.all_risks_mon[
+                i * n : (i + 1) * n
+            ],
+            c="r",
+            label="Monotonized Loss",
+        )
     else:
-        plt.plot(conf.localization_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.localization_conformalizer.optimizer2.all_risks_raw[i*n:(i+1)*n], c="b")
-    plt.plot(conf.localization_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.localization_conformalizer.optimizer2.all_risks_mon[i*n:(i+1)*n], c="r")
-    #plt.show()
+        plt.plot(
+            conf.localization_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.localization_conformalizer.optimizer2.all_risks_raw[
+                i * n : (i + 1) * n
+            ],
+            c="b",
+        )
+    plt.plot(
+        conf.localization_conformalizer.optimizer2.all_lbds_cnf[
+            i * n : (i + 1) * n
+        ],
+        conf.localization_conformalizer.optimizer2.all_risks_mon[
+            i * n : (i + 1) * n
+        ],
+        c="r",
+    )
+    # plt.show()
 # Put X and Y legend
 plt.xlabel("Lambda Confidence")
 plt.ylabel("Risk")
 plt.title("Raw and Monotonized Losses for Localization")
 # focus on the interval between 0.9 and 1
-#plt.xlim(0.9995, 1)
+# plt.xlim(0.9995, 1)
 plt.xlim(0.9, 1)
-#plt.xscale("log")
+# plt.xscale("log")
 plt.legend()
-plt.savefig(f"monotonicity_zoomed_loc_{matching_function}_{localization_method}_{localization_prediction_set}_{confidence_method}_{classification_prediction_set}.png")
+plt.savefig(
+    f"monotonicity_zoomed_loc_{matching_function}_{localization_method}_{localization_prediction_set}_{confidence_method}_{classification_prediction_set}.png"
+)
 
-n = len(conf.localization_conformalizer.optimizer2.all_risks_raw)/13
+n = len(conf.localization_conformalizer.optimizer2.all_risks_raw) / 13
 n = int(n)
-plt.figure(figsize=(16,9))
+plt.figure(figsize=(16, 9))
 for i in range(13):
     if i == 0:
-        plt.plot(conf.localization_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.localization_conformalizer.optimizer2.all_risks_raw[i*n:(i+1)*n], c="b", label="Raw Loss")
-        plt.plot(conf.localization_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.localization_conformalizer.optimizer2.all_risks_mon[i*n:(i+1)*n], c="r", label="Monotonized Loss")
+        plt.plot(
+            conf.localization_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.localization_conformalizer.optimizer2.all_risks_raw[
+                i * n : (i + 1) * n
+            ],
+            c="b",
+            label="Raw Loss",
+        )
+        plt.plot(
+            conf.localization_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.localization_conformalizer.optimizer2.all_risks_mon[
+                i * n : (i + 1) * n
+            ],
+            c="r",
+            label="Monotonized Loss",
+        )
     else:
-        plt.plot(conf.localization_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.localization_conformalizer.optimizer2.all_risks_raw[i*n:(i+1)*n], c="b")
-    plt.plot(conf.localization_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.localization_conformalizer.optimizer2.all_risks_mon[i*n:(i+1)*n], c="r")
-    #plt.show()
+        plt.plot(
+            conf.localization_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.localization_conformalizer.optimizer2.all_risks_raw[
+                i * n : (i + 1) * n
+            ],
+            c="b",
+        )
+    plt.plot(
+        conf.localization_conformalizer.optimizer2.all_lbds_cnf[
+            i * n : (i + 1) * n
+        ],
+        conf.localization_conformalizer.optimizer2.all_risks_mon[
+            i * n : (i + 1) * n
+        ],
+        c="r",
+    )
+    # plt.show()
 # Put X and Y legend
 plt.xlabel("Lambda Confidence")
 plt.ylabel("Risk")
 plt.title("Raw and Monotonized Losses for Localization")
 # focus on the interval between 0.9 and 1
-#plt.xlim(0.9995, 1)
-#plt.xscale("log")
+# plt.xlim(0.9995, 1)
+# plt.xscale("log")
 plt.legend()
-plt.savefig(f"monotonicity_all_loc_{matching_function}_{localization_method}_{localization_prediction_set}_{confidence_method}_{classification_prediction_set}.png")
+plt.savefig(
+    f"monotonicity_all_loc_{matching_function}_{localization_method}_{localization_prediction_set}_{confidence_method}_{classification_prediction_set}.png"
+)
 
-n = len(conf.classification_conformalizer.optimizer2.all_risks_raw)/25
+n = len(conf.classification_conformalizer.optimizer2.all_risks_raw) / 25
 n = int(n)
-plt.figure(figsize=(16,9))  
+plt.figure(figsize=(16, 9))
 for i in range(25):
     if i == 0:
-        plt.plot(conf.classification_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.classification_conformalizer.optimizer2.all_risks_raw[i*n:(i+1)*n], c="b", label="Raw Loss")
-        plt.plot(conf.classification_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.classification_conformalizer.optimizer2.all_risks_mon[i*n:(i+1)*n], c="r", label="Monotonized Loss")
+        plt.plot(
+            conf.classification_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.classification_conformalizer.optimizer2.all_risks_raw[
+                i * n : (i + 1) * n
+            ],
+            c="b",
+            label="Raw Loss",
+        )
+        plt.plot(
+            conf.classification_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.classification_conformalizer.optimizer2.all_risks_mon[
+                i * n : (i + 1) * n
+            ],
+            c="r",
+            label="Monotonized Loss",
+        )
     else:
-        plt.plot(conf.classification_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.classification_conformalizer.optimizer2.all_risks_raw[i*n:(i+1)*n], c="b")
-    plt.plot(conf.classification_conformalizer.optimizer2.all_lbds_cnf[i*n:(i+1)*n], conf.classification_conformalizer.optimizer2.all_risks_mon[i*n:(i+1)*n], c="r")
-    #plt.show()
+        plt.plot(
+            conf.classification_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.classification_conformalizer.optimizer2.all_risks_raw[
+                i * n : (i + 1) * n
+            ],
+            c="b",
+        )
+        plt.plot(
+            conf.classification_conformalizer.optimizer2.all_lbds_cnf[
+                i * n : (i + 1) * n
+            ],
+            conf.classification_conformalizer.optimizer2.all_risks_mon[
+                i * n : (i + 1) * n
+            ],
+            c="r",
+        )
+    # plt.show()
 # Put X and Y legend
 plt.xlabel("Lambda Confidence")
 plt.ylabel("Risk")
 plt.title("Raw and Monotonized Losses for Classification")
 plt.legend()
-plt.savefig(f"monotonicity_all_class_{matching_function}_{localization_method}_{localization_prediction_set}_{confidence_method}_{classification_prediction_set}.png")
+plt.savefig(
+    f"monotonicity_all_class_{matching_function}_{localization_method}_{localization_prediction_set}_{confidence_method}_{classification_prediction_set}.png"
+)

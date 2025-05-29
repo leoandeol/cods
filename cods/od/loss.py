@@ -113,6 +113,62 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         # )
 
 
+class BoxCountTwosidedConfidenceLoss(ODLoss):
+    def __init__(
+        self,
+        upper_bound: int = 1,
+        threshold: int = 3,
+        device: str = "cpu",
+        **kwargs,
+    ):
+        """Initialize the Confidence Loss.
+
+        Parameters
+        ----------
+        - upper_bound (int): The upper bound of the loss.
+
+        Returns
+        -------
+        - None
+
+        """
+        super().__init__(upper_bound=upper_bound, device=device)
+        self.threshold = threshold
+
+    def __call__(
+        self,
+        true_boxes: torch.Tensor | List[torch.Tensor],
+        true_cls: torch.Tensor | List[torch.Tensor],
+        conf_boxes: torch.Tensor | List[torch.Tensor],
+        conf_cls: List[torch.Tensor],
+    ) -> torch.Tensor:
+        """Call the Confidence Loss.
+
+        Parameters
+        ----------
+        - predictions (ODPredictions): The predictions.
+        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+
+        Returns
+        -------
+        - torch.Tensor: The loss value.
+
+        """
+        if len(true_boxes) == 0:
+            loss = torch.zeros(1).to(self.device)
+        else:
+            # loss = abs(len(true_boxes) - len(conf_boxes)) / (
+            #    max(len(true_boxes), len(conf_boxes)) * 20
+            # )
+            loss = (
+                torch.ones(1).to(self.device)
+                if abs(len(true_boxes) - len(conf_boxes)) > self.threshold
+                else torch.zeros(1).to(self.device)
+            )
+            loss = torch.tensor(loss).float().to(self.device).expand(1)
+        return loss
+
+
 class BoxCountRecallConfidenceLoss(ODLoss):
     def __init__(
         self,
@@ -224,7 +280,7 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
-        distance_threshold: float = 200,
+        distance_threshold: float = 0.5,
         device: str = "cpu",
         **kwargs,
     ):
@@ -243,12 +299,14 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
         self.distance_threshold = distance_threshold
         # self.other_losses = other_losses if other_losses is not None else []
 
+        # TODO redefine ConfidenceLoss abstract class, we need preds here not conformalized preds
+
     def __call__(
         self,
         true_boxes: torch.Tensor | List[torch.Tensor],
         true_cls: torch.Tensor | List[torch.Tensor],
-        conf_boxes: torch.Tensor | List[torch.Tensor],
-        conf_cls: List[torch.Tensor],
+        pred_boxes: torch.Tensor | List[torch.Tensor],
+        pred_cls: List[torch.Tensor],
     ) -> torch.Tensor:
         """Call the Confidence Loss.
 
@@ -264,14 +322,14 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
         """
         if len(true_boxes) == 0:
             loss = torch.zeros(1).to(self.device)
-        elif len(conf_boxes) == 0:
+        elif len(pred_boxes) == 0:
             loss = torch.ones(1).to(self.device)
         else:
-            l_ass = assymetric_hausdorff_distance(true_boxes, conf_boxes)
-            # l_ass /= torch.max(l_ass)
-            distance_matrix = (
-                l_ass  # class_factor * l_lac + (1 - class_factor) * l_ass
-            )
+            class_factor = 0.22
+            l_ass = assymetric_hausdorff_distance(true_boxes, pred_boxes)
+            l_ass /= torch.max(l_ass)
+            l_lac = f_lac(true_cls, pred_cls)
+            distance_matrix = class_factor * l_lac + (1 - class_factor) * l_ass
             shortest_distances, _ = torch.min(distance_matrix, dim=1)
             # print("Distances", shortest_distances)
             loss = torch.mean(
@@ -638,6 +696,145 @@ class PixelWiseRecallLoss(ODLoss):
         areas = self.get_covered_areas(conf_boxes, true_boxes)
         loss = torch.ones(1).to(self.device) - torch.mean(areas)
         return loss
+
+
+#### TESTS:
+class BoxWisePrecisionLoss(ODLoss):
+    """Box-wise PRECISION loss: 1 - mean(areas of the union of the boxes),
+
+    This loss function calculates the recall loss based on the areas of the union of the predicted and true bounding boxes.
+    The recall loss is defined as 1 minus the mean of the areas of the union of the boxes.
+    """
+
+    def __init__(
+        self,
+        union_of_boxes: bool = True,
+        device: str = "cpu",
+    ):
+        """Initialize the Box-wise Recall Loss.
+
+        Parameters
+        ----------
+        - union_of_boxes (bool): Whether to use the union of boxes.
+
+        Returns
+        -------
+        - None
+
+        """
+        super().__init__(upper_bound=1, device=device)
+        self.union_of_boxes = union_of_boxes
+        self.get_covered_areas = (
+            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
+        )
+        if not union_of_boxes:
+            raise NotImplementedError(
+                "Box-wise Recall Loss only supports union of boxes.",
+            )
+
+    def __call__(
+        self,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
+    ) -> torch.Tensor:
+        """Call the Box-wise Recall Loss.
+
+        Parameters
+        ----------
+        - predictions (ODPredictions): The predictions.
+        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+
+        Returns
+        -------
+        - float: The loss value.
+
+        """
+        if len(true_boxes) == 0:
+            return torch.zeros(1).to(self.device)
+        if len(conf_boxes) == 0:
+            return torch.ones(1).to(self.device)
+        # try:
+        losses = []
+        for conf_box in conf_boxes:
+            area = self.get_covered_areas(conf_box[None, :], true_boxes).max()
+            loss = (area < 0.999).float()
+            losses.append(loss)
+        miscoverage = torch.mean(torch.stack(losses)).expand(1)
+        # TODO: here, there's always as many preds as gt, because this is done after matching
+        # TODO: should the matching be done... inside the loss ?
+        return miscoverage
+
+
+from cods.od.utils import vectorized_generalized_iou
+
+
+class BoxWiseIoULoss(ODLoss):
+    """Box-wise PRECISION loss: 1 - mean(areas of the union of the boxes),
+
+    This loss function calculates the recall loss based on the areas of the union of the predicted and true bounding boxes.
+    The recall loss is defined as 1 minus the mean of the areas of the union of the boxes.
+    """
+
+    def __init__(
+        self,
+        union_of_boxes: bool = True,
+        device: str = "cpu",
+    ):
+        """Initialize the Box-wise Recall Loss.
+
+        Parameters
+        ----------
+        - union_of_boxes (bool): Whether to use the union of boxes.
+
+        Returns
+        -------
+        - None
+
+        """
+        super().__init__(upper_bound=1, device=device)
+        self.union_of_boxes = union_of_boxes
+        self.get_covered_areas = (
+            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
+        )
+        if not union_of_boxes:
+            raise NotImplementedError(
+                "Box-wise Recall Loss only supports union of boxes.",
+            )
+
+    def __call__(
+        self,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
+    ) -> torch.Tensor:
+        """Call the Box-wise Recall Loss.
+
+        Parameters
+        ----------
+        - predictions (ODPredictions): The predictions.
+        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+
+        Returns
+        -------
+        - float: The loss value.
+
+        """
+        if len(true_boxes) == 0:
+            return torch.zeros(1).to(self.device)
+        if len(conf_boxes) == 0:
+            return torch.ones(1).to(self.device)
+        # try:
+        ious = vectorized_generalized_iou(true_boxes, conf_boxes)
+        miscoverage = (ious < 0.9).float().mean().expand(1)
+        # except Exception as e:
+        #     # print shapes
+        #     print(conf_boxes.shape, true_boxes.shape)
+        #     print(f"Error in get_covered_areas: {e}")
+        #     raise e
+        return miscoverage
 
 
 class NumberPredictionsGapLoss(ODLoss):

@@ -388,6 +388,7 @@ class ODEvaluator:
         confidences = predictions.confidences
 
         pred_boxes = predictions.pred_boxes
+        pred_cls = predictions.pred_cls
 
         conf_boxes = conformalized_predictions.conf_boxes
         conf_cls = conformalized_predictions.conf_cls
@@ -422,12 +423,14 @@ class ODEvaluator:
             conf_boxes_i = conf_boxes[i]
             confidences_i = confidences[i]
             true_cls_i = true_cls[i]
+            pred_cls_i = pred_cls[i]
             conf_cls_i = conf_cls[i]
 
             matching_i = predictions.matching[i]
 
             conf_boxes_i = conf_boxes_i[confidences_i >= confidence_threshold]
             pred_boxes_i = pred_boxes_i[confidences_i >= confidence_threshold]
+            pred_cls_i = pred_cls_i[confidences_i >= confidence_threshold]
             conf_cls_i = [
                 x
                 for x, c in zip(conf_cls_i, confidences_i)
@@ -436,9 +439,12 @@ class ODEvaluator:
 
             if self.confidence_loss is not None:
                 confidence_loss_i = self.confidence_loss(
-                    true_boxes_i, true_cls_i, conf_boxes_i, conf_cls_i
+                    true_boxes_i,
+                    true_cls_i,
+                    pred_boxes_i,
+                    pred_cls_i,  # conf_boxes_i, conf_cls_i
                 )
-                confidence_set_size_i = conf_boxes_i.shape[0]
+                confidence_set_size_i = pred_boxes_i.shape[0]
 
                 confidence_losses.append(confidence_loss_i)
                 confidence_set_sizes.append(confidence_set_size_i)
