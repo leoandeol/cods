@@ -91,10 +91,12 @@ def contained(tb: torch.Tensor, pb: torch.Tensor) -> torch.Tensor:
     """Compute the intersection over union (IoU) between two bounding boxes.
 
     Args:
+    ----
         tb (torch.Tensor): Ground truth bounding boxes (N, 4).
         pb (torch.Tensor): Predicted bounding boxes (N, 4).
 
     Returns:
+    -------
         torch.Tensor: IoU values (N,).
 
     """

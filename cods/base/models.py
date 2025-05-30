@@ -41,6 +41,7 @@ class Model:
         """Save predictions to file
 
         Args:
+        ----
             predictions (Predictions): predictions object
             path (str): path to file
 
@@ -66,9 +67,11 @@ class Model:
         """Load predictions if they exist, else return None
 
         Args:
+        ----
             path (str): path to predictions file
 
         Returns:
+        -------
             Predictions: predictions object
 
         """

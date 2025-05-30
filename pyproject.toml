@@ -41,6 +41,7 @@ ignore = []
 #TODO too much currently disabled
 fixable = ["ALL"]
 select = ["ALL"]
+# select = ["F", "E", "B", "I", "RUF", "TCH"]
 # Disable fix for unused imports (`F401`).
 unfixable = [] # ["F401"]
 
@@ -50,3 +51,8 @@ indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.8"
+strict = true  # Optional: enables full strict mode
+ignore_missing_imports = true

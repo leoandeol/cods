@@ -8,12 +8,15 @@ class ObjectnessNCScore(NCScore):
     """ObjectnessNCScore is a class that calculates the score for objectness prediction.
 
     Args:
+    ----
         kwargs: Additional keyword arguments.
 
     Attributes:
+    ----------
         None
 
     Methods:
+    -------
         __call__(self, n_gt, confidence): Calculates the score based on the number of ground truth objects and confidence values.
 
     """
@@ -25,10 +28,12 @@ class ObjectnessNCScore(NCScore):
         """Calculates the score based on the number of ground truth objects and confidence values.
 
         Args:
+        ----
             n_gt (int): Number of ground truth objects.
             confidence (torch.Tensor): Confidence values.
 
         Returns:
+        -------
             torch.Tensor: The calculated score.
 
         """
@@ -40,12 +45,15 @@ class ODNCScore(NCScore):
     """ODNCScore is an abstract class for calculating the score in object detection tasks.
 
     Args:
+    ----
         kwargs: Additional keyword arguments.
 
     Attributes:
+    ----------
         None
 
     Methods:
+    -------
         __call__(self, pred_boxes, true_box, **kwargs): Calculates the score based on predicted boxes and true box.
         get_set(self, pred_boxes, quantile): Returns the set of boxes based on predicted boxes and quantile.
         apply_margins(self, pred_boxes): Applies margins to the predicted boxes.
@@ -64,10 +72,12 @@ class ODNCScore(NCScore):
         """Calculates the score based on predicted boxes and true box.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             true_box (torch.Tensor): True box.
 
         Returns:
+        -------
             torch.Tensor: The calculated score.
 
         """
@@ -81,10 +91,12 @@ class ODNCScore(NCScore):
         """Returns the set of boxes based on predicted boxes and quantile.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             quantile (float): Quantile value.
 
         Returns:
+        -------
             torch.Tensor: The set of boxes.
 
         """
@@ -94,9 +106,11 @@ class ODNCScore(NCScore):
         """Applies margins to the predicted boxes.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
 
         Returns:
+        -------
             torch.Tensor: The predicted boxes with applied margins.
 
         """
@@ -107,12 +121,15 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
     """MinAdditiveSignedAssymetricHausdorffNCScore is a class that calculates the score using the minimum additive signed asymmetric Hausdorff distance.
 
     Args:
+    ----
         image_shape (torch.Tensor, optional): The shape of the image. Defaults to None.
 
     Attributes:
+    ----------
         image_shape (torch.Tensor): The shape of the image.
 
     Methods:
+    -------
         __call__(self, pred_boxes, true_box): Calculates the score based on predicted boxes and true box.
         apply_margins(self, pred_boxes, quantile): Applies margins to the predicted boxes based on quantile.
 
@@ -130,10 +147,12 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         """Calculates the score based on predicted boxes and true box.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             true_box (torch.Tensor): True box.
 
         Returns:
+        -------
             torch.Tensor: The calculated score.
 
         """
@@ -172,10 +191,12 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         """Applies margins to the predicted boxes based on quantile.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             quantile (float): Quantile value.
 
         Returns:
+        -------
             torch.Tensor: The predicted boxes with applied margins.
 
         """
@@ -195,12 +216,15 @@ class UnionAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
     """UnionAdditiveSignedAssymetricHausdorffNCScore is a class that calculates the score using the union additive signed asymmetric Hausdorff distance.
 
     Args:
+    ----
         None
 
     Attributes:
+    ----------
         None
 
     Methods:
+    -------
         apply_margins(self, pred_boxes, quantile): Applies margins to the predicted boxes based on quantile.
 
     """
@@ -212,10 +236,12 @@ class UnionAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         """Calculates the score based on predicted boxes and true box.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             true_box (torch.Tensor): True box.
 
         Raises:
+        ------
             NotImplementedError: This method is not implemented yet. Use Min instead.
 
         """
@@ -229,10 +255,12 @@ class UnionAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         """Applies margins to the predicted boxes based on quantile.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             quantile (float): Quantile value.
 
         Returns:
+        -------
             torch.Tensor: The predicted boxes with applied margins.
 
         """
@@ -252,12 +280,15 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
     """MinMultiplicativeSignedAssymetricHausdorffNCScore is a class that calculates the score using the minimum multiplicative signed asymmetric Hausdorff distance.
 
     Args:
+    ----
         None
 
     Attributes:
+    ----------
         None
 
     Methods:
+    -------
         __call__(self, pred_boxes, true_box): Calculates the score based on predicted boxes and true box.
         apply_margins(self, pred_boxes, quantile): Applies margins to the predicted boxes based on quantile.
 
@@ -274,10 +305,12 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         """Calculates the score based on predicted boxes and true box.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             true_box (torch.Tensor): True box.
 
         Returns:
+        -------
             torch.Tensor: The calculated score.
 
         """
@@ -307,10 +340,12 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         """Applies margins to the predicted boxes based on quantile.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             quantile (float): Quantile value.
 
         Returns:
+        -------
             torch.Tensor: The predicted boxes with applied margins.
 
         """
@@ -332,12 +367,15 @@ class UnionMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
     """UnionMultiplicativeSignedAssymetricHausdorffNCScore is a class that calculates the score using the union multiplicative signed asymmetric Hausdorff distance.
 
     Args:
+    ----
         None
 
     Attributes:
+    ----------
         None
 
     Methods:
+    -------
         apply_margins(self, pred_boxes, quantile): Applies margins to the predicted boxes based on quantile.
 
     """
@@ -349,10 +387,12 @@ class UnionMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         """Calculates the score based on predicted boxes and true box.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             true_box (torch.Tensor): True box.
 
         Raises:
+        ------
             NotImplementedError: This method is not implemented yet. Use Min instead.
 
         """
@@ -366,10 +406,12 @@ class UnionMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         """Applies margins to the predicted boxes based on quantile.
 
         Args:
+        ----
             pred_boxes (torch.Tensor): Predicted boxes.
             quantile (float): Quantile value.
 
         Returns:
+        -------
             torch.Tensor: The predicted boxes with applied margins.
 
         """

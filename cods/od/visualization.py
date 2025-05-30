@@ -18,6 +18,7 @@ def plot_preds(
     """Plot the predictions of an object detection model.
 
     Args:
+    ----
         preds (object): Object containing the predictions.
         idx (int): Index of the image to plot.
         conf_boxes (list): List of confidence boxes.
@@ -64,6 +65,7 @@ def plot_preds(
         """Draw a rectangle on the plot.
 
         Args:
+        ----
             ax (object): Axes object of the plot.
             box (list): List of coordinates [x1, y1, x2, y2] of the rectangle.
             color (str): Color of the rectangle.
@@ -182,6 +184,7 @@ def create_pdf_with_plots(
     """Create a PDF with plots for each image in the predictions.
 
     Args:
+    ----
         predictions (ODPredictions): Object containing the predictions.
         conformalized_predictions (ODConformalizedPredictions, optional): Object containing conformalized predictions. Defaults to None.
         confidence_threshold (float, optional): Confidence threshold for filtering predictions. Defaults to None.
@@ -247,7 +250,7 @@ def create_pdf_with_plots(
                             proba = proba.cpu().numpy()
                         if idx_to_label is not None:
                             text = ", ".join(
-                                [f"{idx_to_label[cl]}" for cl in proba]
+                                [f"{idx_to_label[cl]}" for cl in proba],
                             )
                         else:
                             text = ", ".join([f"{cl}" for cl in proba])

@@ -468,7 +468,9 @@ class LocalizationConformalizer(Conformalizer):
         if new_opt:
 
             def build_predictions(
-                matched_pred_boxes_i, matched_pred_cls_i, lbd
+                matched_pred_boxes_i,
+                matched_pred_cls_i,
+                lbd,
             ):
                 conf_boxes = apply_margins(
                     [matched_pred_boxes_i],
@@ -883,7 +885,9 @@ class ConfidenceConformalizer(Conformalizer):
         return lambda_minus, lambda_plus
 
     def conformalize(
-        self, predictions: ODPredictions, verbose: bool = True
+        self,
+        predictions: ODPredictions,
+        verbose: bool = True,
     ) -> float:
         """Conformalize the object detection predictions.
 
@@ -1001,7 +1005,9 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         # TODO(leo): tmp
         preprocess = "softmax"
         super().__init__(
-            method=prediction_set, preprocess=preprocess, device=device
+            method=prediction_set,
+            preprocess=preprocess,
+            device=device,
         )
         if loss not in self.LOSSES:
             raise ValueError(
@@ -1034,7 +1040,8 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         self.backend = backend
         self._backend_loss = ODBinaryClassificationLoss()
         self.loss = ClassificationLossWrapper(
-            self._backend_loss, device=self.device
+            self._backend_loss,
+            device=self.device,
         )
         self.lambda_classification = None
 
@@ -1174,13 +1181,15 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         if new_opt:
 
             def build_predictions(
-                matched_pred_boxes_i, matched_pred_cls_i, lbd
+                matched_pred_boxes_i,
+                matched_pred_cls_i,
+                lbd,
             ):
                 conf_boxes = matched_pred_boxes_i
                 n_classes = len(predictions.pred_cls[0][0].squeeze())
                 if self._score_function is None:
                     self._score_function = self.ACCEPTED_METHODS[self.method](
-                        n_classes
+                        n_classes,
                     )
 
                 # TODO(leo): filter for confidence here!
@@ -1242,7 +1251,9 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         return lambda_classification
 
     def conformalize(
-        self, predictions: ODPredictions, verbose: bool = True
+        self,
+        predictions: ODPredictions,
+        verbose: bool = True,
     ) -> List:
         # TODO: add od parameters to function signature
         # NO MATCHING HERE
@@ -1741,7 +1752,8 @@ class ODConformalizer(Conformalizer):
             # Unique to Confidence due to dependence
             logger.info("Setting Confidence Threshold of Predictions")
             self.confidence_conformalizer.conformalize(
-                predictions, verbose=verbose
+                predictions,
+                verbose=verbose,
             )
             self.confidence_threshold = (
                 1 - lambda_confidence_plus
@@ -1858,7 +1870,7 @@ class ODConformalizer(Conformalizer):
                 #     "The parameters have been computed on another set of predictions.",
                 # )
                 logger.info(
-                    "The parameters have been computed on another set of predictions."
+                    "The parameters have been computed on another set of predictions.",
                 )
             parameters_unique_id = parameters.unique_id
         else:
@@ -1911,7 +1923,7 @@ class ODConformalizer(Conformalizer):
         if parameters is None:
             # TODO: rethink this
             raise ValueError(
-                "Parameters must be provided for conformalization"
+                "Parameters must be provided for conformalization",
             )
 
         results = ODConformalizedPredictions(
@@ -2146,7 +2158,8 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                         else x[None, y.argmax()]
                     )
                     for x, y in zip(
-                        predictions.pred_boxes, predictions.confidence
+                        predictions.pred_boxes,
+                        predictions.confidence,
                     )
                 ],
             )
@@ -2294,7 +2307,8 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         coverage_obj = []
         set_size_obj = []
         for true_boxes, confidence in zip(
-            predictions.true_boxes, predictions.confidence
+            predictions.true_boxes,
+            predictions.confidence,
         ):
             cov = (
                 1

@@ -30,6 +30,7 @@ def compute_global_coverage(
     """Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE #TODO
 
     Args:
+    ----
         predictions (ODPredictions): Object detection predictions.
         conformalized_predictiond (ODConformalizedPredictions): Conformalized object detection predictions.
         confidence (bool, optional): Whether to consider confidence coverage. Defaults to True.
@@ -38,6 +39,7 @@ def compute_global_coverage(
         loss (function, optional): Loss function. Defaults to None.
 
     Returns:
+    -------
         torch.Tensor: Global coverage tensor.
 
     """
@@ -163,10 +165,12 @@ def getStretch(
     """Get the stretch of object detection predictions.
 
     Args:
+    ----
         od_predictions (ODPredictions): Object detection predictions.
         conf_boxes (list): List of confidence boxes.
 
     Returns:
+    -------
         torch.Tensor: Stretch tensor.
 
     """
@@ -188,6 +192,7 @@ def get_recall_precision(
     """Get the recall and precision for object detection predictions.
 
     Args:
+    ----
         od_predictions (ODPredictions): Object detection predictions.
         pred_boxes (list): List of predicted boxes. Defaults to None.
         IOU_THRESHOLD (float, optional): IoU threshold. Defaults to 0.5.
@@ -196,6 +201,7 @@ def get_recall_precision(
         replace_iou (function, optional): IoU replacement function. Defaults to None.
 
     Returns:
+    -------
         tuple: Tuple containing the recall, precision, and scores.
 
     """
@@ -257,12 +263,14 @@ def getAveragePrecision(
     """Get the average precision for object detection predictions.
 
     Args:
+    ----
         od_predictions (ODPredictions): Object detection predictions.
         pred_boxes (list): List of predicted boxes.
         verbose (bool, optional): Whether to display progress. Defaults to True.
         iou_threshold (float, optional): IoU threshold. Defaults to 0.3.
 
     Returns:
+    -------
         tuple: Tuple containing the average precision, total recalls, total precisions, and objectness thresholds.
 
     """
@@ -298,6 +306,7 @@ def plot_recall_precision(
     """Plot the recall and precision given objectness threshold or IoU threshold.
 
     Args:
+    ----
         total_recalls (list): List of total recalls.
         total_precisions (list): List of total precisions.
         threshes_objectness (np.ndarray): Array of objectness thresholds.

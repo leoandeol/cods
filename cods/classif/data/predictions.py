@@ -35,6 +35,7 @@ class ClassificationPredictions(Predictions):
         """Split predictions into multiple splits
 
         Args:
+        ----
             splits_names (list): list of names for each split
             splits_ratios (list): list of ratios for each split
 

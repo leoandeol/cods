@@ -281,14 +281,15 @@ class VOCDataset(VOCDetection):
         """Args:
             index (int): Index
 
-        Returns:
+        Returns
+        -------
             tuple: (image, target) where target is a dictionary of the XML tree.
 
         """
         img_path = self.images[index]
         img = Image.open(img_path).convert("RGB")
         target = self.parse_voc_xml(
-            ET_parse(self.annotations[index]).getroot()
+            ET_parse(self.annotations[index]).getroot(),
         )
 
         if self.transforms is not None:

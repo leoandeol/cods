@@ -22,6 +22,7 @@ class ODModel(Model):
         """Initializes an instance of the ODModel class.
 
         Args:
+        ----
             model_name (str): The name of the model.
             save_dir_path (str): The path to save the model.
             pretrained (bool, optional): Whether to use pretrained weights. Defaults to True.
@@ -54,6 +55,7 @@ class ODModel(Model):
         """Builds predictions for the given dataset.
 
         Args:
+        ----
             dataset: The dataset to build predictions for.
             dataset_name (str): The name of the dataset.
             split_name (str): The name of the split.
@@ -64,6 +66,7 @@ class ODModel(Model):
             #TODO(leo): not up to date
 
         Returns:
+        -------
             ODPredictions: Predictions object to use for prediction set construction.
 
         """
@@ -231,6 +234,7 @@ class ODModel(Model):
         """Filters the predicted bounding boxes based on the confidence scores and IoU threshold.
 
         Args:
+        ----
             pred_boxes: The predicted bounding boxes.
             pred_cls: The predicted class labels.
             confidences: The confidence scores.
@@ -238,6 +242,7 @@ class ODModel(Model):
             method (str): the method use to delete redundant boxes, currently supported NMS and BayesOD
 
         Returns:
+        -------
             Tuple: The filtered predicted bounding boxes, predicted class labels, confidence scores and uncertainty if existing.
 
         """
@@ -284,9 +289,11 @@ class ODModel(Model):
         """Predicts the output given a batch of input tensors.
 
         Args:
+        ----
             batch (list): The input batch.
 
         Returns:
+        -------
             dict: The predicted output as a dictionary with the following keys:
                 - "image_paths" (list): The paths of the input images
                 - "true_boxes" (list): The true bounding boxes of the objects in the images

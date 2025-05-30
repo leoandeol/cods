@@ -26,21 +26,29 @@ COCO_PATH = "/datasets/shared_datasets/coco/"
 data = MSCOCODataset(root=COCO_PATH, split="val")
 len(data)
 
+
 def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
     # Set up the PDF canvas
     c = canvas.Canvas(output_filename, pagesize=letter)
     width, height = letter
 
     # Register a default font
-    pdfmetrics.registerFont(TTFont("Monospace", "monospace.medium.ttf"))#'arial.ttf'))
+    pdfmetrics.registerFont(
+        TTFont("Monospace", "monospace.medium.ttf"),
+    )  #'arial.ttf'))
 
     # Calculate image size and positions
     image_width = width / 2 - 0.5 * inch
-    image_height = (height / 2 - 0.75 * inch) * 0.9  # Reduce image height to make room for title
+    image_height = (
+        height / 2 - 0.75 * inch
+    ) * 0.9  # Reduce image height to make room for title
     title_height = (height / 2 - 0.75 * inch) * 0.1  # Height for the title
     positions = [
         (0.25 * inch, height - 0.25 * inch - image_height - title_height),
-        (width / 2 + 0.25 * inch, height - 0.25 * inch - image_height - title_height),
+        (
+            width / 2 + 0.25 * inch,
+            height - 0.25 * inch - image_height - title_height,
+        ),
         (0.25 * inch, 0.25 * inch + title_height),
         (width / 2 + 0.25 * inch, 0.25 * inch + title_height),
     ]
@@ -62,18 +70,32 @@ def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
             img_reader = ImageReader(io.BytesIO(img_byte_arr))
 
             # Draw image
-            c.drawImage(img_reader, pos[0], pos[1], width=image_width, height=image_height)
+            c.drawImage(
+                img_reader,
+                pos[0],
+                pos[1],
+                width=image_width,
+                height=image_height,
+            )
 
             # Draw title (image path)
             c.setFont("Monospace", 8)
-            title = os.path.basename(path)  # Use only the filename, not the full path
+            title = os.path.basename(
+                path,
+            )  # Use only the filename, not the full path
             title_width = c.stringWidth(title, "Monospace", 8)
             if title_width > image_width:
                 # If title is too long, truncate it
                 while title_width > image_width and len(title) > 3:
-                    title = title[:-4] + "..."  # Remove 3 characters and add ellipsis
+                    title = (
+                        title[:-4] + "..."
+                    )  # Remove 3 characters and add ellipsis
                     title_width = c.stringWidth(title, "Monospace", 8)
-            c.drawString(pos[0] + (image_width - title_width) / 2, pos[1] - title_height / 2, title)
+            c.drawString(
+                pos[0] + (image_width - title_width) / 2,
+                pos[1] - title_height / 2,
+                title,
+            )
 
             image_count += 1
 
@@ -84,10 +106,16 @@ def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
     # Save the PDF
     c.save()
 
-    print(f"PDF created with {image_count} images on {math.ceil(image_count / 4)} pages.")
+    print(
+        f"PDF created with {image_count} images on {math.ceil(image_count / 4)} pages.",
+    )
 
 
 # Use the function
-dataloader = torch.utils.data.DataLoader(data, batch_size=64, shuffle=False,
-    collate_fn=data._collate_fn)
+dataloader = torch.utils.data.DataLoader(
+    data,
+    batch_size=64,
+    shuffle=False,
+    collate_fn=data._collate_fn,
+)
 create_dataset_pdf(dataloader)

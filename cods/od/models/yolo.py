@@ -227,9 +227,11 @@ class YOLOModel(ODModel):
         """Predicts the output given a batch of input tensors.
 
         Args:
+        ----
             batch (list): The input batch
 
         Returns:
+        -------
             dict: The predicted output as a dictionary with the following keys:
                 - "image_paths" (list): The paths of the input images
                 - "true_boxes" (list): The true bounding boxes of the objects in the images

@@ -15,6 +15,7 @@ class Predictions:
         """Initializes a new instance of the Predictions class.
 
         Args:
+        ----
             unique_id (int): The unique ID of the predictions.
             dataset_name (str): The name of the dataset.
             split_name (str): The name of the split.

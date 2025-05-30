@@ -24,6 +24,7 @@ def bayesod(
     """_summary_
 
     Args:
+    ----
         pred_boxes (torch.Tensor): _description_
         confidences (torch.Tensor): _description_
         pred_cls (torch.Tensor): _description_

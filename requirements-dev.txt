@@ -6,3 +6,5 @@ ipykernel
 wandb
 lazydocs
 line_profiler
+pre-commit
+pytest
