@@ -195,7 +195,7 @@ class MSCOCODataset(Dataset):
         new_idx = self.image_ids[idx]
         return self.reindexed_annotations[new_idx]
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> Tuple[Any, Any, Any, Any]:
         img, img_path = self._load_image_with_path(idx)
         target = self._load_target(idx)
 
@@ -277,7 +277,7 @@ class VOCDataset(VOCDetection):
         "tvmonitor",
     ]
 
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+    def __getitem__(self, index: int) -> Tuple[Any, Any, Any, Any]:
         """Args:
             index (int): Index
 

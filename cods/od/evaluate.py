@@ -139,7 +139,7 @@ class Benchmark:
             raise NotImplementedError(
                 f"Dataset {experiment['dataset']} not implemented yet.",
             )
-        dataset = MSCOCODataset(
+        dataset = self.DATASETS[experiment["dataset"]](
             root="/datasets/shared_datasets/coco/",
             split="val",
         )
