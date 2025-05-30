@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 from logging import getLogger
-from typing import List
 
 import torch
 
@@ -55,7 +56,6 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
     def __init__(
         self,
         upper_bound: int = 1,
-        # other_losses: Optional[List[Loss]] = None,
         device: str = "cpu",
         **kwargs,
     ):
@@ -71,7 +71,6 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
 
         """
         super().__init__(upper_bound=upper_bound, device=device)
-        # self.other_losses = other_losses if other_losses is not None else []
 
     def __call__(
         self,
@@ -92,25 +91,11 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
-        # print(len(conf_boxes), len(true_boxes))
         return (
             torch.zeros(1).to(self.device)
             if len(conf_boxes) >= len(true_boxes)
             else torch.ones(1).to(self.device)
         )
-        # return max(
-        #     [
-        #         (
-        #             torch.zeros(1).to(self.device)
-        #             if len(conf_boxes) >= len(true_boxes)
-        #             else torch.ones(1).to(self.device)
-        #         ),
-        #     ]
-        #     + [
-        #         loss(true_boxes, true_cls, matched_conf_boxes, matched_conf_cls)
-        #         for loss in self.other_losses
-        #     ],
-        # )
 
 
 class BoxCountTwosidedConfidenceLoss(ODLoss):
@@ -157,9 +142,6 @@ class BoxCountTwosidedConfidenceLoss(ODLoss):
         if len(true_boxes) == 0:
             loss = torch.zeros(1).to(self.device)
         else:
-            # loss = abs(len(true_boxes) - len(conf_boxes)) / (
-            #    max(len(true_boxes), len(conf_boxes)) * 20
-            # )
             loss = (
                 torch.ones(1).to(self.device)
                 if abs(len(true_boxes) - len(conf_boxes)) > self.threshold

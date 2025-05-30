@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import List, Optional, Tuple, Union
 
@@ -18,7 +20,6 @@ from cods.od.data import (
     ODResults,
 )
 from cods.od.loss import (
-    # ClassBoxWiseRecallLoss,
     BoxCountRecallConfidenceLoss,
     BoxCountThresholdConfidenceLoss,
     BoxCountTwosidedConfidenceLoss,
@@ -27,7 +28,6 @@ from cods.od.loss import (
     BoxWiseRecallLoss,
     ClassificationLossWrapper,
     ODBinaryClassificationLoss,
-    # MaximumLoss,
     ODLoss,
     PixelWiseRecallLoss,
     ThresholdedBoxDistanceConfidenceLoss,
@@ -107,15 +107,14 @@ class LocalizationConformalizer(Conformalizer):
 
     def __init__(
         self,
-        loss: Union[str, ODLoss],
+        loss: str | ODLoss,
         prediction_set: str,
         guarantee_level: str,
-        matching_function,
+        matching_function: str,
         number_of_margins: int = 1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
-        optimizer: Optional[Union[str, Optimizer]] = None,
+        optimizer: Optional[str | Optimizer] = None,
         backend: str = "auto",
-        device="cpu",
-        # TODO(leo) remove if nonessential: **kwargs,
+        device: str = "cpu",
     ):
         """Initialize the CP class.
 
@@ -170,11 +169,6 @@ class LocalizationConformalizer(Conformalizer):
                 "Not implemented currently for localization",
             )
 
-        # if self.guarantee_level == "object":
-        #     self.risk_function = compute_risk_object_level
-        # elif self.guarantee_level == "image":
-        #     self.risk_function = compute_risk_image_level
-
         if number_of_margins not in [1, 2, 4]:
             raise ValueError("number_of_margins must be 1, 2 or 4")
         if number_of_margins > 1:
@@ -208,215 +202,6 @@ class LocalizationConformalizer(Conformalizer):
             )
 
         self.lambda_localization = None
-
-    # def calibrate(
-    #     self,
-    #     predictions: ODPredictions,
-    #     alpha: float = 0.1,
-    #     confidence_threshold: Union[float, None] = None,
-    #     verbose: bool = True,
-    # ) -> list:
-    #     """
-    #     Calibrates the conformalizer using the given predictions.
-
-    #     Args:
-    #         predictions (ODPredictions): The object detection predictions.
-    #         alpha (float): The significance level for the calibration.
-    #         confidence_threshold (float, optional): The confidence threshold for the predictions. If not provided, it must be set in the predictions or in the conformalizer.
-    #         verbose (bool): Whether to display progress information.
-
-    #     Returns:
-    #         list: The computed quantiles for each margin.
-    #     """
-    #     if self._score_function is None:
-    #         self._score_function = self.accepted_methods[self.method]()
-    #     if predictions.confidence_threshold is None:
-    #         if confidence_threshold is None:
-    #             raise ValueError(
-    #                 "confidence_threshold must be set in the predictions or in the conformalizer"
-    #             )
-    #         else:
-    #             predictions.confidence_threshold = confidence_threshold
-    #     self.confidence_threshold = predictions.confidence_threshold
-
-    #     if self.scores is None:
-    #         # compute all non-conformity scores for each four axes
-    #         scores = []
-    #         for i, true_box_img in tqdm(
-    #             enumerate(predictions.true_boxes), disable=not verbose
-    #         ):
-    #             for j, true_box in enumerate(true_box_img):
-    #                 confidences = predictions.confidences[i]
-    #                 pred_boxes = (
-    #                     predictions.pred_boxes[i][confidences >= predictions.confidence_threshold]
-    #                     if len(
-    #                         predictions.pred_boxes[i][
-    #                             confidences >= predictions.confidence_threshold
-    #                         ]
-    #                     )
-    #                     > 0
-    #                     else predictions.pred_boxes[i][confidences.argmax()]
-    #                 )
-    #                 score = self._score_function(pred_boxes, true_box)
-    #                 scores.append(score)
-    #         scores = torch.stack(scores).squeeze()
-    #         self.scores = scores
-    #         n = len(scores)
-    #     else:
-    #         scores = torch.clone(self.scores.detach())
-    #         n = len(scores)
-
-    #     # 1 margin: take max over all four scores
-    #     if self.margins == 1:
-    #         scores_1, _ = torch.max(scores, dim=-1)
-    #         q = torch.quantile(
-    #             scores_1,
-    #             (1 - alpha) * (n + 1) / n,
-    #             interpolation="higher",
-    #         )
-    #         quantiles = [q] * 4
-    #     # 2 margins: take maximum on x [0, 2] and y [1, 3] axes
-    #     elif self.margins == 2:
-    #         scores_1, _ = torch.max(scores[:, [0, 2]], dim=-1)
-    #         scores_2, _ = torch.max(scores[:, [1, 3]], dim=-1)
-    #         # must apply statistical correction (bonferroni correction)
-    #         q1 = torch.quantile(
-    #             scores_1,
-    #             (1 - alpha / 2) * (n + 1) / n,
-    #             interpolation="higher",
-    #         )
-    #         q2 = torch.quantile(
-    #             scores_2,
-    #             (1 - alpha / 2) * (n + 1) / n,
-    #             interpolation="higher",
-    #         )
-    #         quantiles = [q1, q2, q1, q2]
-    #     # 4 margins: take quantile on each axis
-    #     elif self.margins == 4:
-    #         q1 = torch.quantile(
-    #             scores[:, 0],
-    #             (1 - alpha / 4) * (n + 1) / n,
-    #             interpolation="higher",
-    #         )
-    #         q2 = torch.quantile(
-    #             scores[:, 1],
-    #             (1 - alpha / 4) * (n + 1) / n,
-    #             interpolation="higher",
-    #         )
-    #         q3 = torch.quantile(
-    #             scores[:, 2],
-    #             (1 - alpha / 4) * (n + 1) / n,
-    #             interpolation="higher",
-    #         )
-    #         q4 = torch.quantile(
-    #             scores[:, 3],
-    #             (1 - alpha / 4) * (n + 1) / n,
-    #             interpolation="higher",
-    #         )
-    #         quantiles = [q1, q2, q3, q4]
-
-    #     self.quantiles = quantiles
-    #     return quantiles
-
-    # TODO: clean it, only crc backend, just create a new
-    # optimizer when we have binary losses "QuantileOptimizer"
-
-    # def _get_objective_function(
-    #     self,
-    #     predictions: ODPredictions,
-    #     alpha: float,
-    #     confidence_threshold: float,
-    #     **kwargs,
-    # ) -> Callable[[float], torch.Tensor]:
-    #     """TODO: Add docstring"""
-    #     pred_boxes_filtered = list(
-    #         [
-    #             (
-    #                 x[y >= confidence_threshold]
-    #                 # rip to my little trick
-    #                 # if len(x[y >= confidence_threshold]) > 0
-    #                 # else x[None, y.argmax()]
-    #             )
-    #             for x, y in zip(
-    #                 predictions.pred_boxes, predictions.confidences
-    #             )
-    #         ],
-    #     )
-
-    # def objective_function(lbd: float) -> torch.Tensor:
-    #     """Compute the risk given a lambda value.
-
-    #     Parameters
-    #     ----------
-    #     lbd (float): The lambda value.
-
-    #     Returns
-    #     -------
-    #     corrected_risk (float): The corrected risk.
-
-    #     """
-    #     conf_boxes = apply_margins(
-    #         pred_boxes_filtered,
-    #         [lbd, lbd, lbd, lbd],
-    #         mode=self.prediction_set,
-    #     )
-    #     tmp_parameters = ODParameters(
-    #         global_alpha=alpha,
-    #         confidence_threshold=confidence_threshold,
-    #         predictions_id=predictions.unique_id,
-    #     )
-    #     # TODO: rethink this, why do we regenerate it everytime, make it default somehwo
-    #     n_classes = len(predictions.pred_cls[0][0].squeeze())
-    #     conf_cls = [
-    #         [
-    #             torch.arange(n_classes)[None, ...].to(self.device)
-    #             for pred_cls_i_j in pred_cls_i
-    #         ]
-    #         for pred_cls_i in predictions.pred_cls
-    #     ]
-    #     tmp_conformalized_predictions = ODConformalizedPredictions(
-    #         predictions=predictions,
-    #         parameters=tmp_parameters,
-    #         conf_boxes=conf_boxes,
-    #         conf_cls=conf_cls,
-    #     )
-    #     # TODO(leoandeol): classwise risk ????
-    #     risk = self.risk_function(
-    #         tmp_conformalized_predictions,
-    #         predictions,
-    #         loss=self.loss,
-    #     )
-
-    #     n = len(predictions)
-    #     corrected_risk = self._correct_risk(
-    #         risk=risk,
-    #         n=n,
-    #         B=self.loss.upper_bound,
-    #     )
-    #     return corrected_risk
-
-    # return objective_function
-
-    # def _correct_risk(
-    #     self,
-    #     risk: torch.Tensor,
-    #     n: int,
-    #     B: float,
-    # ) -> torch.Tensor:
-    #     """Correct the risk using the number of predictions and the upper bound.
-
-    #     Parameters
-    #     ----------
-    #     - risk (torch.Tensor): The risk tensor.
-    #     - n (int): The number of predictions.
-    #     - B (float): The upper bound.
-
-    #     Returns
-    #     -------
-    #     - corrected_risk (torch.Tensor): The corrected risk tensor.
-
-    #     """
-    #     return (n / (n + 1)) * torch.mean(risk) + B / (n + 1)
 
     def calibrate(
         self,
@@ -464,59 +249,41 @@ class LocalizationConformalizer(Conformalizer):
                 f"Using overload confidence threshold: {overload_confidence_threshold:.4f}",
             )
             confidence_threshold = overload_confidence_threshold
-        new_opt = True
 
-        if new_opt:
+        def build_predictions(
+            matched_pred_boxes_i,
+            matched_pred_cls_i,
+            lbd,
+        ):
+            conf_boxes = apply_margins(
+                [matched_pred_boxes_i],
+                [lbd, lbd, lbd, lbd],
+                mode=self.prediction_set,
+            )[0]
+            # TODO: rethink this, why do we regenerate it everytime, make it default somehwo
+            n_classes = len(predictions.pred_cls[0][0].squeeze())
+            conf_cls = [
+                torch.arange(n_classes)[None, ...].to(self.device)
+                for pred_cls_i_j in matched_pred_cls_i
+            ]
+            return conf_boxes, conf_cls
 
-            def build_predictions(
-                matched_pred_boxes_i,
-                matched_pred_cls_i,
-                lbd,
-            ):
-                conf_boxes = apply_margins(
-                    [matched_pred_boxes_i],
-                    [lbd, lbd, lbd, lbd],
-                    mode=self.prediction_set,
-                )[0]
-                # TODO: rethink this, why do we regenerate it everytime, make it default somehwo
-                n_classes = len(predictions.pred_cls[0][0].squeeze())
-                conf_cls = [
-                    torch.arange(n_classes)[None, ...].to(self.device)
-                    for pred_cls_i_j in matched_pred_cls_i
-                ]
-                return conf_boxes, conf_cls
-
-            self.optimizer2 = SecondStepMonotonizingOptimizer()
-            lambda_localization = self.optimizer2.optimize(
-                predictions,
-                build_predictions,
-                loss=self.loss,
-                matching_function=self.matching_function,
-                alpha=alpha,
-                device=self.device,
-                B=1,
-                bounds=[0, 1000]
-                if self.prediction_set == "additive"
-                else [0, 100],
-                steps=13,
-                epsilon=1e-9,
-                verbose=verbose,
-            )
-        else:
-            # objective_function = self._get_objective_function(
-            #     predictions=predictions,
-            #     alpha=alpha,
-            #     confidence_threshold=confidence_threshold,
-            # )
-
-            # lambda_localization = self.optimizer.optimize(
-            #     objective_function=objective_function,
-            #     alpha=alpha,
-            #     bounds=bounds,
-            #     steps=steps,
-            #     verbose=verbose,
-            # )
-            pass
+        self.optimizer2 = SecondStepMonotonizingOptimizer()
+        lambda_localization = self.optimizer2.optimize(
+            predictions,
+            build_predictions,
+            loss=self.loss,
+            matching_function=self.matching_function,
+            alpha=alpha,
+            device=self.device,
+            B=1,
+            bounds=[0, 1000]
+            if self.prediction_set == "additive"
+            else [0, 100],
+            steps=13,
+            epsilon=1e-9,
+            verbose=verbose,
+        )
 
         if verbose:
             logger.info(
@@ -1767,8 +1534,6 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             logger.info(
                 f"Confidence Treshold {predictions.confidence_threshold}, Coverage = {torch.mean(coverage_obj)}, Median set size = {torch.mean(set_size_obj)}",
             )
-
-        coverage_loc = []
 
         def compute_set_size(boxes):
             set_sizes = []

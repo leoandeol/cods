@@ -174,13 +174,34 @@ class MSCOCODataset(Dataset):
 
         self.transforms = transforms
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """String representation of the dataset.
+
+        Returns:
+            str: String representation of the dataset.
+
+        """
         return f"MSCOCODataset(\n\t{self.name = },\n\t{self.split = },\n\t{self.root = }\n)"
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Return the number of images in the dataset.
+
+        Returns:
+            int: Number of images in the dataset.
+
+        """
         return len(self.image_ids)
 
-    def _load_image(self, idx: int):
+    def _load_image(self, idx: int) -> Image.Image:
+        """Load an image from the dataset.
+
+        Args:
+            idx (int): Index of the image to load.
+
+        Returns:
+            Image.Image: The loaded image.
+
+        """
         new_idx = self.image_ids[idx]
         image_path = os.path.join(self.images_path, self.image_files[new_idx])
 
