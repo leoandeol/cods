@@ -2,7 +2,7 @@
 
 *A library for distribution-free model-agnostic finite-sample uncertainty quantification applied to computer vision tasks!*
 
-![](./docs/pics/fig_cod_rev.png)
+![](./docs/pics/od_main.jpg)
 
 A library for Conformal Classification, Object Detection and Segmentation, based on PyTorch, with all the latest methods and models!
 
@@ -43,7 +43,7 @@ pip install -e .
 
 Application of CODS to the image of a kitchen in MS-COCO with α=0.1
 
-![](./docs/pics/kitchen.png)
+![](./docs/pics/od_bears.jpg)
 
 ## Tutorials
 

@@ -19,8 +19,7 @@ class ODModel(Model):
         weights: Optional[str] = None,
         device: str = "cpu",
     ):
-        """
-        Initializes an instance of the ODModel class.
+        """Initializes an instance of the ODModel class.
 
         Args:
             model_name (str): The name of the model.
@@ -28,6 +27,7 @@ class ODModel(Model):
             pretrained (bool, optional): Whether to use pretrained weights. Defaults to True.
             weights (str, optional): The path to the weights file. Defaults to None.
             device (str, optional): The device to use for computation. Defaults to "cpu".
+
         """
         super().__init__(
             model_name=model_name,
@@ -51,8 +51,7 @@ class ODModel(Model):
         filter_preds_by_confidence: Optional[float] = None,
         **kwargs,
     ) -> ODPredictions:
-        """
-        Builds predictions for the given dataset.
+        """Builds predictions for the given dataset.
 
         Args:
             dataset: The dataset to build predictions for.
@@ -66,6 +65,7 @@ class ODModel(Model):
 
         Returns:
             ODPredictions: Predictions object to use for prediction set construction.
+
         """
         string_to_hash = f"{dataset.root}_{dataset_name}_{split_name}_{batch_size}_{shuffle}_{self.model_name}_object_detection_{dataset.image_ids}"
         hash = sha256(string_to_hash.encode()).hexdigest()
@@ -90,20 +90,21 @@ class ODModel(Model):
                         )
                     preds.to(self.device)
                     return preds
-                else:
-                    raise ValueError(
-                        "Predictions file exists but is not of type ODPredictions"
-                    )
-            elif verbose:
-                print("Predictions do not exist, building them...")
-        else:
-            if verbose:
-                print(
-                    "Force recompute is set to True, building predictions..."
+                raise ValueError(
+                    "Predictions file exists but is not of type ODPredictions",
                 )
+            if verbose:
+                print("Predictions do not exist, building them...")
+        elif verbose:
+            print(
+                "Force recompute is set to True, building predictions...",
+            )
 
         dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
+            dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            **kwargs,
         )
 
         # TODO: dangerous for YOLO
@@ -152,20 +153,20 @@ class ODModel(Model):
                 all_pred_cls.append(pred_cls)
 
         all_image_paths = list(
-            [path for arr_path in all_image_paths for path in arr_path]
+            [path for arr_path in all_image_paths for path in arr_path],
         )
         all_image_shapes = list(
-            [shape for arr_shape in all_image_shapes for shape in arr_shape]
+            [shape for arr_shape in all_image_shapes for shape in arr_shape],
         )
         all_true_boxes = list(
             [
                 box.to(self.device)
                 for arr_box in all_true_boxes
                 for box in arr_box
-            ]
+            ],
         )
         all_pred_boxes = list(
-            [box for arr_box in all_pred_boxes for box in arr_box]
+            [box for arr_box in all_pred_boxes for box in arr_box],
         )
         if len(all_pred_boxes_unc) > 0:
             all_pred_boxes_unc = list(
@@ -173,7 +174,7 @@ class ODModel(Model):
                     box_unc
                     for arr_box_unc in all_pred_boxes_unc
                     for box_unc in arr_box_unc
-                ]
+                ],
             )
         else:
             all_pred_boxes_unc = None
@@ -182,17 +183,17 @@ class ODModel(Model):
                 confidence
                 for arr_confidence in all_confidences
                 for confidence in arr_confidence
-            ]
+            ],
         )
         all_true_cls = list(
             [
                 cls.to(self.device)
                 for arr_cls in all_true_cls
                 for cls in arr_cls
-            ]
+            ],
         )
         all_pred_cls = list(
-            [proba for arr_proba in all_pred_cls for proba in arr_proba]
+            [proba for arr_proba in all_pred_cls for proba in arr_proba],
         )
 
         preds = ODPredictions(
@@ -227,8 +228,7 @@ class ODModel(Model):
         iou_threshold=0.5,
         method: str = "nms",
     ):
-        """
-        Filters the predicted bounding boxes based on the confidence scores and IoU threshold.
+        """Filters the predicted bounding boxes based on the confidence scores and IoU threshold.
 
         Args:
             pred_boxes: The predicted bounding boxes.
@@ -239,6 +239,7 @@ class ODModel(Model):
 
         Returns:
             Tuple: The filtered predicted bounding boxes, predicted class labels, confidence scores and uncertainty if existing.
+
         """
         new_pred_boxes = []
         new_pred_cls = []
@@ -247,7 +248,9 @@ class ODModel(Model):
         for i in range(len(pred_boxes)):
             if method.lower() == "nms":
                 keep = torchvision.ops.nms(
-                    pred_boxes[i], confidences[i], iou_threshold=iou_threshold
+                    pred_boxes[i],
+                    confidences[i],
+                    iou_threshold=iou_threshold,
                 )
                 new_pred_box = pred_boxes[i].index_select(dim=0, index=keep)
                 new_pred_cl = pred_cls[i].index_select(dim=0, index=keep)
@@ -264,7 +267,7 @@ class ODModel(Model):
                 )
             else:
                 raise NotImplementedError(
-                    "Not Implemented, method must be one of 'nms', 'bayesod'"
+                    "Not Implemented, method must be one of 'nms', 'bayesod'",
                 )
 
         if len(new_pred_boxes_unc) == 0:
@@ -278,8 +281,7 @@ class ODModel(Model):
         )
 
     def predict_batch(self, batch: list, **kwargs) -> dict:
-        """
-        Predicts the output given a batch of input tensors.
+        """Predicts the output given a batch of input tensors.
 
         Args:
             batch (list): The input batch.
@@ -292,5 +294,6 @@ class ODModel(Model):
                 - "confidences" (list): The confidence scores of the predicted bounding boxes
                 - "true_cls" (list): The true class labels of the objects in the images
                 - "pred_cls" (list): The predicted class labels of the objects in the images
+
         """
         raise NotImplementedError("Please Implement this method")

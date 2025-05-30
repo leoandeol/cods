@@ -27,8 +27,7 @@ def compute_global_coverage(
     localization: bool = True,
     loss: Optional[Callable] = None,
 ) -> torch.Tensor:
-    """
-    Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE #TODO
+    """Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE #TODO
 
     Args:
         predictions (ODPredictions): Object detection predictions.
@@ -40,20 +39,20 @@ def compute_global_coverage(
 
     Returns:
         torch.Tensor: Global coverage tensor.
-    """
 
+    """
     conf_boxes = conformalized_predictions.conf_boxes
     if conf_boxes is None and (confidence is True or localization is True):
         localization = False
         confidence = False
         logger.warning(
-            "No conformal boxes provided, skipping confidence and localization"
+            "No conformal boxes provided, skipping confidence and localization",
         )
     conf_cls = conformalized_predictions.conf_cls
     if conf_cls is None and cls is True:
         cls = False
         logger.warning(
-            "No conformal classes provided, skipping classification"
+            "No conformal classes provided, skipping classification",
         )
 
     covs = []
@@ -122,18 +121,21 @@ def compute_global_coverage(
                             else torch.tensor([])
                         )
                         loc_loss = loss(
-                            true_box[None, :], None, conf_box_i, None
+                            true_box[None, :],
+                            None,
+                            conf_box_i,
+                            None,
                         ).item()
                 except:
                     print(
-                        f"Number of ground truth boxes: {len(predictions.true_boxes[i])}"
+                        f"Number of ground truth boxes: {len(predictions.true_boxes[i])}",
                     )
                     print(predictions.pred_boxes[i].shape)
                     print(
                         predictions.pred_boxes[i][
                             predictions.confidences[i]
                             >= predictions.confidence_threshold
-                        ].shape
+                        ].shape,
                     )
                     print(conf_boxes[i].shape)
                     print(conf_boxes_i.shape)
@@ -155,10 +157,10 @@ def compute_global_coverage(
 
 
 def getStretch(
-    od_predictions: ODPredictions, conf_boxes: list
+    od_predictions: ODPredictions,
+    conf_boxes: list,
 ) -> torch.Tensor:
-    """
-    Get the stretch of object detection predictions.
+    """Get the stretch of object detection predictions.
 
     Args:
         od_predictions (ODPredictions): Object detection predictions.
@@ -166,6 +168,7 @@ def getStretch(
 
     Returns:
         torch.Tensor: Stretch tensor.
+
     """
     stretches = []
     area = lambda x: (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
@@ -182,8 +185,7 @@ def get_recall_precision(
     verbose=True,
     replace_iou=None,
 ) -> tuple:
-    """
-    Get the recall and precision for object detection predictions.
+    """Get the recall and precision for object detection predictions.
 
     Args:
         od_predictions (ODPredictions): Object detection predictions.
@@ -195,6 +197,7 @@ def get_recall_precision(
 
     Returns:
         tuple: Tuple containing the recall, precision, and scores.
+
     """
     true_boxes = od_predictions.true_boxes
     scores = od_predictions.confidence
@@ -241,7 +244,7 @@ def get_recall_precision(
 
     if verbose:
         print(
-            f"Average Recall = {np.mean(recalls)}, Average Precision = {np.mean(precisions)}"
+            f"Average Recall = {np.mean(recalls)}, Average Precision = {np.mean(precisions)}",
         )
     return recalls, precisions, my_scores
 
@@ -251,8 +254,7 @@ def getAveragePrecision(
     verbose=True,
     iou_threshold=0.3,
 ) -> tuple:
-    """
-    Get the average precision for object detection predictions.
+    """Get the average precision for object detection predictions.
 
     Args:
         od_predictions (ODPredictions): Object detection predictions.
@@ -262,6 +264,7 @@ def getAveragePrecision(
 
     Returns:
         tuple: Tuple containing the average precision, total recalls, total precisions, and objectness thresholds.
+
     """
     total_recalls = []
     total_precisions = []
@@ -275,13 +278,14 @@ def getAveragePrecision(
             verbose=False,
         )
         pbar.set_description(
-            f"Average Recall = {np.mean(tmp_recalls)}, Average Precision = {np.mean(tmp_precisions)}"
+            f"Average Recall = {np.mean(tmp_recalls)}, Average Precision = {np.mean(tmp_precisions)}",
         )
         total_recalls.append(np.mean(tmp_recalls))
         total_precisions.append(np.mean(tmp_precisions))
 
     AP = np.trapz(
-        x=list(reversed(total_recalls)), y=list(reversed(total_precisions))
+        x=list(reversed(total_recalls)),
+        y=list(reversed(total_precisions)),
     )
     return AP, total_recalls, total_precisions, threshes_objectness
 
@@ -291,13 +295,13 @@ def plot_recall_precision(
     total_precisions: list,
     threshes_objectness: np.ndarray,
 ):
-    """
-    Plot the recall and precision given objectness threshold or IoU threshold.
+    """Plot the recall and precision given objectness threshold or IoU threshold.
 
     Args:
         total_recalls (list): List of total recalls.
         total_precisions (list): List of total precisions.
         threshes_objectness (np.ndarray): Array of objectness thresholds.
+
     """
     fig, (ax1, ax2) = plt.subplots(1, 2)
     ax1.plot(threshes_objectness, total_recalls, label="Recall")
@@ -332,7 +336,10 @@ def unroll_metrics(
         total_precisions_vanilla,
         threshes_objectness_vanilla,
     ) = getAveragePrecision(
-        predictions, pred_boxes, verbose=True, iou_threshold=iou_threshold
+        predictions,
+        pred_boxes,
+        verbose=True,
+        iou_threshold=iou_threshold,
     )
     conf_boxes = conformalized_predictions.conf_boxes
     if verbose:
@@ -343,7 +350,10 @@ def unroll_metrics(
         total_precisions_conf,
         threshes_objectness_conf,
     ) = getAveragePrecision(
-        predictions, conf_boxes, verbose=True, iou_threshold=iou_threshold
+        predictions,
+        conf_boxes,
+        verbose=True,
+        iou_threshold=iou_threshold,
     )
     if verbose:
         print(f"(Conformal) Average Precision: {AP_conf}")
@@ -362,7 +372,10 @@ def unroll_metrics(
 
 class ODEvaluator:
     def __init__(
-        self, confidence_loss, localization_loss, classification_loss
+        self,
+        confidence_loss,
+        localization_loss,
+        classification_loss,
     ):
         self.confidence_loss = confidence_loss
         self.localization_loss = localization_loss
@@ -404,10 +417,10 @@ class ODEvaluator:
             print(f"alpha_localization: {parameters.alpha_localization}")
             print(f"alpha_classification: {parameters.alpha_classification}")
             print(
-                f"lambda_confidence_plus: {parameters.lambda_confidence_plus}"
+                f"lambda_confidence_plus: {parameters.lambda_confidence_plus}",
             )
             print(
-                f"lambda_confidence_minus: {parameters.lambda_confidence_minus}"
+                f"lambda_confidence_minus: {parameters.lambda_confidence_minus}",
             )
             print(f"lambda_localization: {parameters.lambda_localization}")
             print(f"lambda_classification: {parameters.lambda_classification}")
@@ -492,7 +505,8 @@ class ODEvaluator:
                 #     print(matched_conf_boxes_i)
                 localization_set_size_i = []
                 for conf_box_i_j, pred_box_i_j in zip(
-                    conf_boxes_i, pred_boxes_i
+                    conf_boxes_i,
+                    pred_boxes_i,
                 ):
                     set_size = (
                         (conf_box_i_j[2] - conf_box_i_j[0])
@@ -505,11 +519,12 @@ class ODEvaluator:
                     localization_set_size_i.append(set_size)
                 if len(localization_set_size_i) == 0:
                     localization_set_size_i = torch.tensor(
-                        [0.0], dtype=torch.float
+                        [0.0],
+                        dtype=torch.float,
                     ).to(conf_boxes_i.device)[0]
                 else:
                     localization_set_size_i = torch.mean(
-                        torch.stack(localization_set_size_i)
+                        torch.stack(localization_set_size_i),
                     )
 
                 localization_losses.append(localization_loss_i)
@@ -530,13 +545,15 @@ class ODEvaluator:
                     classification_set_size_i.append(conf_cls_i_j.shape[0])
                 if len(classification_set_size_i) == 0:
                     classification_set_size_i = torch.tensor(
-                        [0.0], dtype=torch.float
+                        [0.0],
+                        dtype=torch.float,
                     ).to(conf_boxes_i.device)[0]
                 else:
                     classification_set_size_i = torch.mean(
                         torch.tensor(
-                            classification_set_size_i, dtype=torch.float
-                        )
+                            classification_set_size_i,
+                            dtype=torch.float,
+                        ),
                     )
                 classification_set_sizes.append(classification_set_size_i)
 
@@ -559,7 +576,8 @@ class ODEvaluator:
             classification_coverages=classification_losses,
             localization_coverages=localization_losses,
             confidence_set_sizes=torch.tensor(
-                confidence_set_sizes, dtype=torch.float
+                confidence_set_sizes,
+                dtype=torch.float,
             )
             if len(confidence_set_sizes) > 0
             else None,
@@ -570,7 +588,8 @@ class ODEvaluator:
             if len(localization_set_sizes) > 0
             else None,
             global_coverage=torch.maximum(
-                localization_losses, classification_losses
+                localization_losses,
+                classification_losses,
             )
             if self.localization_loss is not None
             and self.classification_loss is not None

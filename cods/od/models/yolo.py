@@ -66,7 +66,7 @@ class YOLOModel(ODModel):
             self.model = AlteredYOLO(model_name)
         else:
             raise NotImplementedError(
-                "Only pretrained models are available for now"
+                "Only pretrained models are available for now",
             )
         self.device = device
         # self.model.eval()
@@ -80,7 +80,7 @@ class YOLOModel(ODModel):
                 # T.Normalize(
                 #     mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
                 # ),
-            ]
+            ],
         )
 
     # Unsure if this is the right way to do it, there is different ways to define the softmax
@@ -107,8 +107,8 @@ class YOLOModel(ODModel):
             out_boxes = box_output[:, :4]
             boxes = xywh2xyxy_scaled(out_boxes, width_scale, height_scale)
 
-            temp = 1#0.2
-            cls_probs = torch.softmax(box_output[:, 4:]/temp, dim=-1)
+            temp = 1  # 0.2
+            cls_probs = torch.softmax(box_output[:, 4:] / temp, dim=-1)
 
             # Extend to be of size 91 :
             CONVERT_TO_91 = [
@@ -194,24 +194,28 @@ class YOLOModel(ODModel):
                 90,
             ]
             CONVERT_TO_91 = torch.tensor(
-                CONVERT_TO_91, device=cls_probs.device
+                CONVERT_TO_91,
+                device=cls_probs.device,
             )
 
             cls_probs_new = torch.zeros(
-                cls_probs.shape[0], 91, device=cls_probs.device
+                cls_probs.shape[0],
+                91,
+                device=cls_probs.device,
             )
 
             cls_probs_new[:, CONVERT_TO_91] = cls_probs
 
             final_confidence, predicted_class = torch.max(
-                box_output[:, 4:], dim=-1
+                box_output[:, 4:],
+                dim=-1,
             )
-            #print(cls_probs_new.sum(dim=-1)[torch.abs(cls_probs_new.sum(dim=-1)-1)>1e-9])
-            #for i in range(cls_probs_new.shape[0]):
+            # print(cls_probs_new.sum(dim=-1)[torch.abs(cls_probs_new.sum(dim=-1)-1)>1e-9])
+            # for i in range(cls_probs_new.shape[0]):
             #    if torch.abs(cls_probs_new[i].sum()-1)>1e-9:
             #        print(f"{cls_probs_new[i].sum():10f} : {torch.abs(cls_probs_new[i].sum()-1)}")
-            #print("\n")
-            assert (torch.abs(cls_probs_new.sum(dim=-1)-1)<1e-6).all()
+            # print("\n")
+            assert (torch.abs(cls_probs_new.sum(dim=-1) - 1) < 1e-6).all()
 
             all_boxes.append(boxes)
             all_confs.append(final_confidence)
@@ -220,8 +224,7 @@ class YOLOModel(ODModel):
         return all_boxes, all_confs, all_probs
 
     def predict_batch(self, batch: list, **kwargs) -> dict:
-        """
-        Predicts the output given a batch of input tensors.
+        """Predicts the output given a batch of input tensors.
 
         Args:
             batch (list): The input batch
@@ -234,11 +237,12 @@ class YOLOModel(ODModel):
                 - "confidences" (list): The confidence scores of the predicted bounding boxes
                 - "true_cls" (list): The true class labels of the objects in the images
                 - "pred_cls" (list): The predicted class labels of the objects in the images
+
         """
         image_paths, image_sizes, images, ground_truth = batch
 
         img_shapes = torch.FloatTensor(
-            np.stack([image.size for image in images])
+            np.stack([image.size for image in images]),
         ).to(self.device)
 
         images = [self.transform(image) for image in images]
@@ -262,16 +266,16 @@ class YOLOModel(ODModel):
                             box["bbox"][1] + box["bbox"][3],
                         ]
                         for box in true_box
-                    ]
+                    ],
                 )
                 for true_box in ground_truth
-            ]
+            ],
         )
         true_cls = list(
             [
                 torch.LongTensor([box["category_id"] for box in true_box])
                 for true_box in ground_truth
-            ]
+            ],
         )
         true_boxes = true_boxes
 

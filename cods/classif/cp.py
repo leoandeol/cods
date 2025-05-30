@@ -13,18 +13,19 @@ class ClassificationConformalizer(Conformalizer):
 
     def __init__(self, method="lac", preprocess="softmax", device="cpu"):
         if method not in self.ACCEPTED_METHODS.keys() and not isinstance(
-            method, ClassifNCScore
+            method,
+            ClassifNCScore,
         ):
             raise ValueError(
-                f"method '{method}' not accepted, must be one of {self.ACCEPTED_METHODS} or a ClassifNCScore"
+                f"method '{method}' not accepted, must be one of {self.ACCEPTED_METHODS} or a ClassifNCScore",
             )
         if preprocess not in self.ACCEPTED_PREPROCESS.keys():
             raise ValueError(
-                f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}"
+                f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
             )
 
         self.preprocess = preprocess
-        self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]      
+        self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
         self._quantile: Optional[Any] = None
         self._n_classes: Optional[Any] = None
         self.device = device
@@ -45,11 +46,11 @@ class ClassificationConformalizer(Conformalizer):
         self._n_classes = preds.n_classes
         if self._score_function is None:
             self._score_function = self.ACCEPTED_METHODS[self.method](
-                self._n_classes
+                self._n_classes,
             )
         elif not isinstance(self._score_function, ClassifNCScore):
             raise ValueError(
-                f"method '{self.method}' not accepted, must be one of {self.ACCEPTED_METHODS} or a ClassifNCScore"
+                f"method '{self.method}' not accepted, must be one of {self.ACCEPTED_METHODS} or a ClassifNCScore",
             )
         scores = []
 
@@ -88,11 +89,11 @@ class ClassificationConformalizer(Conformalizer):
     def conformalize(self, preds: ClassificationPredictions) -> list:
         if self._quantile is None:
             raise ValueError(
-                "Conformalizer must be calibrated before conformalizing."
+                "Conformalizer must be calibrated before conformalizing.",
             )
         if self._score_function is None:
             raise ValueError(
-                "Conformalizer must be calibrated before conformalizing."
+                "Conformalizer must be calibrated before conformalizing.",
             )
 
         conf_cls = []
@@ -100,22 +101,26 @@ class ClassificationConformalizer(Conformalizer):
             pred_cls = self.f_preprocess(pred_cls, -1)
 
             ys = self._score_function.get_set(
-                pred_cls=pred_cls, quantile=self._quantile
+                pred_cls=pred_cls,
+                quantile=self._quantile,
             )
             conf_cls.append(ys)
 
         return conf_cls
 
     def evaluate(
-        self, preds: ClassificationPredictions, conf_cls: list, verbose=True
+        self,
+        preds: ClassificationPredictions,
+        conf_cls: list,
+        verbose=True,
     ):
         if self._quantile is None:
             raise ValueError(
-                "Conformalizer must be calibrated before evaluating."
+                "Conformalizer must be calibrated before evaluating.",
             )
         if conf_cls is None:
             raise ValueError(
-                "Predictions must be conformalized before evaluating."
+                "Predictions must be conformalized before evaluating.",
             )
         losses = []
         set_sizes = []
@@ -130,6 +135,6 @@ class ClassificationConformalizer(Conformalizer):
         set_sizes = torch.stack(set_sizes).ravel()
         if verbose:
             print(
-                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}"
+                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}",
             )
         return losses, set_sizes

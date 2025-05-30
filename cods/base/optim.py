@@ -8,7 +8,10 @@ from tqdm import tqdm
 
 class Optimizer:
     def optimize(
-        self, objective_function: Callable, alpha: float, **kwargs
+        self,
+        objective_function: Callable,
+        alpha: float,
+        **kwargs,
     ) -> float:
         raise NotImplementedError("Optimizer is an abstract class")
 
@@ -27,13 +30,13 @@ class BinarySearchOptimizer(Optimizer):
         epsilon=1e-5,
         verbose=True,
     ) -> float:
-        """
-        params:
+        """params:
         epsilon:
         objective_function: function of one parameter lbd (use partials), which includes the correction part
         """
         if not isinstance(bounds[0], list) and not isinstance(
-            bounds[0], tuple
+            bounds[0],
+            tuple,
         ):
             bounds = [bounds]
 
@@ -45,7 +48,7 @@ class BinarySearchOptimizer(Optimizer):
             uppers.append(upper)
         good_lbds = list([])
         current_lbds = list(
-            [(upper - lower) / 2 for lower, upper in zip(lowers, uppers)]
+            [(upper - lower) / 2 for lower, upper in zip(lowers, uppers)],
         )
 
         pbar = tqdm(range(steps), disable=not verbose)
@@ -61,7 +64,7 @@ class BinarySearchOptimizer(Optimizer):
                 risk = objective_function(*current_lbds)
 
                 pbar.set_description(
-                    f"[{lower:.2f}, {upper:.2f}] -> {current_lbds}. Corrected Risk = {risk:.2f}"
+                    f"[{lower:.2f}, {upper:.2f}] -> {current_lbds}. Corrected Risk = {risk:.2f}",
                 )
 
                 if risk <= alpha:
@@ -76,12 +79,11 @@ class BinarySearchOptimizer(Optimizer):
                     elif risk > alpha:
                         lower = lbd
                         lowers[id] = lower
-                else:
-                    if len(good_lbds) == 0:
-                        logging.error(
-                            "No satisfactory solution of binary search found."
-                        )
-                        return None
+                elif len(good_lbds) == 0:
+                    logging.error(
+                        "No satisfactory solution of binary search found.",
+                    )
+                    return None
         return good_lbds[-1] if len(current_lbds) > 1 else good_lbds[-1][0]
 
 
@@ -154,7 +156,7 @@ class MonteCarloOptimizer(Optimizer):
             if corr_risk <= alpha:
                 if corr_risk >= alpha - epsilon:
                     logging.info(
-                        "Found satisfactory solution of Monte Carlo. Early Stopping."
+                        "Found satisfactory solution of Monte Carlo. Early Stopping.",
                     )
                     return lbd
                 good_lbds.append(lbd)
@@ -164,8 +166,7 @@ class MonteCarloOptimizer(Optimizer):
         if len(good_lbds) == 0:
             logging.warning("No satisfactory solution of Monte Carlo found.")
             return None
-        else:
-            logging.info(
-                f"Found {len(good_lbds)} satisfactory solutions of Monte Carlo. Best risk = {np.max(lbds_risks)} for Lambda={good_lbds[np.argmax(lbds_risks)]}"
-            )
-            return good_lbds[np.argmax(lbds_risks)]
+        logging.info(
+            f"Found {len(good_lbds)} satisfactory solutions of Monte Carlo. Best risk = {np.max(lbds_risks)} for Lambda={good_lbds[np.argmax(lbds_risks)]}",
+        )
+        return good_lbds[np.argmax(lbds_risks)]

@@ -1,7 +1,7 @@
 from typing import Callable, Union
 
 import torch
-from scipy.optimize import bisect, brentq
+from scipy.optimize import brentq
 from scipy.stats import binom
 
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
@@ -36,7 +36,7 @@ def bernstein_uni_lim(Rhat, n, delta):
     return Rhat + part1 + part2
 
 
-def binom_inv_cdf(Rhat, n, delta):
+def binom_inv_cdf(Rhat, n, delta, device="cpu"):
     k = int(Rhat * n)
 
     n = n.detach().cpu().numpy()
@@ -49,7 +49,7 @@ def binom_inv_cdf(Rhat, n, delta):
     # print(f_bin(0), f_bin(1))
     # if f_bin(0) < 0:
     #     return 1.0
-    # todo: check this closely
+    # TODO: check this closely
 
     if f_bin(1) > 0:
         return 1.0
@@ -84,30 +84,30 @@ class ToleranceRegion:
     ):
         if inequality not in self.AVAILABLE_INEQUALITIES:
             raise ValueError(
-                f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}"
+                f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}",
             )
         self.inequality_name = inequality
         self.f_inequality = self.AVAILABLE_INEQUALITIES[inequality]
         if optimizer not in self.ACCEPTED_OPTIMIZERS:
             raise ValueError(
-                f"Available optimizers are {self.ACCEPTED_OPTIMIZERS.keys()}"
+                f"Available optimizers are {self.ACCEPTED_OPTIMIZERS.keys()}",
             )
         self.optimizer_name = optimizer
         self.optimizer = self.ACCEPTED_OPTIMIZERS[optimizer](**optimizer_args)
 
     def calibrate(self, preds, alpha=0.1, delta=0.1, verbose=True, **kwargs):
         raise NotImplementedError(
-            "ToleranceRegion is an abstract class, must be instantiated on a given task."
+            "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
 
     def conformalize(self, preds, verbose=True, **kwargs):
         raise NotImplementedError(
-            "ToleranceRegion is an abstract class, must be instantiated on a given task."
+            "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
 
     def evaluate(self, preds, verbose=True, **kwargs):
         raise NotImplementedError(
-            "ToleranceRegion is an abstract class, must be instantiated on a given task."
+            "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
 
 
@@ -129,7 +129,7 @@ class CombiningToleranceRegions(ToleranceRegion):
                         **parameters[i],
                     )
                     for i, conformalizer in enumerate(self.tregions)
-                ]
+                ],
             )
 
     def conformalize(self, preds):
@@ -140,5 +140,5 @@ class CombiningToleranceRegions(ToleranceRegion):
             [
                 tregion.evaluate(preds, verbose=verbose)
                 for tregion in self.tregions
-            ]
+            ],
         )

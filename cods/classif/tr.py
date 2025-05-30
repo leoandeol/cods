@@ -20,17 +20,19 @@ class ClassificationToleranceRegion(ToleranceRegion):
         optimizer_args={},
     ):
         super().__init__(
-            inequality=inequality, optimizer=optimizer, optimizer_args={}
+            inequality=inequality,
+            optimizer=optimizer,
+            optimizer_args={},
         )
         self.ACCEPTED_LOSSES = CLASSIFICATION_LOSSES
         self.lbd = None
         if loss not in self.ACCEPTED_LOSSES:
             raise ValueError(
-                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
+                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.",
             )
         if preprocess not in self.ACCEPTED_PREPROCESS.keys():
             raise ValueError(
-                f"preprocess '{preprocess}' not accepted, must be one of {self.accepted_preprocess}"
+                f"preprocess '{preprocess}' not accepted, must be one of {self.accepted_preprocess}",
             )
         self.device = device
         self.preprocess = preprocess
@@ -43,7 +45,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
             self.loss = loss()
         else:
             raise ValueError(
-                f"loss must be a string or a ClassificationLoss instance, got {loss}"
+                f"loss must be a string or a ClassificationLoss instance, got {loss}",
             )
 
     def calibrate(
@@ -137,7 +139,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
     ) -> list:
         if self.lbd is None:
             raise ValueError(
-                "Conformalizer must be calibrated before conformalizing."
+                "Conformalizer must be calibrated before conformalizing.",
             )
         conf_cls = []
         for pred_cls in predictions.pred_cls:
@@ -156,7 +158,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
     ):
         if self.lbd is None:
             raise ValueError(
-                "Conformalizer must be calibrated before evaluating."
+                "Conformalizer must be calibrated before evaluating.",
             )
         losses = []
         set_sizes = []
@@ -170,6 +172,6 @@ class ClassificationToleranceRegion(ToleranceRegion):
         set_sizes = torch.stack(set_sizes)
         if verbose:
             print(
-                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}"
+                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}",
             )
         return losses, set_sizes

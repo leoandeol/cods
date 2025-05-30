@@ -96,8 +96,8 @@ def contained(tb: torch.Tensor, pb: torch.Tensor) -> torch.Tensor:
 
     Returns:
         torch.Tensor: IoU values (N,).
-    """
 
+    """
     # TODO: only considering the case where all matchings exist, or none exist
     if pb.nelement() == 0:
         return torch.zeros(tb.size(0), device=tb.device)
@@ -210,7 +210,8 @@ def generalized_iou(boxA, boxB):
 
 
 def vectorized_generalized_iou(
-    boxesA: np.ndarray, boxesB: np.ndarray
+    boxesA: np.ndarray,
+    boxesB: np.ndarray,
 ) -> np.ndarray:
     """Compute the Generalized Intersection over Union (GIoU) between two sets of
     bounding boxes.
@@ -232,14 +233,15 @@ def vectorized_generalized_iou(
     Raises:
     ------
         ValueError: If input arrays do not have shape (N, 4) or (M, 4).
+
     """
     if boxesA.ndim != 2 or boxesA.shape[1] != 4:
         raise ValueError(
-            f"boxesA must have shape (N, 4), but got {boxesA.shape}"
+            f"boxesA must have shape (N, 4), but got {boxesA.shape}",
         )
     if boxesB.ndim != 2 or boxesB.shape[1] != 4:
         raise ValueError(
-            f"boxesB must have shape (M, 4), but got {boxesB.shape}"
+            f"boxesB must have shape (M, 4), but got {boxesB.shape}",
         )
 
     zero_tensor = torch.tensor(0).to(boxesA.device)
@@ -308,7 +310,8 @@ def vectorized_generalized_iou(
     # Add 1 because coordinates are inclusive
     # Shape: (N, M)
     convexHullWidth = torch.maximum(
-        zero_tensor, xC2 - xC1 + 1
+        zero_tensor,
+        xC2 - xC1 + 1,
     )  # Max with 0 just in case of weird inputs
     convexHullHeight = torch.maximum(zero_tensor, yC2 - yC1 + 1)
     convexHullArea = convexHullWidth * convexHullHeight
@@ -356,7 +359,7 @@ def f_lac(true_cls, pred_cls):
 def rank_distance(true_cls, pred_cls):
     sorted_indices = torch.argsort(pred_cls, descending=True, dim=1)
     ranks = (sorted_indices == true_cls.unsqueeze(1, 1)).nonzero(
-        as_tuple=True
+        as_tuple=True,
     )[1]  # ???
     return ranks
 
@@ -385,7 +388,7 @@ def match_predictions_to_true_boxes(
     if verbose and distance_function is None:
         print("Using default:  asymmetric Hausdorff distance")
 
-    if distance_function not in DISTANCE_FUNCTIONS.keys():
+    if distance_function not in DISTANCE_FUNCTIONS:
         raise ValueError(
             f"Distance function {distance_function} not supported, must be one of {DISTANCE_FUNCTIONS.keys()}",
         )
@@ -409,7 +412,7 @@ def match_predictions_to_true_boxes(
     if idx is not None:
         # filter pred_boxes with low objectness
         pred_boxess = [
-            preds.pred_boxes[idx][preds.confidences[idx] >= conf_thr]
+            preds.pred_boxes[idx][preds.confidences[idx] >= conf_thr],
         ]
         true_boxess = [preds.true_boxes[idx]]
 
@@ -443,7 +446,8 @@ def match_predictions_to_true_boxes(
             pred_boxes = pred_boxes.clone()
             if distance_function == "hausdorff":
                 distance_matrix = assymetric_hausdorff_distance(
-                    true_boxes, pred_boxes
+                    true_boxes,
+                    pred_boxes,
                 )
             elif distance_function == "lac":
                 distance_matrix = f_lac(true_cls, pred_cls)
@@ -456,11 +460,12 @@ def match_predictions_to_true_boxes(
                 )
             elif distance_function == "giou":
                 distance_matrix = vectorized_generalized_iou(
-                    true_boxes, pred_boxes
+                    true_boxes,
+                    pred_boxes,
                 )
             else:
                 raise NotImplementedError(
-                    "Only hausdorff and lac are supported"
+                    "Only hausdorff and lac are supported",
                 )
             if hungarian:
                 # TODO: to test
@@ -483,9 +488,8 @@ def match_predictions_to_true_boxes(
 
     if idx is not None:
         return all_matching[0]
-    else:
-        preds.matching = all_matching
-        return all_matching
+    preds.matching = all_matching
+    return all_matching
 
 
 def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
@@ -761,7 +765,7 @@ def compute_risk_image_level_confidence(
             ]
 
             loss_value_i = torch.max(
-                torch.stack([conf_loss_value_i] + other_losses_i)
+                torch.stack([conf_loss_value_i] + other_losses_i),
             )
 
         # loss_value_i = aggregator_func(losses_i)

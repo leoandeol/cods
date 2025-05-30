@@ -39,10 +39,10 @@ fix = true
 ignore = []
 # Allow fix for all enabled rules (when `--fix`) is provided.
 #TODO too much currently disabled
-#fixable = ["ALL"]
-#select = ["ALL"]
+fixable = ["ALL"]
+select = ["ALL"]
 # Disable fix for unused imports (`F401`).
-unfixable = ["F401"]
+unfixable = [] # ["F401"]
 
 [tool.ruff.format]
 quote-style = "double"

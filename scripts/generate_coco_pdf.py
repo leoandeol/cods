@@ -1,16 +1,17 @@
-from cods.od.data import MSCOCODataset
+import io
 import logging
+import math
 import os
 
 import torch
-from reportlab.pdfgen import canvas
-from reportlab.lib.units import inch
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-import math
-import io
+from reportlab.pdfgen import canvas
+
+from cods.od.data import MSCOCODataset
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = (
@@ -25,13 +26,13 @@ COCO_PATH = "/datasets/shared_datasets/coco/"
 data = MSCOCODataset(root=COCO_PATH, split="val")
 len(data)
 
-def create_dataset_pdf(dataloader, output_filename='dataset_images.pdf'):
+def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
     # Set up the PDF canvas
     c = canvas.Canvas(output_filename, pagesize=letter)
     width, height = letter
 
     # Register a default font
-    pdfmetrics.registerFont(TTFont('Monospace', "monospace.medium.ttf"))#'arial.ttf'))
+    pdfmetrics.registerFont(TTFont("Monospace", "monospace.medium.ttf"))#'arial.ttf'))
 
     # Calculate image size and positions
     image_width = width / 2 - 0.5 * inch
@@ -41,7 +42,7 @@ def create_dataset_pdf(dataloader, output_filename='dataset_images.pdf'):
         (0.25 * inch, height - 0.25 * inch - image_height - title_height),
         (width / 2 + 0.25 * inch, height - 0.25 * inch - image_height - title_height),
         (0.25 * inch, 0.25 * inch + title_height),
-        (width / 2 + 0.25 * inch, 0.25 * inch + title_height)
+        (width / 2 + 0.25 * inch, 0.25 * inch + title_height),
     ]
 
     image_count = 0
@@ -54,7 +55,7 @@ def create_dataset_pdf(dataloader, output_filename='dataset_images.pdf'):
 
             # Convert JpegImageFile to bytes
             img_byte_arr = io.BytesIO()
-            img.save(img_byte_arr, format='JPEG')
+            img.save(img_byte_arr, format="JPEG")
             img_byte_arr = img_byte_arr.getvalue()
 
             # Create an ImageReader object
@@ -64,14 +65,14 @@ def create_dataset_pdf(dataloader, output_filename='dataset_images.pdf'):
             c.drawImage(img_reader, pos[0], pos[1], width=image_width, height=image_height)
 
             # Draw title (image path)
-            c.setFont('Monospace', 8)
+            c.setFont("Monospace", 8)
             title = os.path.basename(path)  # Use only the filename, not the full path
-            title_width = c.stringWidth(title, 'Monospace', 8)
+            title_width = c.stringWidth(title, "Monospace", 8)
             if title_width > image_width:
                 # If title is too long, truncate it
                 while title_width > image_width and len(title) > 3:
-                    title = title[:-4] + '...'  # Remove 3 characters and add ellipsis
-                    title_width = c.stringWidth(title, 'Monospace', 8)
+                    title = title[:-4] + "..."  # Remove 3 characters and add ellipsis
+                    title_width = c.stringWidth(title, "Monospace", 8)
             c.drawString(pos[0] + (image_width - title_width) / 2, pos[1] - title_height / 2, title)
 
             image_count += 1
@@ -88,5 +89,5 @@ def create_dataset_pdf(dataloader, output_filename='dataset_images.pdf'):
 
 # Use the function
 dataloader = torch.utils.data.DataLoader(data, batch_size=64, shuffle=False,
-    collate_fn=data._collate_fn,)
+    collate_fn=data._collate_fn)
 create_dataset_pdf(dataloader)

@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -46,14 +46,7 @@ from cods.od.score import (
 )
 from cods.od.utils import (
     apply_margins,
-    # compute_risk_cls_box_level,
-    # compute_risk_cls_image_level,
-    compute_risk_image_level,
-    # compute_risk_image_level_confidence,
     compute_risk_object_level,
-    # evaluate_cls_conformalizer,
-    # get_classif_predictions_from_od_predictions,
-    # get_conf_cls_for_od,
     match_predictions_to_true_boxes,
 )
 
@@ -682,14 +675,14 @@ class ConfidenceConformalizer(Conformalizer):
         self.other_losses = other_losses
         self.loss = self.ACCEPTED_LOSSES[loss](
             # other_losses=other_losses,
-            device=self.device
+            device=self.device,
         )
         self.guarantee_level = guarantee_level
 
         if guarantee_level == "object":
             raise ValueError("Not implemented currently for Confidence")
             # self.risk_function = compute_risk_object_level
-        elif guarantee_level == "image":
+        if guarantee_level == "image":
             # self.risk_function = compute_risk_image_level_confidence
             pass
 
@@ -1173,7 +1166,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             confidence_threshold = overload_confidence_threshold
 
         logger.warning(
-            "Currently considering that there is only one matching prediction to each true box for classification pruposes. To add later how to aggregate if multiple preidctions matched."
+            "Currently considering that there is only one matching prediction to each true box for classification pruposes. To add later how to aggregate if multiple preidctions matched.",
         )
 
         new_opt = True

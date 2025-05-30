@@ -16,7 +16,7 @@ class ClassifNCScore(NCScore):
     def get_set(self, pred_cls, quantile):
         ys = list(range(self.n_classes))
         pred_set = list(
-            [y for y in ys if self._score_function(pred_cls, y) <= quantile]
+            [y for y in ys if self._score_function(pred_cls, y) <= quantile],
         )
         pred_set = torch.tensor(pred_set)
         return pred_set
@@ -41,7 +41,7 @@ class APSNCScore(ClassifNCScore):
         # Ensure input is a probability distribution
         if not torch.isclose(pred_cls.sum(), torch.tensor(1.0), atol=1e-3):
             raise ValueError(
-                f"Input pred_cls should be a probability vector, but sums to {pred_cls.sum().item()}"
+                f"Input pred_cls should be a probability vector, but sums to {pred_cls.sum().item()}",
             )
 
         values, indices = torch.sort(pred_cls, descending=True)

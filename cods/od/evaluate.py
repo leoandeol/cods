@@ -75,11 +75,11 @@ class Benchmark:
             ) = combination
             if dataset not in self.DATASETS:
                 raise ValueError(
-                    f"Invalid dataset: {dataset}, must be one of {self.DATASETS.keys()}"
+                    f"Invalid dataset: {dataset}, must be one of {self.DATASETS.keys()}",
                 )
             if model not in self.MODELS:
                 raise ValueError(
-                    f"Invalid model: {model}, must be one of {self.MODELS.keys()}"
+                    f"Invalid model: {model}, must be one of {self.MODELS.keys()}",
                 )
             experiments.append(
                 {
@@ -96,7 +96,7 @@ class Benchmark:
                     "batch_size": batch_size,
                     "optimizer": optimizer,
                     "nms_iou_threshold": nms_iou_threshold,
-                }
+                },
             )
 
         # with concurrent.futures.ProcessPoolExecutor(max_workers=8) as executor:
@@ -137,20 +137,22 @@ class Benchmark:
         # Load dataset
         if experiment["dataset"] not in self.DATASETS:
             raise NotImplementedError(
-                f"Dataset {experiment['dataset']} not implemented yet."
+                f"Dataset {experiment['dataset']} not implemented yet.",
             )
         dataset = MSCOCODataset(
-            root="/datasets/shared_datasets/coco/", split="val"
+            root="/datasets/shared_datasets/coco/",
+            split="val",
         )
         data_cal, data_val = dataset.split_dataset(0.5, shuffle=False)
 
         # Load model
         if experiment["model"] not in self.MODELS:
             raise NotImplementedError(
-                f"Model { experiment['model']} not implemented yet."
+                f"Model { experiment['model']} not implemented yet.",
             )
         model = self.MODELS[experiment["model"]](
-            pretrained=True, device=self.device
+            pretrained=True,
+            device=self.device,
         )
 
         # Build predictions
@@ -209,7 +211,9 @@ class Benchmark:
         )
 
         conformal_preds = conf.conformalize(
-            preds_val, parameters=parameters, verbose=verbose
+            preds_val,
+            parameters=parameters,
+            verbose=verbose,
         )
 
         results_val = conf.evaluate(
@@ -220,27 +224,33 @@ class Benchmark:
             verbose=verbose,
         )
         results = {
-            "confidence_set_sizes": torch.mean(results_val.confidence_set_sizes),
+            "confidence_set_sizes": torch.mean(
+                results_val.confidence_set_sizes
+            ),
             "confidence_losses": results_val.confidence_coverages,
-            "localization_set_sizes": torch.mean(results_val.localization_set_sizes),
+            "localization_set_sizes": torch.mean(
+                results_val.localization_set_sizes
+            ),
             "localization_losses": results_val.localization_coverages,
-            "classification_set_sizes": torch.mean(results_val.classification_set_sizes),
+            "classification_set_sizes": torch.mean(
+                results_val.classification_set_sizes
+            ),
             "classification_losses": results_val.classification_coverages,
             "confidence_mean_risk": torch.mean(
-                results_val.confidence_coverages
+                results_val.confidence_coverages,
             ),
             "confidence_std_risk": torch.std(results_val.confidence_coverages),
             "localization_mean_risk": torch.mean(
-                results_val.localization_coverages
+                results_val.localization_coverages,
             ),
             "localization_std_risk": torch.std(
-                results_val.localization_coverages
+                results_val.localization_coverages,
             ),
             "classification_mean_risk": torch.mean(
-                results_val.classification_coverages
+                results_val.classification_coverages,
             ),
             "classification_std_risk": torch.std(
-                results_val.classification_coverages
+                results_val.classification_coverages,
             ),
             "global_losses": results_val.global_coverage,
             "global_mean_risk": torch.mean(results_val.global_coverage),
@@ -300,7 +310,7 @@ def parse_args():
 
 if __name__ == "__main__":
     args = parse_args()
-    with open(args.config, "r") as f:
+    with open(args.config) as f:
         config = json.load(f)
 
     benchmark = Benchmark(config, device=args.device)

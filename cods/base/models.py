@@ -30,7 +30,10 @@ class Model:
         logger.info(f"Model {model_name} initialized")
 
     def build_predictions(
-        self, dataloader: torch.utils.data.DataLoader, verbose=True, **kwargs
+        self,
+        dataloader: torch.utils.data.DataLoader,
+        verbose=True,
+        **kwargs,
     ) -> Predictions:
         raise NotImplementedError("Please Implement this method")
 
@@ -40,6 +43,7 @@ class Model:
         Args:
             predictions (Predictions): predictions object
             path (str): path to file
+
         """
         path = f"{self.save_dir_path}/{hash}.pkl"
         # create directory if it doesn't exist
@@ -66,6 +70,7 @@ class Model:
 
         Returns:
             Predictions: predictions object
+
         """
         path = f"{self.save_dir_path}/{hash}.pkl"
         if not os.path.exists(path):

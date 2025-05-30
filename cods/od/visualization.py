@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib.backends.backend_pdf import PdfPages
 from PIL import Image
 
 from cods.od.data import ODConformalizedPredictions, ODPredictions
-from matplotlib.backends.backend_pdf import PdfPages
 
 
 def plot_preds(
@@ -15,8 +15,7 @@ def plot_preds(
     idx_to_label: dict = None,
     save_as=None,
 ):
-    """
-    Plot the predictions of an object detection model.
+    """Plot the predictions of an object detection model.
 
     Args:
         preds (object): Object containing the predictions.
@@ -25,6 +24,7 @@ def plot_preds(
         conf_cls (list): List of confidence classes.
         confidence_threshold (float, optional): Confidence threshold for filtering predictions. If not provided, the threshold from `preds` will be used. Defaults to None.
         save_as (str, optional): File path to save the plot. Defaults to None.
+
     """
     is_conformal = conformalized_predictions is not None
 
@@ -61,14 +61,14 @@ def plot_preds(
     plt.imshow(image)
 
     def draw_rect(ax, box, color, proba, conformal=False):
-        """
-        Draw a rectangle on the plot.
+        """Draw a rectangle on the plot.
 
         Args:
             ax (object): Axes object of the plot.
             box (list): List of coordinates [x1, y1, x2, y2] of the rectangle.
             color (str): Color of the rectangle.
             proba (int or numpy.ndarray): Probability or probability distribution of the class.
+
         """
         x1, y1, x2, y2 = box
         # correct coordinates to not go outside of bounds
@@ -85,7 +85,7 @@ def plot_preds(
                 fill=False,
                 edgecolor=color,
                 linewidth=2,
-            )
+            ),
         )
         # TODO(leo):conf
         if conformal:
@@ -114,35 +114,34 @@ def plot_preds(
                     fontsize=15,
                     bbox=dict(facecolor=color, alpha=0.5),
                 )
-        else:
-            if isinstance(proba, int) or len(proba.shape) == 0:
-                if isinstance(proba, torch.Tensor):
-                    proba = proba.item()
-                if idx_to_label is not None:
-                    text = f"{idx_to_label[proba]}" if proba >= 0 else "conf"
-                else:
-                    text = f"{proba}" if proba >= 0 else "conf"
-                ax.text(
-                    x2 - 30,
-                    y2,
-                    text,
-                    fontsize=15,
-                    bbox=dict(facecolor=color, alpha=0.5),
-                )
+        elif isinstance(proba, int) or len(proba.shape) == 0:
+            if isinstance(proba, torch.Tensor):
+                proba = proba.item()
+            if idx_to_label is not None:
+                text = f"{idx_to_label[proba]}" if proba >= 0 else "conf"
             else:
-                cl = proba.argmax().item()
-                if idx_to_label is not None:
-                    text = f"{idx_to_label[cl]}: {proba[cl]:0.2f}"
-                else:
-                    text = f"{cl}: {proba[cl]:0.2f}"
+                text = f"{proba}" if proba >= 0 else "conf"
+            ax.text(
+                x2 - 30,
+                y2,
+                text,
+                fontsize=15,
+                bbox=dict(facecolor=color, alpha=0.5),
+            )
+        else:
+            cl = proba.argmax().item()
+            if idx_to_label is not None:
+                text = f"{idx_to_label[cl]}: {proba[cl]:0.2f}"
+            else:
+                text = f"{cl}: {proba[cl]:0.2f}"
 
-                ax.text(
-                    x1,
-                    y1,
-                    text,
-                    fontsize=15,
-                    bbox=dict(facecolor=color, alpha=0.5),
-                )
+            ax.text(
+                x1,
+                y1,
+                text,
+                fontsize=15,
+                bbox=dict(facecolor=color, alpha=0.5),
+            )
 
     ax = plt.gca()
     for box, cl in zip(true_boxes, true_cls):
@@ -172,9 +171,15 @@ def plot_preds(
         plt.savefig(save_as, bbox_inches="tight")
     plt.show()
 
-def create_pdf_with_plots(predictions: ODPredictions, conformalized_predictions: ODConformalizedPredictions = None, confidence_threshold=None, idx_to_label: dict = None, output_pdf="output.pdf"):
-    """
-    Create a PDF with plots for each image in the predictions.
+
+def create_pdf_with_plots(
+    predictions: ODPredictions,
+    conformalized_predictions: ODConformalizedPredictions = None,
+    confidence_threshold=None,
+    idx_to_label: dict = None,
+    output_pdf="output.pdf",
+):
+    """Create a PDF with plots for each image in the predictions.
 
     Args:
         predictions (ODPredictions): Object containing the predictions.
@@ -182,10 +187,14 @@ def create_pdf_with_plots(predictions: ODPredictions, conformalized_predictions:
         confidence_threshold (float, optional): Confidence threshold for filtering predictions. Defaults to None.
         idx_to_label (dict, optional): Mapping from class indices to labels. Defaults to None.
         output_pdf (str, optional): Path to save the output PDF. Defaults to "output.pdf".
+
     """
     is_conformal = conformalized_predictions is not None
 
-    if confidence_threshold is None and predictions.confidence_threshold is not None:
+    if (
+        confidence_threshold is None
+        and predictions.confidence_threshold is not None
+    ):
         confidence_threshold = predictions.confidence_threshold
     elif confidence_threshold is None:
         raise ValueError("Confidence Threshold should be provided")
@@ -230,14 +239,16 @@ def create_pdf_with_plots(predictions: ODPredictions, conformalized_predictions:
                         fill=False,
                         edgecolor=color,
                         linewidth=2,
-                    )
+                    ),
                 )
                 if conformal:
                     if len(proba) <= 5:
                         if isinstance(proba, torch.Tensor):
                             proba = proba.cpu().numpy()
                         if idx_to_label is not None:
-                            text = ", ".join([f"{idx_to_label[cl]}" for cl in proba])
+                            text = ", ".join(
+                                [f"{idx_to_label[cl]}" for cl in proba]
+                            )
                         else:
                             text = ", ".join([f"{cl}" for cl in proba])
                         ax.text(
@@ -256,35 +267,36 @@ def create_pdf_with_plots(predictions: ODPredictions, conformalized_predictions:
                             fontsize=15,
                             bbox=dict(facecolor=color, alpha=0.5),
                         )
-                else:
-                    if isinstance(proba, int) or len(proba.shape) == 0:
-                        if isinstance(proba, torch.Tensor):
-                            proba = proba.item()
-                        if idx_to_label is not None:
-                            text = f"{idx_to_label[proba]}" if proba >= 0 else "conf"
-                        else:
-                            text = f"{proba}" if proba >= 0 else "conf"
-                        ax.text(
-                            x2 - 30,
-                            y2,
-                            text,
-                            fontsize=15,
-                            bbox=dict(facecolor=color, alpha=0.5),
+                elif isinstance(proba, int) or len(proba.shape) == 0:
+                    if isinstance(proba, torch.Tensor):
+                        proba = proba.item()
+                    if idx_to_label is not None:
+                        text = (
+                            f"{idx_to_label[proba]}" if proba >= 0 else "conf"
                         )
                     else:
-                        cl = proba.argmax().item()
-                        if idx_to_label is not None:
-                            text = f"{idx_to_label[cl]}: {proba[cl]:0.2f}"
-                        else:
-                            text = f"{cl}: {proba[cl]:0.2f}"
+                        text = f"{proba}" if proba >= 0 else "conf"
+                    ax.text(
+                        x2 - 30,
+                        y2,
+                        text,
+                        fontsize=15,
+                        bbox=dict(facecolor=color, alpha=0.5),
+                    )
+                else:
+                    cl = proba.argmax().item()
+                    if idx_to_label is not None:
+                        text = f"{idx_to_label[cl]}: {proba[cl]:0.2f}"
+                    else:
+                        text = f"{cl}: {proba[cl]:0.2f}"
 
-                        ax.text(
-                            x1,
-                            y1,
-                            text,
-                            fontsize=15,
-                            bbox=dict(facecolor=color, alpha=0.5),
-                        )
+                    ax.text(
+                        x1,
+                        y1,
+                        text,
+                        fontsize=15,
+                        bbox=dict(facecolor=color, alpha=0.5),
+                    )
 
             ax = plt.gca()
             for box, cl in zip(true_boxes, true_cls):
@@ -316,7 +328,7 @@ def create_pdf_with_plots(predictions: ODPredictions, conformalized_predictions:
 
             plt.axis("off")
             plt.title(
-                f"Image {idx + 1}: {len(true_boxes)} ground truths, {len(pred_boxes)} predictions"
+                f"Image {idx + 1}: {len(true_boxes)} ground truths, {len(pred_boxes)} predictions",
             )
             pdf.savefig(bbox_inches="tight")
             plt.close()
@@ -339,6 +351,6 @@ def plot_histograms_predictions(predictions: ODPredictions):
     axs[1].set_title(f"Predicted boxes, mean size = {np.mean(list_pred):.2f}")
     axs[2].hist(list_pred_thresh, bins=20)
     axs[2].set_title(
-        f"Predicted boxes above threshold, mean size = {np.mean(list_pred_thresh):.2f}"
+        f"Predicted boxes above threshold, mean size = {np.mean(list_pred_thresh):.2f}",
     )
     plt.show()

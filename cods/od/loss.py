@@ -214,7 +214,7 @@ class BoxCountRecallConfidenceLoss(ODLoss):
             loss = torch.maximum(
                 torch.zeros(1).to(self.device),
                 torch.tensor(
-                    (len(true_boxes) - len(conf_boxes)) / len(true_boxes)
+                    (len(true_boxes) - len(conf_boxes)) / len(true_boxes),
                 ),
             ).to(self.device)
         return loss
@@ -333,7 +333,7 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
             shortest_distances, _ = torch.min(distance_matrix, dim=1)
             # print("Distances", shortest_distances)
             loss = torch.mean(
-                (shortest_distances > self.distance_threshold).float()
+                (shortest_distances > self.distance_threshold).float(),
             ).expand(1)
             # print("Final Loss", loss)
         return loss
@@ -376,7 +376,8 @@ class ClassificationLossWrapper(ODLoss):
         """
         self.classification_loss = classification_loss
         super().__init__(
-            upper_bound=classification_loss.upper_bound, device=device
+            upper_bound=classification_loss.upper_bound,
+            device=device,
         )
 
     def __call__(
@@ -691,7 +692,7 @@ class PixelWiseRecallLoss(ODLoss):
         """
         if len(true_boxes) == 0:
             return torch.zeros(1).to(self.device)
-        elif len(conf_boxes) == 0:
+        if len(conf_boxes) == 0:
             return torch.ones(1).to(self.device)
         areas = self.get_covered_areas(conf_boxes, true_boxes)
         loss = torch.ones(1).to(self.device) - torch.mean(areas)

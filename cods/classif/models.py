@@ -45,11 +45,14 @@ class ClassificationModel(Model):
             if verbose:
                 print("Predictions already exist, loading them...")
             return preds
-        elif verbose:
+        if verbose:
             print("Predictions do not exist, building them...")
 
         dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
+            dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            **kwargs,
         )
         predictions = {"true_cls": [], "pred_cls": []}
         if verbose:
