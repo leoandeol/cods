@@ -8,7 +8,12 @@ class ClassificationLoss(Loss):
         super().__init__()
         self.upper_bound = upper_bound
 
-    def __call__(self, true_cls: torch.Tensor, conf_cls: torch.Tensor, **kwargs):
+    def __call__(
+        self,
+        true_cls: torch.Tensor,
+        conf_cls: torch.Tensor,
+        **kwargs,
+    ):
         raise NotImplementedError("ClassifLoss is an abstract class.")
 
     def get_set(self, pred_cls: torch.Tensor, lbd: float):
@@ -23,8 +28,7 @@ class LACLoss(ClassificationLoss):
         super().__init__(upper_bound=upper_bound)
 
     def __call__(self, true_cls: torch.Tensor, conf_cls: torch.Tensor):
-        """
-        Computes the LAC loss.
+        """Computes the LAC loss.
         :param true_cls: true class of the sample
         :param conf_cls: conformalized prediction of the sample
         :return: LAC loss

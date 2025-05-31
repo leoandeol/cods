@@ -1,9 +1,10 @@
-import torch
 from typing import Callable
 
+import torch
+
 from cods.base.tr import ToleranceRegion
-from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 from cods.classif.data import ClassificationPredictions
+from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 
 
 class ClassificationToleranceRegion(ToleranceRegion):
@@ -15,19 +16,25 @@ class ClassificationToleranceRegion(ToleranceRegion):
         inequality="binomial_inverse_cdf",
         optimizer="binary_search",
         preprocess="softmax",
+        device="cpu",
         optimizer_args={},
     ):
-        super().__init__(inequality=inequality, optimizer=optimizer, optimizer_args={})
+        super().__init__(
+            inequality=inequality,
+            optimizer=optimizer,
+            optimizer_args={},
+        )
         self.ACCEPTED_LOSSES = CLASSIFICATION_LOSSES
         self.lbd = None
         if loss not in self.ACCEPTED_LOSSES:
             raise ValueError(
-                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
+                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.",
             )
         if preprocess not in self.ACCEPTED_PREPROCESS.keys():
             raise ValueError(
-                f"preprocess '{preprocess}' not accepted, must be one of {self.accepted_preprocess}"
+                f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
             )
+        self.device = device
         self.preprocess = preprocess
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
         if isinstance(loss, str):
@@ -38,7 +45,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
             self.loss = loss()
         else:
             raise ValueError(
-                f"loss must be a string or a ClassificationLoss instance, got {loss}"
+                f"loss must be a string or a ClassificationLoss instance, got {loss}",
             )
 
     def calibrate(
@@ -120,15 +127,20 @@ class ClassificationToleranceRegion(ToleranceRegion):
         # TODO: fix
         return self.f_inequality(
             Rhat=risk,
-            n=torch.tensor(n, dtype=torch.float).cuda(),
-            delta=torch.tensor(delta, dtype=torch.float).cuda(),
+            n=torch.tensor(n, dtype=torch.float).to(self.device),
+            delta=torch.tensor(delta, dtype=torch.float).to(self.device),
         )
 
     def conformalize(
-        self, predictions: ClassificationPredictions, verbose: bool = True, **kwargs
+        self,
+        predictions: ClassificationPredictions,
+        verbose: bool = True,
+        **kwargs,
     ) -> list:
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before conformalizing.")
+            raise ValueError(
+                "Conformalizer must be calibrated before conformalizing.",
+            )
         conf_cls = []
         for pred_cls in predictions.pred_cls:
             pred_cls = self.f_preprocess(pred_cls, -1)
@@ -138,10 +150,16 @@ class ClassificationToleranceRegion(ToleranceRegion):
         return conf_cls
 
     def evaluate(
-        self, preds: ClassificationPredictions, conf_cls: list, verbose=True, **kwargs
+        self,
+        preds: ClassificationPredictions,
+        conf_cls: list,
+        verbose=True,
+        **kwargs,
     ):
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before evaluating.")
+            raise ValueError(
+                "Conformalizer must be calibrated before evaluating.",
+            )
         losses = []
         set_sizes = []
         for i, true_cls in enumerate(preds.true_cls):
@@ -154,6 +172,6 @@ class ClassificationToleranceRegion(ToleranceRegion):
         set_sizes = torch.stack(set_sizes)
         if verbose:
             print(
-                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}"
+                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}",
             )
         return losses, set_sizes

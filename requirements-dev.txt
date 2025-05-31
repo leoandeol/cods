@@ -1,0 +1,10 @@
+ruff
+ipykernel
+jupyter
+notebook
+ipykernel
+wandb
+lazydocs
+line_profiler
+pre-commit
+pytest

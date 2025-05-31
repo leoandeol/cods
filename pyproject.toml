@@ -1,0 +1,58 @@
+[tool.ruff]
+target-version = "py38"
+# Exclude a variety of commonly ignored directories.
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+]
+line-length = 79
+extend-include = ["*.ipynb"]
+indent-width = 4
+fix = true
+
+
+[tool.ruff.lint]
+ignore = []
+# Allow fix for all enabled rules (when `--fix`) is provided.
+#TODO too much currently disabled
+fixable = ["ALL"]
+select = ["ALL"]
+# select = ["F", "E", "B", "I", "RUF", "TCH"]
+# Disable fix for unused imports (`F401`).
+unfixable = [] # ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+
+[tool.mypy]
+python_version = "3.8"
+strict = true  # Optional: enables full strict mode
+ignore_missing_imports = true
