@@ -80,7 +80,6 @@ This project was developped by Léo Andéol & Luca Mossina as part of the DEEL p
 6. [Bates et al 2019: Risk Controlling Prediction Sets](https://dl.acm.org/doi/abs/10.1145/3478535)
 7. [Andéol et al. 2023: Confident Object Detection via Conformal Prediction and Conformal Risk Control](https://proceedings.mlr.press/v204/andeol23a.html)
 8. [Li et al. 2022: Towards PAC Multi-Object Detection and Tracking](https://arxiv.org/abs/2204.07482)
-9. [Bates et al. 2021: Risk Controlling Prediction Sets](https://dl.acm.org/doi/abs/10.1145/3478535)
 
 ## Citation
 
