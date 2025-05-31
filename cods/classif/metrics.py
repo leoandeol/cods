@@ -64,7 +64,7 @@ def get_empirical_safety(
     if isinstance(loss, str):
         loss = ACCEPTED_LOSSES[loss]()
     elif isinstance(loss, ClassificationLoss):
-        loss = loss()
+        loss = loss
     else:
         raise ValueError(
             f"loss must be a string or a ClassificationLoss instance, got {loss}",

@@ -26,7 +26,17 @@ class ClassificationToleranceRegion(ToleranceRegion):
         )
         self.ACCEPTED_LOSSES = CLASSIFICATION_LOSSES
         self.lbd = None
-        if loss not in self.ACCEPTED_LOSSES:
+        if isinstance(preprocess, str):
+            if preprocess not in self.ACCEPTED_PREPROCESS.keys():
+                raise ValueError(
+                    f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS.keys()}"
+                )
+            self.preprocess = preprocess
+            self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
+        elif isinstance(preprocess, Callable):
+            self.preprocess_name = preprocess.__name__
+            self.f_preprocess = preprocess
+        else:
             raise ValueError(
                 f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.",
             )
@@ -38,11 +48,15 @@ class ClassificationToleranceRegion(ToleranceRegion):
         self.preprocess = preprocess
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
         if isinstance(loss, str):
+            if loss not in self.ACCEPTED_LOSSES:
+                raise ValueError(
+                    f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
+                )
             self.loss_name = loss
             self.loss = self.ACCEPTED_LOSSES[loss]()
         elif isinstance(loss, ClassificationLoss):
             self.loss_name = loss.__class__.__name__
-            self.loss = loss()
+            self.loss = loss
         else:
             raise ValueError(
                 f"loss must be a string or a ClassificationLoss instance, got {loss}",
@@ -61,14 +75,6 @@ class ClassificationToleranceRegion(ToleranceRegion):
         if self.lbd is not None:
             print("Replacing previously computed lambda")
         self._n_classes = predictions.n_classes
-        if self.loss is None:
-            self.loss = self.ACCEPTED_LOSSES[self.loss_name]()
-        # if preds.matching is None:
-        #     if verbose:
-        #         print("Computing Matching of Boxes")
-        #     matching = matching_by_iou(preds)
-        # else:
-        #     matching = preds.matching
         risk_function = self._get_risk_function(
             predictions=predictions,
             alpha=alpha,
@@ -78,7 +84,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,
@@ -120,10 +126,10 @@ class ClassificationToleranceRegion(ToleranceRegion):
 
     def _correct_risk(
         self,
-        risk,
-        n,
-        delta,
-    ):
+        risk: torch.Tensor,
+        n: int,
+        delta: float,
+    ) -> torch.Tensor:
         # TODO: fix
         return self.f_inequality(
             Rhat=risk,
@@ -146,7 +152,6 @@ class ClassificationToleranceRegion(ToleranceRegion):
             pred_cls = self.f_preprocess(pred_cls, -1)
             ys = self.loss.get_set(pred_cls=pred_cls, lbd=self.lbd)
             conf_cls.append(ys)
-        predictions.conf_cls = conf_cls
         return conf_cls
 
     def evaluate(

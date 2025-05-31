@@ -35,6 +35,11 @@ class ClassificationDataset(ImageDataset):
             generator=generator,
         )
         for dataset in datasets:
+            if (
+                not isinstance(dataset, ClassificationDataset)
+                or dataset.idx_to_cls is None
+            ):
+                raise ValueError("idx_to_cls should've been set!")
             dataset.idx_to_cls = self.idx_to_cls
             yield dataset
 
@@ -45,7 +50,9 @@ class ClassificationDataset(ImageDataset):
 
 
 class ImageNetDataset(ClassificationDataset):
-    def __init__(self, path: str, transforms: Callable = None, **kwargs):
+    def __init__(
+        self, path: str, transforms: Union[Callable, None] = None, **kwargs
+    ):
         tmp = json.loads(
             urllib.request.urlopen(
                 "https://s3.amazonaws.com/deep-learning-models/image-models/imagenet_class_index.json",
@@ -75,6 +82,7 @@ class ImageNetDataset(ClassificationDataset):
 
     def __getitem__(self, item):
         img, label = super(ImageNetDataset, self).__getitem__(item)
-        img = self.transforms(img)
+        if self.transforms is not None:
+            img = self.transforms(img)
 
-        return os.path.join(self._path, self.filename(item)), img, label
+        return os.path.join(self._path, str(self.filename(item))), img, label

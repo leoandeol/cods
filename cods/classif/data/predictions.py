@@ -13,9 +13,9 @@ class ClassificationPredictions(Predictions):
         dataset_name: str,
         split_name: str,
         image_paths: List[str],
-        idx_to_cls: Dict[int, str],
+        idx_to_cls: Union[Dict[int, str], None],
         true_cls: torch.Tensor,
-        pred_cls: List[torch.Tensor],
+        pred_cls: torch.Tensor,
     ):
         super().__init__(dataset_name, split_name, task_name="classification")
         self.image_paths = image_paths

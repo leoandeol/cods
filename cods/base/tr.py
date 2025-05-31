@@ -4,6 +4,7 @@ import torch
 from scipy.optimize import brentq
 from scipy.stats import binom
 
+from cods.base.data import Predictions
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
 
 
@@ -82,30 +83,45 @@ class ToleranceRegion:
         optimizer: str = "binary_search",
         optimizer_args: dict = {},
     ):
-        if inequality not in self.AVAILABLE_INEQUALITIES:
+        if isinstance(inequality, str):
+            if inequality not in self.AVAILABLE_INEQUALITIES.keys():
+                raise ValueError(
+                    f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}"
+                )
+            self.inequality_name = inequality
+            self.f_inequality = self.AVAILABLE_INEQUALITIES[inequality]
+        elif isinstance(inequality, Callable):
+            self.f_inequality = inequality
+            self.inequality_name = inequality.__name__
+        else:
             raise ValueError(
                 f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}",
             )
-        self.inequality_name = inequality
-        self.f_inequality = self.AVAILABLE_INEQUALITIES[inequality]
-        if optimizer not in self.ACCEPTED_OPTIMIZERS:
+        if optimizer not in self.ACCEPTED_OPTIMIZERS.keys():
             raise ValueError(
                 f"Available optimizers are {self.ACCEPTED_OPTIMIZERS.keys()}",
             )
         self.optimizer_name = optimizer
         self.optimizer = self.ACCEPTED_OPTIMIZERS[optimizer](**optimizer_args)
 
-    def calibrate(self, preds, alpha=0.1, delta=0.1, verbose=True, **kwargs):
+    def calibrate(
+        self,
+        preds: Predictions,
+        alpha: float = 0.1,
+        delta: float = 0.1,
+        verbose: bool = True,
+        **kwargs,
+    ):
         raise NotImplementedError(
             "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
 
-    def conformalize(self, preds, verbose=True, **kwargs):
+    def conformalize(self, preds: Predictions, verbose: bool = True, **kwargs):
         raise NotImplementedError(
             "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
 
-    def evaluate(self, preds, verbose=True, **kwargs):
+    def evaluate(self, preds: Predictions, verbose: bool = True, **kwargs):
         raise NotImplementedError(
             "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
@@ -116,7 +132,13 @@ class CombiningToleranceRegions(ToleranceRegion):
         self.tregions = tregions
         self.mode = mode
 
-    def calibrate(self, preds, alpha=0.1, delta=0.1, parameters=None):
+    def calibrate(
+        self,
+        preds: Predictions,
+        alpha: float = 0.1,
+        delta: float = 0.1,
+        parameters: Union[None, List] = None,
+    ):
         if parameters is None:
             parameters = [{} for _ in range(len(self.tregions))]
         if self.mode == "bonferroni":

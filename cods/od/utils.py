@@ -25,7 +25,7 @@ def mesh_func(
         y1 (int): y-coordinate of the top-left corner of the bounding box.
         x2 (int): x-coordinate of the bottom-right corner of the bounding box.
         y2 (int): y-coordinate of the bottom-right corner of the bounding box.
-        pbs (List[List[int]]): List of predicted bounding boxes.
+        pbs (torch.Tensor): List of predicted bounding boxes.
 
     Returns:
     -------

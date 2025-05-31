@@ -10,7 +10,7 @@ class ClassifNCScore(NCScore):
         super().__init__()
         self.n_classes = n_classes
 
-    def __call__(self, **kwargs):
+    def __call__(self, pred_cls: torch.Tensor, y: torch.Tensor, **kwargs):
         raise NotImplementedError("ClassifNCScore is an abstract class.")
 
     def get_set(self, pred_cls, quantile):
@@ -26,7 +26,7 @@ class LACNCScore(ClassifNCScore):
     def __init__(self, n_classes: int, **kwargs):
         super().__init__(n_classes=n_classes)
 
-    def __call__(self, pred_cls: torch.Tensor, y: int, **kwargs):
+    def __call__(self, pred_cls: torch.Tensor, y: torch.Tensor, **kwargs):
         return 1 - pred_cls[y]
 
     def get_set(self, pred_cls, quantile):

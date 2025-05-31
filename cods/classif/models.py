@@ -35,7 +35,7 @@ class ClassificationModel(Model):
         shuffle: bool = False,
         verbose: bool = True,
         **kwargs,
-    ):
+    ) -> ClassificationPredictions:
         preds = self._load_preds_if_exists(
             dataset_name=dataset_name,
             split_name=split_name,
@@ -54,7 +54,8 @@ class ClassificationModel(Model):
             shuffle=shuffle,
             **kwargs,
         )
-        predictions = {"true_cls": [], "pred_cls": []}
+        true_cls = []
+        pred_cls = []
         if verbose:
             print("Building predictions...")
         ids = []
@@ -65,9 +66,9 @@ class ClassificationModel(Model):
                 labels = labels.to(self.device)
                 ids.extend(id)
                 preds = self.model(images)
-                # _, preds = torch.max(outputs, 1)
-                predictions["true_cls"].extend(labels)  # .cpu().numpy())
-                predictions["pred_cls"].extend(preds)  # .cpu().numpy())
+                true_cls.extend(labels)
+                pred_cls.extend(preds)
+        predictions = {}
         predictions["dataset_name"] = dataset_name
         predictions["split_name"] = split_name
         paths = ids  # dataset.get_paths(ids)

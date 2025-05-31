@@ -99,7 +99,7 @@ class GaussianProcessOptimizer(Optimizer):
         steps: int,
         epsilon=1e-5,
         verbose=True,
-    ) -> float:
+    ) -> Union[float, np.ndarray, None]:
         # TODO: experimental
         def fun_opti(params):
             corr_risk = objective_function(*params)
@@ -142,12 +142,12 @@ class MonteCarloOptimizer(Optimizer):
         steps: int,
         epsilon=1e-4,
         verbose=True,
-    ) -> float:
+    ) -> Union[float, np.ndarray, None]:
         good_lbds = []
         lbds_risks = []
 
         pbar = tqdm(range(steps), disable=not verbose)
-        for i in pbar:
+        for it in pbar:
             lbd = np.random.uniform(size=len(bounds))
             for i, bound in enumerate(bounds):
                 lower, upper = bound
