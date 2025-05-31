@@ -86,7 +86,7 @@ __init__(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L84"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L87"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `postprocess`
 
@@ -100,7 +100,7 @@ postprocess(outputs, image_sizes)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L109"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 
@@ -114,12 +114,14 @@ Predicts the output given a batch of input tensors.
 
 **Args:**
  
+---- 
  - <b>`batch`</b> (list):  The input batch 
 
 
 
 **Returns:**
  
+------- 
  - <b>`dict`</b>:  The predicted output as a dictionary with the following keys: 
         - "image_paths" (list): The paths of the input images 
         - "true_boxes" (list): The true bounding boxes of the objects in the images 

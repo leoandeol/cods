@@ -10,7 +10,7 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L11"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L9"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `xywh2xyxy_scaled`
 
@@ -25,14 +25,14 @@ xywh2xyxy_scaled(x, width_scale, height_scale)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L20"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L18"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `AlteredYOLO`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L21"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L19"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -139,7 +139,7 @@ This property returns the transformations if they are defined in the model. The 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L25"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L23"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict`
 
@@ -154,14 +154,14 @@ predict(source=None, stream=False, **kwargs)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L47"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L45"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `YOLOModel`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L50"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L48"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -185,7 +185,7 @@ __init__(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L89"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L87"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `postprocess`
 
@@ -199,7 +199,7 @@ postprocess(raw_output, img_shapes, model_input_size)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L124"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L226"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 
@@ -213,12 +213,14 @@ Predicts the output given a batch of input tensors.
 
 **Args:**
  
+---- 
  - <b>`batch`</b> (list):  The input batch 
 
 
 
 **Returns:**
  
+------- 
  - <b>`dict`</b>:  The predicted output as a dictionary with the following keys: 
         - "image_paths" (list): The paths of the input images 
         - "true_boxes" (list): The true bounding boxes of the objects in the images 

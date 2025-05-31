@@ -10,7 +10,7 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/utils.py#L19"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/utils.py#L18"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `bayesod`
 
@@ -29,10 +29,26 @@ _summary_
 
 **Args:**
  
+---- 
  - <b>`pred_boxes`</b> (torch.Tensor):  _description_ 
  - <b>`confidences`</b> (torch.Tensor):  _description_ 
  - <b>`pred_cls`</b> (torch.Tensor):  _description_ 
  - <b>`iou_threshold`</b> (float):  _description_ 
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/utils.py#L114"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `filter_preds`
+
+```python
+filter_preds(preds, confidence_threshold=0.001)
+```
+
+
+
+
 
 
 ---
