@@ -32,7 +32,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
             )
         if preprocess not in self.ACCEPTED_PREPROCESS.keys():
             raise ValueError(
-                f"preprocess '{preprocess}' not accepted, must be one of {self.accepted_preprocess}",
+                f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
             )
         self.device = device
         self.preprocess = preprocess
