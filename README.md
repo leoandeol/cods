@@ -2,7 +2,7 @@
 
 *A library for distribution-free model-agnostic finite-sample uncertainty quantification applied to computer vision tasks!*
 
-![](./docs/pics/fig_cod_rev.png)
+![](./docs/pics/od_main.jpg)
 
 A library for Conformal Classification, Object Detection and Segmentation, based on PyTorch, with all the latest methods and models!
 
@@ -43,7 +43,7 @@ pip install -e .
 
 Application of CODS to the image of a kitchen in MS-COCO with α=0.1
 
-![](./docs/pics/kitchen.png)
+![](./docs/pics/od_bears.jpg)
 
 ## Tutorials
 
@@ -80,7 +80,6 @@ This project was developped by Léo Andéol & Luca Mossina as part of the DEEL p
 6. [Bates et al 2019: Risk Controlling Prediction Sets](https://dl.acm.org/doi/abs/10.1145/3478535)
 7. [Andéol et al. 2023: Confident Object Detection via Conformal Prediction and Conformal Risk Control](https://proceedings.mlr.press/v204/andeol23a.html)
 8. [Li et al. 2022: Towards PAC Multi-Object Detection and Tracking](https://arxiv.org/abs/2204.07482)
-9. [Bates et al. 2021: Risk Controlling Prediction Sets](https://dl.acm.org/doi/abs/10.1145/3478535)
 
 ## Citation
 

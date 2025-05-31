@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List
 
 import torch
 
@@ -35,8 +35,10 @@ class ClassificationPredictions(Predictions):
         """Split predictions into multiple splits
 
         Args:
+        ----
             splits_names (list): list of names for each split
             splits_ratios (list): list of ratios for each split
+
         """
         assert sum(splits_ratios) == 1
         assert len(splits_names) == len(splits_ratios)
@@ -48,11 +50,11 @@ class ClassificationPredictions(Predictions):
             splits.append(
                 ClassificationPredictions(
                     dataset_name=self.dataset_name,
-                    idx_to_cls=self.idx_to_cls,
-                    image_paths=self.image_paths[start:end],
                     split_name=splits_names[i],
+                    image_paths=self.image_paths[start:end],
                     true_cls=self.true_cls[start:end],
                     pred_cls=self.pred_cls[start:end],
-                )
+                    idx_to_cls=self.idx_to_cls,
+                ),
             )
         return splits

@@ -170,3 +170,14 @@ work_dirs/
 wandb/
 .vscode/
 saved_predictions/
+test.png
+*.pt
+*.pth
+*.pdf
+voc/
+.idea/
+*.out
+saved_predictions
+final_experiments/figs/
+final_experiments/*.csv
+monotonicity_*

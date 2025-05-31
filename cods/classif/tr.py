@@ -1,4 +1,4 @@
-from typing import Callable, Union
+from typing import Callable
 
 import torch
 
@@ -12,14 +12,17 @@ class ClassificationToleranceRegion(ToleranceRegion):
 
     def __init__(
         self,
-        loss: Union[str, ClassificationLoss] = "lac",
-        inequality: Union[str, Callable] = "binomial_inverse_cdf",
-        optimizer: str = "binary_search",
-        preprocess: Union[str, Callable] = "softmax",
-        optimizer_args: dict = {},
+        loss="lac",
+        inequality="binomial_inverse_cdf",
+        optimizer="binary_search",
+        preprocess="softmax",
+        device="cpu",
+        optimizer_args={},
     ):
         super().__init__(
-            inequality=inequality, optimizer=optimizer, optimizer_args=optimizer_args
+            inequality=inequality,
+            optimizer=optimizer,
+            optimizer_args={},
         )
         self.ACCEPTED_LOSSES = CLASSIFICATION_LOSSES
         self.lbd = None
@@ -35,9 +38,15 @@ class ClassificationToleranceRegion(ToleranceRegion):
             self.f_preprocess = preprocess
         else:
             raise ValueError(
-                "preprocess must be a string or a callable function, got {type(preprocess)}"
+                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.",
             )
-
+        if preprocess not in self.ACCEPTED_PREPROCESS.keys():
+            raise ValueError(
+                f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
+            )
+        self.device = device
+        self.preprocess = preprocess
+        self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
         if isinstance(loss, str):
             if loss not in self.ACCEPTED_LOSSES:
                 raise ValueError(
@@ -50,7 +59,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
             self.loss = loss
         else:
             raise ValueError(
-                f"loss must be a string or a ClassificationLoss instance, got {loss}"
+                f"loss must be a string or a ClassificationLoss instance, got {loss}",
             )
 
     def calibrate(
@@ -124,15 +133,20 @@ class ClassificationToleranceRegion(ToleranceRegion):
         # TODO: fix
         return self.f_inequality(
             Rhat=risk,
-            n=torch.tensor(n, dtype=torch.float).cuda(),
-            delta=torch.tensor(delta, dtype=torch.float).cuda(),
+            n=torch.tensor(n, dtype=torch.float).to(self.device),
+            delta=torch.tensor(delta, dtype=torch.float).to(self.device),
         )
 
     def conformalize(
-        self, predictions: ClassificationPredictions, verbose: bool = True, **kwargs
+        self,
+        predictions: ClassificationPredictions,
+        verbose: bool = True,
+        **kwargs,
     ) -> list:
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before conformalizing.")
+            raise ValueError(
+                "Conformalizer must be calibrated before conformalizing.",
+            )
         conf_cls = []
         for pred_cls in predictions.pred_cls:
             pred_cls = self.f_preprocess(pred_cls, -1)
@@ -141,10 +155,16 @@ class ClassificationToleranceRegion(ToleranceRegion):
         return conf_cls
 
     def evaluate(
-        self, preds: ClassificationPredictions, conf_cls: list, verbose=True, **kwargs
+        self,
+        preds: ClassificationPredictions,
+        conf_cls: list,
+        verbose=True,
+        **kwargs,
     ):
         if self.lbd is None:
-            raise ValueError("Conformalizer must be calibrated before evaluating.")
+            raise ValueError(
+                "Conformalizer must be calibrated before evaluating.",
+            )
         losses = []
         set_sizes = []
         for i, true_cls in enumerate(preds.true_cls):
@@ -157,6 +177,6 @@ class ClassificationToleranceRegion(ToleranceRegion):
         set_sizes = torch.stack(set_sizes)
         if verbose:
             print(
-                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}"
+                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}",
             )
         return losses, set_sizes

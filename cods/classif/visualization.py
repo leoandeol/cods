@@ -1,5 +1,3 @@
-from typing import Union
-
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -7,15 +5,15 @@ from cods.classif.data import ClassificationPredictions
 
 
 def plot_predictions(
-    idxs: Union[int, list],
+    idxs: list,
     preds: ClassificationPredictions,
-    conf_cls: Union[list, None] = None,
+    conf_cls: list = None,
 ):
     if isinstance(idxs, int):
         idxs = [idxs]
     if conf_cls is not None and len(preds) != len(conf_cls):
         raise ValueError(
-            f"len(preds)={len(preds)} and len(conf_cls)={len(conf_cls)} must be equal"
+            f"len(preds)={len(preds)} and len(conf_cls)={len(conf_cls)} must be equal",
         )
     if preds.idx_to_cls is None:
         raise ValueError("preds.idx_to_cls must be set")
@@ -32,13 +30,15 @@ def plot_predictions(
         pred_cls = int(preds.pred_cls[idx_pred].argmax().item())
         pred_cls_name = preds.idx_to_cls[pred_cls]
         if conf_cls is None:
-            curr_ax.set_title(f"True: {true_cls_name},\n Pred: {pred_cls_name}")
+            curr_ax.set_title(
+                f"True: {true_cls_name},\n Pred: {pred_cls_name}",
+            )
         else:
             conf_cls_name = list(
-                [preds.idx_to_cls[x.item()] for x in conf_cls[idx_pred]]
+                [preds.idx_to_cls[x.item()] for x in conf_cls[idx_pred]],
             )
             curr_ax.set_title(
-                f"True: {true_cls_name},\n Pred: {pred_cls_name},\n Conf: {conf_cls_name if len(conf_cls_name) == 1 else 'len='+str(len(conf_cls_name))}"
+                f"True: {true_cls_name},\n Pred: {pred_cls_name},\n Conf: {conf_cls_name if len(conf_cls_name) == 1 else 'len='+str(len(conf_cls_name))}",
             )
             curr_ax.axis("off")
     plt.show()

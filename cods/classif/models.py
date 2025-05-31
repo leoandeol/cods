@@ -1,7 +1,4 @@
-from typing import Union
-
 import torch
-import torch.utils.data
 from tqdm import tqdm
 
 from cods.base.models import Model
@@ -11,13 +8,13 @@ from cods.classif.data import ClassificationPredictions
 class ClassificationModel(Model):
     def __init__(
         self,
-        model: torch.nn.Module,
-        model_name: str,
-        pretrained: bool = True,
-        weights: Union[str, None] = None,
-        device: str = "cuda",
-        save: bool = True,
-        save_dir_path: Union[str, None] = None,
+        model,
+        model_name,
+        pretrained=True,
+        weights=None,
+        device="cpu",
+        save=True,
+        save_dir_path=None,
     ):
         super().__init__(
             model_name=model_name,
@@ -40,22 +37,22 @@ class ClassificationModel(Model):
         **kwargs,
     ) -> ClassificationPredictions:
         preds = self._load_preds_if_exists(
-            dataset_name=dataset_name, split_name=split_name, task_name="classification"
+            dataset_name=dataset_name,
+            split_name=split_name,
+            task_name="classification",
         )
         if preds is not None:
             if verbose:
                 print("Predictions already exist, loading them...")
-            if isinstance(preds, ClassificationPredictions):
-                return preds
-            else:
-                raise ValueError(
-                    f"Predictions already exist, but are of wrong type: {type(preds)}"
-                )
-        elif verbose:
+            return preds
+        if verbose:
             print("Predictions do not exist, building them...")
 
         dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
+            dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            **kwargs,
         )
         true_cls = []
         pred_cls = []

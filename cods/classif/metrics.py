@@ -7,10 +7,11 @@ from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 
 
 def get_coverage(
-    preds: ClassificationPredictions, conf_cls: torch.Tensor, verbose: bool = True
+    preds: ClassificationPredictions,
+    conf_cls: torch.Tensor,
+    verbose: bool = True,
 ):
-    """
-    Computes the coverage of the conformal prediction set.
+    """Computes the coverage of the conformal prediction set.
     :param preds: predictions and ground truth of the classifier
     :param conf_cls: conformalized predictions of the classifier
     :param verbose: whether to print the coverage
@@ -32,8 +33,7 @@ def get_empirical_risk(
     loss: ClassificationLoss,
     verbose: bool = True,
 ):
-    """
-    Computes the empirical risk of the conformal prediction set.
+    """Computes the empirical risk of the conformal prediction set.
     :param preds: predictions and ground truth of the classifier
     :param conf_cls: conformalized predictions of the classifier
     :param verbose: whether to print the empirical risk
@@ -54,8 +54,7 @@ def get_empirical_safety(
     loss: ClassificationLoss,
     verbose: bool = True,
 ):
-    """
-    Computes the empirical safety of the conformal prediction set.
+    """Computes the empirical safety of the conformal prediction set.
     :param preds: predictions and ground truth of the classifier
     :param conf_cls: conformalized predictions of the classifier
     :param verbose: whether to print the empirical safety
@@ -68,7 +67,7 @@ def get_empirical_safety(
         loss = loss
     else:
         raise ValueError(
-            f"loss must be a string or a ClassificationLoss instance, got {loss}"
+            f"loss must be a string or a ClassificationLoss instance, got {loss}",
         )
 
     B = loss.upper_bound
