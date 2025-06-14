@@ -11,9 +11,7 @@ from cods.od.data import MSCOCODataset
 from cods.od.models import DETRModel
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = (
-    "0"  # chose the GPU. If only one, then "0"
-)
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # chose the GPU. If only one, then "0"
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -22,16 +20,12 @@ COCO_PATH = "/datasets/shared_datasets/coco/"
 
 data = MSCOCODataset(root=COCO_PATH, split="val")
 
-calibration_ratio = (
-    0.5  # set 0.5 to use 50% for calibration and 50% for testing
-)
+calibration_ratio = 0.5  # set 0.5 to use 50% for calibration and 50% for testing
 
 use_smaller_subset = True  # TODO: Temp
 
 if use_smaller_subset:
-    data_cal, data_val = data.split_dataset(
-        calibration_ratio, shuffle=False, n_calib_test=800
-    )
+    data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False, n_calib_test=800)
 else:
     data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)
 
@@ -76,3 +70,76 @@ for split in ["cal", "val"]:
         f"\t Quantiles [0.90, 0.95, 0.97, 0.99] (Predictions vs Ground Truth): "
         f"{np.quantile(n_objects_pred, [0.90, 0.95, 0.97, 0.99])} vs {np.quantile(n_objects_true, [0.90, 0.95, 0.97, 0.99])}"
     )
+
+    import matplotlib.pyplot as plt
+
+    plt.figure(figsize=(8, 5))
+    plt.hist(
+        n_objects_pred,
+        bins=30,
+        alpha=0.5,
+        label="Predicted Objects",
+        color="blue",
+        density=True,
+    )
+    plt.hist(
+        n_objects_true,
+        bins=30,
+        alpha=0.5,
+        label="Ground Truth Objects",
+        color="orange",
+        density=True,
+    )
+    plt.xlabel("Number of Objects per Image")
+    plt.ylabel("Density")
+    plt.title(f"Histogram of Object Counts ({'Calibration' if split == 'cal' else 'Validation'})")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f"histogram_objects_{'calibration' if split == 'cal' else 'validation'}.png")
+    plt.close()
+    print(f"Saved histogram for {split} split.")
+
+    CONFIDENCE_THRESHOLD = 1 - 0.9259869  # Set your desired threshold
+
+    # Filter predictions by confidence threshold
+    n_objects_pred_thresh = [
+        np.sum(np.array(conf) >= CONFIDENCE_THRESHOLD) for conf in preds_cal.confidences
+    ]
+
+    plt.figure(figsize=(8, 5))
+    plt.hist(
+        n_objects_pred,
+        bins=30,
+        alpha=0.5,
+        label="Predicted Objects",
+        color="blue",
+        density=True,
+    )
+    plt.hist(
+        n_objects_pred_thresh,
+        bins=30,
+        alpha=0.5,
+        label=f"Predicted Objects (conf >= {CONFIDENCE_THRESHOLD:.3f})",
+        color="green",
+        density=True,
+    )
+    plt.hist(
+        n_objects_true,
+        bins=30,
+        alpha=0.5,
+        label="Ground Truth Objects",
+        color="orange",
+        density=True,
+    )
+    plt.xlabel("Number of Objects per Image")
+    plt.ylabel("Density")
+    plt.title(
+        f"Histogram of Object Counts ({'Calibration' if split == 'cal' else 'Validation'})\nFiltered by Confidence >= {CONFIDENCE_THRESHOLD:.3f}"
+    )
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(
+        f"histogram_objects_{'calibration' if split == 'cal' else 'validation'}_conf_{CONFIDENCE_THRESHOLD:.3f}.png"
+    )
+    plt.close()
+    print(f"Saved filtered histogram for {split} split (conf >= {CONFIDENCE_THRESHOLD:.3f}).")

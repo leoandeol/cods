@@ -92,25 +92,11 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         - torch.Tensor: The loss value.
 
         """
-        # print(len(conf_boxes), len(true_boxes))
         return (
             torch.zeros(1).to(self.device)
             if len(conf_boxes) >= len(true_boxes)
             else torch.ones(1).to(self.device)
         )
-        # return max(
-        #     [
-        #         (
-        #             torch.zeros(1).to(self.device)
-        #             if len(conf_boxes) >= len(true_boxes)
-        #             else torch.ones(1).to(self.device)
-        #         ),
-        #     ]
-        #     + [
-        #         loss(true_boxes, true_cls, matched_conf_boxes, matched_conf_cls)
-        #         for loss in self.other_losses
-        #     ],
-        # )
 
 
 class BoxCountTwosidedConfidenceLoss(ODLoss):
@@ -213,9 +199,7 @@ class BoxCountRecallConfidenceLoss(ODLoss):
         else:
             loss = torch.maximum(
                 torch.zeros(1).to(self.device),
-                torch.tensor(
-                    (len(true_boxes) - len(conf_boxes)) / len(true_boxes)
-                ),
+                torch.tensor((len(true_boxes) - len(conf_boxes)) / len(true_boxes)),
             ).to(self.device)
         return loss
         # return max(
@@ -332,9 +316,7 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
             distance_matrix = class_factor * l_lac + (1 - class_factor) * l_ass
             shortest_distances, _ = torch.min(distance_matrix, dim=1)
             # print("Distances", shortest_distances)
-            loss = torch.mean(
-                (shortest_distances > self.distance_threshold).float()
-            ).expand(1)
+            loss = torch.mean((shortest_distances > self.distance_threshold).float()).expand(1)
             # print("Final Loss", loss)
         return loss
 
@@ -351,9 +333,7 @@ class ODBinaryClassificationLoss(ClassificationLoss):
         """ """
         # if len(conf_cls) == 0:
         #    logger.warning(f"conf_cls is empty : {conf_cls}")
-        loss = (
-            torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
-        )
+        loss = torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
         # if loss == 0:
         #    logger.info(f"true_cls: {true_cls}, conf_cls: {conf_cls}")
         return loss
@@ -375,9 +355,7 @@ class ClassificationLossWrapper(ODLoss):
 
         """
         self.classification_loss = classification_loss
-        super().__init__(
-            upper_bound=classification_loss.upper_bound, device=device
-        )
+        super().__init__(upper_bound=classification_loss.upper_bound, device=device)
 
     def __call__(
         self,
@@ -596,9 +574,7 @@ class BoxWiseRecallLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",
@@ -662,9 +638,7 @@ class PixelWiseRecallLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Pixel-wise Recall Loss only supports union of boxes.",
@@ -724,9 +698,7 @@ class BoxWisePrecisionLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",
@@ -795,9 +767,7 @@ class BoxWiseIoULoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",
