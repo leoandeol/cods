@@ -1,5 +1,6 @@
 # File: train_yolo.py
 
+
 from ultralytics import YOLO
 
 
@@ -9,6 +10,10 @@ def main():
     # 1. Load a pre-trained model
     model = YOLO(model_name)
 
+    # wandb.init(
+
+    # add_wandb_callback(model, enable_model_checkpointing=True)
+
     # 2. Train the model with specific data augmentations
     results = model.train(
         # Required arguments
@@ -16,7 +21,8 @@ def main():
         epochs=50,
         imgsz=640,
         batch=16,
-        name=f"{model_name.split(".pt")[0]}_sncf",
+        name=f"{model_name.split('.pt')[0]}_sncf",
+        project="cods-sncf",
         # --- Data Augmentation Arguments ---
         # Geometric Augmentations
         degrees=15.0,  # Random rotation (-15 to +15 degrees)
@@ -39,6 +45,8 @@ def main():
 
     print("Training finished.")
     print(f"Best model weights saved at: {results.save_dir}/weights/best.pt")
+
+    # wandb.finish()
 
 
 if __name__ == "__main__":
