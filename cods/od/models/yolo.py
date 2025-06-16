@@ -53,6 +53,7 @@ class YOLOModel(ODModel):
         device="cpu",
         save=True,
         save_dir_path=None,
+        is_coco=True,
     ):
         super().__init__(
             model_name=model_name,
@@ -82,6 +83,7 @@ class YOLOModel(ODModel):
                 # ),
             ],
         )
+        self.is_coco = is_coco
 
     # Unsure if this is the right way to do it, there is different ways to define the softmax
     def postprocess(
@@ -110,101 +112,104 @@ class YOLOModel(ODModel):
             temp = 1  # 0.2
             cls_probs = torch.softmax(box_output[:, 4:] / temp, dim=-1)
 
-            # Extend to be of size 91 :
-            CONVERT_TO_91 = [
-                1,
-                2,
-                3,
-                4,
-                5,
-                6,
-                7,
-                8,
-                9,
-                10,
-                11,
-                13,
-                14,
-                15,
-                16,
-                17,
-                18,
-                19,
-                20,
-                21,
-                22,
-                23,
-                24,
-                25,
-                27,
-                28,
-                31,
-                32,
-                33,
-                34,
-                35,
-                36,
-                37,
-                38,
-                39,
-                40,
-                41,
-                42,
-                43,
-                44,
-                46,
-                47,
-                48,
-                49,
-                50,
-                51,
-                52,
-                53,
-                54,
-                55,
-                56,
-                57,
-                58,
-                59,
-                60,
-                61,
-                62,
-                63,
-                64,
-                65,
-                67,
-                70,
-                72,
-                73,
-                74,
-                75,
-                76,
-                77,
-                78,
-                79,
-                80,
-                81,
-                82,
-                84,
-                85,
-                86,
-                87,
-                88,
-                89,
-                90,
-            ]
-            CONVERT_TO_91 = torch.tensor(
-                CONVERT_TO_91,
-                device=cls_probs.device,
-            )
+            if self.is_coco:
+                # Extend to be of size 91 :
+                CONVERT_TO_91 = [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10,
+                    11,
+                    13,
+                    14,
+                    15,
+                    16,
+                    17,
+                    18,
+                    19,
+                    20,
+                    21,
+                    22,
+                    23,
+                    24,
+                    25,
+                    27,
+                    28,
+                    31,
+                    32,
+                    33,
+                    34,
+                    35,
+                    36,
+                    37,
+                    38,
+                    39,
+                    40,
+                    41,
+                    42,
+                    43,
+                    44,
+                    46,
+                    47,
+                    48,
+                    49,
+                    50,
+                    51,
+                    52,
+                    53,
+                    54,
+                    55,
+                    56,
+                    57,
+                    58,
+                    59,
+                    60,
+                    61,
+                    62,
+                    63,
+                    64,
+                    65,
+                    67,
+                    70,
+                    72,
+                    73,
+                    74,
+                    75,
+                    76,
+                    77,
+                    78,
+                    79,
+                    80,
+                    81,
+                    82,
+                    84,
+                    85,
+                    86,
+                    87,
+                    88,
+                    89,
+                    90,
+                ]
+                CONVERT_TO_91 = torch.tensor(
+                    CONVERT_TO_91,
+                    device=cls_probs.device,
+                )
 
-            cls_probs_new = torch.zeros(
-                cls_probs.shape[0],
-                91,
-                device=cls_probs.device,
-            )
+                cls_probs_new = torch.zeros(
+                    cls_probs.shape[0],
+                    91,
+                    device=cls_probs.device,
+                )
 
-            cls_probs_new[:, CONVERT_TO_91] = cls_probs
+                cls_probs_new[:, CONVERT_TO_91] = cls_probs
+            else:
+                cls_probs_new = cls_probs
 
             final_confidence, predicted_class = torch.max(
                 box_output[:, 4:],
@@ -257,29 +262,37 @@ class YOLOModel(ODModel):
             img_shapes,
             model_input_size,
         )
-        true_boxes = list(
-            [
-                torch.LongTensor(
-                    [
+        if self.is_coco:
+            true_boxes = list(
+                [
+                    torch.LongTensor(
                         [
-                            box["bbox"][0],
-                            box["bbox"][1],
-                            box["bbox"][0] + box["bbox"][2],
-                            box["bbox"][1] + box["bbox"][3],
-                        ]
-                        for box in true_box
-                    ],
-                )
-                for true_box in ground_truth
-            ],
-        )
-        true_cls = list(
-            [
-                torch.LongTensor([box["category_id"] for box in true_box])
-                for true_box in ground_truth
-            ],
-        )
-        true_boxes = true_boxes
+                            [
+                                box["bbox"][0],
+                                box["bbox"][1],
+                                box["bbox"][0] + box["bbox"][2],
+                                box["bbox"][1] + box["bbox"][3],
+                            ]
+                            for box in true_box
+                        ],
+                    )
+                    for true_box in ground_truth
+                ],
+            )
+            true_cls = list(
+                [
+                    torch.LongTensor([box["category_id"] for box in true_box])
+                    for true_box in ground_truth
+                ],
+            )
+        else:
+            # For SNCF, should be standardized in the dataset class rather
+            true_boxes = list(
+                [torch.LongTensor(x["boxes"]) for x in ground_truth]
+            )
+            true_cls = list(
+                [torch.LongTensor(x["labels"]) for x in ground_truth]
+            )
 
         return {
             "image_paths": image_paths,
