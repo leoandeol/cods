@@ -2,8 +2,13 @@ name: CD - Publish to PyPI
 
 on:
   push:
+    branches:
+      - main
     tags:
-      - 'v*' 
+      - 'v*'
+  pull_request:
+    branches:
+      - main
 
 jobs:
   deploy:
