@@ -1,6 +1,6 @@
 [project]
 name = "cods"
-version = "0.2" # <--- IMPORTANT: Update this manually or via a script for new releases
+version = "0.2" 
 description = "Conformal Object Detection & Segmentation"
 authors = [
     { name = "Léo Andéol", email = "leo@andeol.eu" },
@@ -13,11 +13,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License", # Assuming MIT, replace if different
     "Operating System :: OS Independent",
 ]
-# No 'dependencies' or 'optional-dependencies' here, as they are in requirements.txt
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+pyproject.toml = true
 
 [tool.setuptools.packages.find]
 include = ["cods*"]
@@ -57,7 +59,7 @@ extend-include = ["*.ipynb"]
 indent-width = 4
 
 [tool.ruff.lint]
-select = ["ALL"]
+select = ["E", "F", "W", "B", "I", "C", "D"]
 ignore = []
 fixable = ["ALL"]
 unfixable = []
