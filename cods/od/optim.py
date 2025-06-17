@@ -1,3 +1,5 @@
+"""Optimizers for conformal object detection calibration and risk control."""
+
 from logging import getLogger
 from typing import List
 
@@ -13,9 +15,11 @@ from cods.od.utils import apply_margins, match_predictions_to_true_boxes
 logger = getLogger("cods")
 
 
-# TODO(leo): only image level currently
 class FirstStepMonotonizingOptimizer(Optimizer):
+    """Optimizer for the first step of monotonic risk control in object detection."""
+
     def __init__(self):
+        """Initialize the FirstStepMonotonizingOptimizer."""
         pass
 
     def _correct_risk(
@@ -26,15 +30,15 @@ class FirstStepMonotonizingOptimizer(Optimizer):
     ) -> torch.Tensor:
         """Correct the risk using the number of predictions and the upper bound.
 
-        Parameters
-        ----------
-        - risk (torch.Tensor): The risk tensor.
-        - n (int): The number of predictions.
-        - B (float): The upper bound.
+        Args:
+        ----
+            risk (torch.Tensor): The risk tensor.
+            n (int): The number of predictions.
+            B (float): The upper bound.
 
-        Returns
+        Returns:
         -------
-        - corrected_risk (torch.Tensor): The corrected risk tensor.
+            torch.Tensor: The corrected risk tensor.
 
         """
         return (torch.sum(torch.stack(risk)) + B) / (n + 1)
@@ -49,10 +53,35 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         alpha: float,
         device: str,
         B: float = 1,
-        bounds: List[float] = [0, 1],  # deprecated
+        bounds: List[float] = [0, 1],
         init_lambda: float = 1,
         verbose: bool = False,
     ):
+        """Optimize the risk for object detection using monotonic risk control.
+
+        Args:
+        ----
+            predictions (ODPredictions): Object detection predictions.
+            confidence_loss (ODLoss): Loss function for confidence.
+            localization_loss (ODLoss): Loss function for localization.
+            classification_loss (ODLoss): Loss function for classification.
+            matching_function: Function to match predictions to ground truth.
+            alpha (float): Risk threshold.
+            device (str): Device to use.
+            B (float, optional): Upper bound. Defaults to 1.
+            bounds (list, optional): Search bounds. Defaults to [0, 1].
+            init_lambda (float, optional): Initial lambda value. Defaults to 1.
+            verbose (bool, optional): Whether to print progress. Defaults to False.
+
+        Returns:
+        -------
+            float: The optimal lambda value.
+
+        Raises:
+        ------
+            ValueError: If no solution is found satisfying the constraints.
+
+        """
         true_boxes = predictions.true_boxes
         pred_boxes = predictions.pred_boxes
         true_cls = predictions.true_cls
@@ -64,17 +93,12 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             [x for x in confidences],  # .squeeze()
         )
         confidence_image_idx = torch.concatenate(
-            [
-                torch.ones_like(x, dtype=int) * i
-                for i, x in enumerate(confidences)
-            ],
+            [torch.ones_like(x, dtype=int) * i for i, x in enumerate(confidences)],
         )
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
         sorted_confidence_image_indices = confidence_image_idx[indices]
-        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[
-            0:-1
-        ].clone()
+        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[0:-1].clone()
         # We let the first be, it should occur no change anyways ?
         # sorted_confidence_image_indices[0] = ???
 
@@ -106,11 +130,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             matching_i = predictions.matching[i]
 
             pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [
-                x
-                for x, c in zip(pred_cls_i, confidences_i)
-                if c >= 1 - lambda_conf
-            ]
+            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - lambda_conf]
             pred_cls_i = (
                 torch.stack(pred_cls_i)
                 if len(pred_cls_i) > 0
@@ -142,9 +162,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             matched_pred_cls_i = list(
                 [
                     (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[
-                            0
-                        ]  # TODO zero here ?
+                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
                         if len(matching_i[j]) > 0
                         else torch.tensor([]).float().to(device)
                     )
@@ -263,11 +281,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             image_shape = image_shapes[i]
 
             pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [
-                x
-                for x, c in zip(pred_cls_i, confidences_i)
-                if c >= 1 - lambda_conf
-            ]
+            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - lambda_conf]
             pred_cls_i = (
                 torch.stack(pred_cls_i)
                 if len(pred_cls_i) > 0
@@ -492,13 +506,9 @@ class FirstStepMonotonizingOptimizer(Optimizer):
 
                     matching_i = predictions.matching[i]
 
-                    pred_boxes_i = pred_boxes_i[
-                        confidences_i >= 1 - previous_lbd
-                    ]
+                    pred_boxes_i = pred_boxes_i[confidences_i >= 1 - previous_lbd]
                     pred_cls_i = [
-                        x
-                        for x, c in zip(pred_cls_i, confidences_i)
-                        if c >= 1 - previous_lbd
+                        x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - previous_lbd
                     ]
                     confidence_loss_i = confidence_loss(
                         true_boxes_i,
@@ -542,7 +552,10 @@ class FirstStepMonotonizingOptimizer(Optimizer):
 
 
 class SecondStepMonotonizingOptimizer(Optimizer):
+    """Optimizer for the second step of monotonic risk control in object detection."""
+
     def __init__(self):
+        """Initialize the SecondStepMonotonizingOptimizer."""
         pass
 
     def _correct_risk(
@@ -553,15 +566,15 @@ class SecondStepMonotonizingOptimizer(Optimizer):
     ) -> torch.Tensor:
         """Correct the risk using the number of predictions and the upper bound.
 
-        Parameters
-        ----------
-        - risk (torch.Tensor): The risk tensor.
-        - n (int): The number of predictions.
-        - B (float): The upper bound.
+        Args:
+        ----
+            risk (torch.Tensor): The risk tensor.
+            n (int): The number of predictions.
+            B (float): The upper bound.
 
-        Returns
+        Returns:
         -------
-        - corrected_risk (torch.Tensor): The corrected risk tensor.
+            torch.Tensor: The corrected risk tensor.
 
         """
         return (n / (n + 1)) * risk + B / (n + 1)
@@ -575,6 +588,22 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         build_predictions,
         matching_function,
     ):
+        """Evaluate the risk for a given lambda value.
+
+        Args:
+        ----
+            lbd: Lambda value.
+            loss: Loss function.
+            final_lbd_conf: Final lambda for confidence.
+            predictions: Object detection predictions.
+            build_predictions: Function to build predictions.
+            matching_function: Function to match predictions to ground truth.
+
+        Returns:
+        -------
+            The evaluated risk.
+
+        """
         true_boxes = predictions.true_boxes
         pred_boxes = predictions.pred_boxes
         true_cls = predictions.true_cls
@@ -585,17 +614,12 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
         stacked_confidences = torch.concatenate(confidences)
         confidence_image_idx = torch.concatenate(
-            [
-                torch.ones_like(x, dtype=torch.int) * i
-                for i, x in enumerate(confidences)
-            ],
+            [torch.ones_like(x, dtype=torch.int) * i for i, x in enumerate(confidences)],
         )
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
         sorted_confidence_image_indices = confidence_image_idx[indices]
-        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[
-            0:-1
-        ].clone()
+        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[0:-1].clone()
         # We let the first be, it should occur no change anyways ?
         # sorted_confidence_image_indices[0] = ???
 
@@ -767,6 +791,31 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         epsilon=1e-10,
         verbose: bool = False,
     ):
+        """Optimize the risk for object detection using monotonic risk control (second step).
+
+        Args:
+        ----
+            predictions (ODPredictions): Object detection predictions.
+            build_predictions: Function to build predictions.
+            loss (ODLoss): Loss function.
+            matching_function: Function to match predictions to ground truth.
+            alpha (float): Risk threshold.
+            device (str): Device to use.
+            B (float, optional): Upper bound. Defaults to 1.
+            bounds (list, optional): Search bounds. Defaults to [0, 1].
+            steps (int, optional): Number of steps for optimization. Defaults to 13.
+            epsilon (float, optional): Small value to ensure strict inequality. Defaults to 1e-10.
+            verbose (bool, optional): Whether to print progress. Defaults to False.
+
+        Returns:
+        -------
+            float: The optimal lambda value.
+
+        Raises:
+        ------
+            ValueError: If no good lambda is found.
+
+        """
         self.all_risks_raw = []
         self.all_risks_mon = []
         self.all_lbds_cnf = []

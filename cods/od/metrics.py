@@ -27,16 +27,18 @@ def compute_global_coverage(
     localization: bool = True,
     loss: Optional[Callable] = None,
 ) -> torch.Tensor:
-    """Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE #TODO
+    """Compute the global coverage for object detection predictions.
 
     Args:
     ----
         predictions (ODPredictions): Object detection predictions.
-        conformalized_predictiond (ODConformalizedPredictions): Conformalized object detection predictions.
+        parameters (ODParameters): Parameters for object detection.
+        conformalized_predictions (ODConformalizedPredictions): Conformalized object detection predictions.
+        guarantee_level (str, optional): Level of coverage guarantee (e.g., 'object'). Defaults to 'object'.
         confidence (bool, optional): Whether to consider confidence coverage. Defaults to True.
         cls (bool, optional): Whether to consider class coverage. Defaults to True.
         localization (bool, optional): Whether to consider localization coverage. Defaults to True.
-        loss (function, optional): Loss function. Defaults to None.
+        loss (Callable, optional): Loss function to use. Defaults to None.
 
     Returns:
     -------
@@ -194,7 +196,6 @@ def get_recall_precision(
     Args:
     ----
         od_predictions (ODPredictions): Object detection predictions.
-        pred_boxes (list): List of predicted boxes. Defaults to None.
         IOU_THRESHOLD (float, optional): IoU threshold. Defaults to 0.5.
         SCORE_THRESHOLD (float, optional): Score threshold. Defaults to 0.5.
         verbose (bool, optional): Whether to display progress. Defaults to True.
@@ -265,7 +266,6 @@ def getAveragePrecision(
     Args:
     ----
         od_predictions (ODPredictions): Object detection predictions.
-        pred_boxes (list): List of predicted boxes.
         verbose (bool, optional): Whether to display progress. Defaults to True.
         iou_threshold (float, optional): IoU threshold. Defaults to 0.3.
 
@@ -330,6 +330,21 @@ def unroll_metrics(
     iou_threshold: float = 0.5,
     verbose: bool = True,
 ) -> dict:
+    """Compute and return various metrics for object detection predictions and conformalized predictions.
+
+    Args:
+    ----
+        predictions (ODPredictions): Object detection predictions.
+        conformalized_predictions (ODConformalizedPredictions): Conformalized object detection predictions.
+        confidence_threshold (float or torch.Tensor, optional): Confidence threshold. Defaults to None.
+        iou_threshold (float, optional): IoU threshold. Defaults to 0.5.
+        verbose (bool, optional): Whether to display progress. Defaults to True.
+
+    Returns:
+    -------
+        dict: Dictionary containing metrics such as AP, recalls, precisions, and thresholds.
+
+    """
     # TODO: include conf_cls for metrics
     if confidence_threshold is None:
         print("Defaulting to predictions' confidence threshold")
@@ -380,12 +395,23 @@ def unroll_metrics(
 
 
 class ODEvaluator:
+    """Evaluator for object detection predictions using specified loss functions."""
+
     def __init__(
         self,
         confidence_loss,
         localization_loss,
         classification_loss,
     ):
+        """Initialize the ODEvaluator.
+
+        Args:
+        ----
+            confidence_loss (callable): Loss function for confidence.
+            localization_loss (callable): Loss function for localization.
+            classification_loss (callable): Loss function for classification.
+
+        """
         self.confidence_loss = confidence_loss
         self.localization_loss = localization_loss
         self.classification_loss = classification_loss
@@ -396,6 +422,19 @@ class ODEvaluator:
         parameters: ODParameters,
         conformalized_predictions: ODConformalizedPredictions,
     ):
+        """Evaluate predictions using the provided loss functions and return results.
+
+        Args:
+        ----
+            predictions (ODPredictions): Object detection predictions.
+            parameters (ODParameters): Parameters for object detection.
+            conformalized_predictions (ODConformalizedPredictions): Conformalized object detection predictions.
+
+        Returns:
+        -------
+            ODResults: Results object containing computed losses and set sizes.
+
+        """
         # TODO: handle ODParameters
         confidence_losses = []
         classification_losses = []

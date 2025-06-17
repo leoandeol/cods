@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Tuple, Union
 
 import torch
 
@@ -44,17 +43,6 @@ from cods.od.score import (
     UnionAdditiveSignedAssymetricHausdorffNCScore,
     UnionMultiplicativeSignedAssymetricHausdorffNCScore,
 )
-from cods.classif.cp import ClassificationConformalizer
-from cods.od.data import ODPredictions
-from cods.od.loss import BoxWiseRecallLoss, PixelWiseRecallLoss
-from cods.od.metrics import compute_global_coverage
-from cods.od.score import (
-    MinAdditiveSignedAssymetricHausdorffNCScore,
-    MinMultiplicativeSignedAssymetricHausdorffNCScore,
-    ObjectnessNCScore,
-    UnionAdditiveSignedAssymetricHausdorffNCScore,
-    UnionMultiplicativeSignedAssymetricHausdorffNCScore,
-)
 from cods.od.utils import (
     apply_margins,
     compute_risk_object_level,
@@ -63,7 +51,9 @@ from cods.od.utils import (
 
 logger = logging.getLogger("cods")
 # FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-FORMAT = "[%(asctime)s:%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
+FORMAT = (
+    "[%(asctime)s:%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
+)
 logging.basicConfig(format=FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
 
 """
@@ -80,16 +70,12 @@ class LocalizationConformalizer(Conformalizer):
 
     Attributes
     ----------
-    - BACKENDS (list): A list of supported backends.
-    - accepted_methods (dict): A dictionary mapping accepted method names to their corresponding score functions.
-    - PREDICTION_SETS (list): A list of supported prediction sets.
-    - LOSSES (dict): A dictionary mapping loss names to their corresponding loss classes.
-    - OPTIMIZERS (dict): A dictionary mapping optimizer names to their corresponding optimizer classes.
-
-    Methods
-    -------
-    - __init__: Initialize the LocalizationConformalizer class.
-    - _get_risk_function: Get the risk function for risk conformalization.
+        BACKENDS (list): Supported backends.
+        accepted_methods (dict): Mapping of accepted method names to score functions.
+        PREDICTION_SETS (list): Supported prediction sets.
+        LOSSES (dict): Mapping of loss names to loss classes.
+        OPTIMIZERS (dict): Mapping of optimizer names to optimizer classes.
+        GUARANTEE_LEVELS (list): Supported guarantee levels.
 
     """
 
@@ -122,31 +108,23 @@ class LocalizationConformalizer(Conformalizer):
         prediction_set: str,
         guarantee_level: str,
         matching_function: str,
-        number_of_margins: int = 1,  # where to compute 1, 2 or 4 margins with bonferroni corrections
-        optimizer: Optional[str | Optimizer] = None,
+        number_of_margins: int = 1,
+        optimizer: str | Optimizer | None = None,
         backend: str = "auto",
         device: str = "cpu",
     ):
-        """Initialize the CP class.
+        """Initialize the LocalizationConformalizer.
 
-        Parameters
-        ----------
-        - loss (Union[str, ODLoss]): The loss function to be used. It can be either a string representing a predefined loss function or an instance of the ODLoss class.
-        - prediction_set (str): The prediction set to be used. Must be one of ["additive", "multiplicative", "adaptive"].
-        - guarantee_level (str): The guarantee level to be used. Must be one of ["image", "object"].
-        - number_of_margins (int, optional): The number of margins to compute. Default is 1.
-        - optimizer (Optional[Union[str, Optimizer]], optional): The optimizer to be used. It can be either a string representing a predefined optimizer or an instance of the Optimizer class. Default is None.
-        - backend (str, optional): The backend to be used. Default is "auto".
-        - **kwargs: Additional keyword arguments.
-
-        Raises
-        ------
-        - ValueError: If the loss is not accepted, it must be one of the predefined losses or an instance of ODLoss.
-        - ValueError: If the prediction set is not accepted, it must be one of the predefined prediction sets.
-        - ValueError: If the number of margins is not 1, 2, or 4.
-        - NotImplementedError: If the number of margins is greater than 1 (only 1 margin is supported for now).
-        - ValueError: If the backend is not accepted, it must be one of the predefined backends.
-        - ValueError: If the optimizer is not accepted, it must be one of the predefined optimizers or an instance of Optimizer.
+        Args:
+        ----
+            loss (Union[str, ODLoss]): Loss function or its name.
+            prediction_set (str): Prediction set type.
+            guarantee_level (str): Guarantee level.
+            matching_function (str): Matching function name.
+            number_of_margins (int, optional): Number of margins. Defaults to 1.
+            optimizer (Optional[Union[str, Optimizer]], optional): Optimizer. Defaults to None.
+            backend (str, optional): Backend. Defaults to "auto".
+            device (str, optional): Device. Defaults to "cpu".
 
         """
         super().__init__()
@@ -219,27 +197,24 @@ class LocalizationConformalizer(Conformalizer):
         predictions: ODPredictions,
         alpha: float,
         steps: int = 13,
-        bounds: List[float] = [
-            0,
-            1000,
-        ],  # TODO: currently ignored by new optimizer
+        bounds: list[float] = [0, 1000],
         verbose: bool = True,
-        overload_confidence_threshold: Optional[float] = None,
+        overload_confidence_threshold: float | None = None,
     ) -> float:
-        """Calibrate the conformalizer.
+        """Calibrate the conformalizer for localization.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The object detection predictions.
-        - alpha (float): The significance level.
-        - steps (int): The number of steps for optimization.
-        - bounds (List[float]): The bounds for optimization.
-        - verbose (bool): Whether to print the optimization progress.
-        - confidence_threshold (float): The threshold for objectness confidence.
+        Args:
+        ----
+            predictions (ODPredictions): Object detection predictions.
+            alpha (float): Significance level.
+            steps (int, optional): Number of optimization steps. Defaults to 13.
+            bounds (List[float], optional): Bounds for optimization. Defaults to [0, 1000].
+            verbose (bool, optional): Verbosity. Defaults to True.
+            overload_confidence_threshold (Optional[float], optional): Overload confidence threshold. Defaults to None.
 
-        Returns
+        Returns:
         -------
-        - lbd (float): The calibrated lambda value.
+            float: Calibrated lambda value.
 
         """
         if self.lambda_localization is not None:
@@ -288,9 +263,7 @@ class LocalizationConformalizer(Conformalizer):
             alpha=alpha,
             device=self.device,
             B=1,
-            bounds=[0, 1000]
-            if self.prediction_set == "additive"
-            else [0, 100],
+            bounds=[0, 1000] if self.prediction_set == "additive" else [0, 100],
             steps=13,
             epsilon=1e-9,
             verbose=verbose,
@@ -307,24 +280,20 @@ class LocalizationConformalizer(Conformalizer):
     def conformalize(
         self,
         predictions: ODPredictions,
-        parameters: Optional[ODParameters] = None,
+        parameters: ODParameters | None = None,
         verbose: bool = True,
-    ) -> List[torch.Tensor]:
-        """Conformalizes the predictions using the specified lambda values for localization.
+    ) -> list[torch.Tensor]:
+        """Conformalize predictions using the calibrated lambda values for localization.
 
         Args:
         ----
-            predictions (ODPredictions): The predictions to be conformalized.
-            parameters (Optional[ODParameters], optional): The optional parameters containing the lambda value for localization. Defaults to None.
-            verbose (bool, optional): Whether to display verbose information. Defaults to True.
+            predictions (ODPredictions): Predictions to conformalize.
+            parameters (Optional[ODParameters], optional): Parameters with lambda value. Defaults to None.
+            verbose (bool, optional): Verbosity. Defaults to True.
 
         Returns:
         -------
-            List[torch.Tensor]: The conformalized bounding boxes.
-
-        Raises:
-        ------
-            ValueError: If the conformalizer is not calibrated before conformalizing.
+            List[torch.Tensor]: Conformalized bounding boxes.
 
         """
         if self.lambda_localization is None and (
@@ -333,10 +302,7 @@ class LocalizationConformalizer(Conformalizer):
             raise ValueError(
                 "Conformalizer must be calibrated, or parameters provided, before conformalizing.",
             )
-        if (
-            parameters is not None
-            and parameters.lambda_localization is not None
-        ):
+        if parameters is not None and parameters.lambda_localization is not None:
             if verbose:
                 logger.info("Using λ for localization from parameters")
             lambda_localization = parameters.lambda_localization
@@ -366,7 +332,7 @@ class LocalizationConformalizer(Conformalizer):
 
 
 class ConfidenceConformalizer(Conformalizer):
-    """ """
+    """Conformalizer for confidence/objectness in object detection."""
 
     ACCEPTED_LOSSES = {
         "box_count_threshold": BoxCountThresholdConfidenceLoss,
@@ -380,11 +346,22 @@ class ConfidenceConformalizer(Conformalizer):
         guarantee_level: str,
         matching_function: str,
         loss: str = "box_count_threshold",
-        other_losses: Optional[List] = None,
+        other_losses: list | None = None,
         optimizer: str = "binary_search",
         device="cpu",
     ):
-        """ """
+        """Initialize the ConfidenceConformalizer.
+
+        Args:
+        ----
+            guarantee_level (str): Guarantee level.
+            matching_function (str): Matching function name.
+            loss (str, optional): Loss name. Defaults to "box_count_threshold".
+            other_losses (Optional[List], optional): Other losses. Defaults to None.
+            optimizer (str, optional): Optimizer name. Defaults to "binary_search".
+            device (str, optional): Device. Defaults to "cpu".
+
+        """
         super().__init__()
         self.device = device
         if loss not in self.ACCEPTED_LOSSES:
@@ -422,10 +399,24 @@ class ConfidenceConformalizer(Conformalizer):
         predictions: ODPredictions,
         alpha: float = 0.1,
         steps: int = 13,
-        bounds: List[float] = [0, 1],
+        bounds: list[float] = [0, 1],
         verbose: bool = True,
-    ) -> Tuple[float, float]:
-        """ """
+    ) -> tuple[float, float]:
+        """Calibrate the conformalizer for confidence/objectness.
+
+        Args:
+        ----
+            predictions (ODPredictions): Object detection predictions.
+            alpha (float, optional): Significance level. Defaults to 0.1.
+            steps (int, optional): Number of optimization steps. Defaults to 13.
+            bounds (List[float], optional): Bounds for optimization. Defaults to [0, 1].
+            verbose (bool, optional): Verbosity. Defaults to True.
+
+        Returns:
+        -------
+            Tuple[float, float]: Calibrated lambda_minus and lambda_plus values.
+
+        """
         if self.lambda_plus is not None:
             logger.info("Replacing previously computed λ")
 
@@ -466,15 +457,16 @@ class ConfidenceConformalizer(Conformalizer):
         predictions: ODPredictions,
         verbose: bool = True,
     ) -> float:
-        """Conformalize the object detection predictions.
+        """Conformalize the object detection predictions using calibrated lambda values.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The object detection predictions.
+        Args:
+        ----
+            predictions (ODPredictions): Object detection predictions.
+            verbose (bool, optional): Verbosity. Defaults to True.
 
-        Returns
+        Returns:
         -------
-        - conf_boxes (List[List[float]]): The conformalized bounding boxes.
+            float: The new confidence threshold (1 - lambda_plus).
 
         """
         if self.lambda_minus is None or self.lambda_plus is None:
@@ -487,7 +479,7 @@ class ConfidenceConformalizer(Conformalizer):
 
 
 class ODClassificationConformalizer(ClassificationConformalizer):
-    """ """
+    """Conformalizer for classification in object detection tasks."""
 
     BACKENDS = ["auto", "cp", "crc"]
     GUARANTEE_LEVELS = ["image", "object"]
@@ -508,9 +500,20 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         guarantee_level="image",
         optimizer="binary_search",
         device="cpu",
-        # TODO(leo) remove if nonessential: **kwargs,
     ):
-        """ """
+        """Initialize the ODClassificationConformalizer.
+
+        Args:
+        ----
+            matching_function (str): Matching function name.
+            loss (str, optional): Loss name. Defaults to "binary".
+            prediction_set (str, optional): Prediction set. Defaults to "lac".
+            backend (str, optional): Backend. Defaults to "auto".
+            guarantee_level (str, optional): Guarantee level. Defaults to "image".
+            optimizer (str, optional): Optimizer name. Defaults to "binary_search".
+            device (str, optional): Device. Defaults to "cpu".
+
+        """
         self.matching_function = matching_function
         # TODO(leo): tmp
         preprocess = "softmax"
@@ -565,11 +568,27 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         self,
         predictions: ODPredictions,
         alpha: float,
-        bounds: List[float] = [0, 1],
+        bounds: list[float] | None = [0, 1],
         steps: int = 40,
         verbose: bool = True,
-        overload_confidence_threshold: Optional[float] = None,
+        overload_confidence_threshold: float | None = None,
     ) -> torch.Tensor:
+        """Calibrate the conformalizer for classification.
+
+        Args:
+        ----
+            predictions (ODPredictions): Object detection predictions.
+            alpha (float): Significance level.
+            bounds (List[float], optional): Bounds for optimization. Defaults to [0, 1].
+            steps (int, optional): Number of optimization steps. Defaults to 40.
+            verbose (bool, optional): Verbosity. Defaults to True.
+            overload_confidence_threshold (Optional[float], optional): Overload confidence threshold. Defaults to None.
+
+        Returns:
+        -------
+            torch.Tensor: Calibrated lambda value for classification.
+
+        """
         if overload_confidence_threshold is None:
             if predictions.confidence_threshold is None:
                 raise ValueError(
@@ -606,16 +625,11 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             # TODO(leo): filter for confidence here!
             def get_conf_cls():
                 conf_cls_i = []
-                for j, pred_cls_i_j in enumerate(matched_pred_cls_i):
+                for pred_cls_i_j in matched_pred_cls_i:
                     conf_cls_i_j = self._score_function.get_set(
                         pred_cls=pred_cls_i_j,
                         quantile=lbd,
                     )
-                    # conf_cls_i_j = torch.where(
-                    #     pred_cls_i_j >= 1 - lbd
-                    # )[
-                    #     0
-                    # ]
                     conf_cls_i.append(conf_cls_i_j)
                 return conf_cls_i
 
@@ -648,14 +662,27 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         self,
         predictions: ODPredictions,
         verbose: bool = True,
-    ) -> List:
+    ) -> list:
+        """Conformalize the predictions for classification.
+
+        Args:
+        ----
+            predictions (ODPredictions): Object detection predictions.
+            verbose (bool, optional): Verbosity. Defaults to True.
+
+        Returns:
+        -------
+            List: Conformalized class predictions.
+
+        """
+
         # TODO: add od parameters to function signature
         # NO MATCHING HERE
         def get_conf_cls():
             conf_cls = []
-            for i, pred_cls_i in enumerate(predictions.pred_cls):
+            for pred_cls_i in predictions.pred_cls:
                 conf_cls_i = []
-                for j, pred_cls_i_j in enumerate(pred_cls_i):
+                for pred_cls_i_j in pred_cls_i:
                     conf_cls_i_j = self._score_function.get_set(
                         pred_cls=pred_cls_i_j,
                         quantile=self.lambda_classification,
@@ -669,63 +696,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
 
 
 class ODConformalizer(Conformalizer):
-    """Class representing conformalizers for object detection tasks.
-
-    Attributes:
-    ----------
-        MULTIPLE_TESTING_CORRECTIONS (List[str]): List of supported multiple testing correction methods.
-        BACKENDS (List[str]): List of supported backends.
-        GUARANTEE_LEVELS (List[str]): List of supported guarantee levels.
-
-    Args:
-    ----
-        backend (str): The backend used for the conformalization. Only 'auto' is supported currently.
-        guarantee_level (str): The guarantee level for the conformalization. Must be one of ["image", "object"].
-        confidence_threshold (Optional[float]): The confidence threshold used for objectness conformalization. Mutually exclusive with 'confidence_method', if set, then confidence_method must be None.
-        multiple_testing_correction (Optional[str]): The method used for multiple testing correction. Must be one of ["bonferroni"] or None. None implies no correction is applied, and that a List of Alphas is expected for calibration instead.
-        confidence_method (Union[ConfidenceConformalizer, str, None]): The method used for confidence conformalization. Mutually exclusive with 'confidence_threshold', if set, then confidence_threshold must be None. Either pass a ConfidenceConformalizer instance, a string representing the method (loss) name, or None.
-        localization_method (Union[LocalizationConformalizer, str, None]): The method used for localization conformalization. Either pass a LocalizationConformalizer instance, a string representing the method (loss) name, or None.
-        classification_method (Union[ClassificationConformalizer, str, None]): The method used for classification conformalization. Either pass a ClassificationConformalizer instance, a string representing the method (loss) name, or None.
-        **kwargs: Additional keyword arguments.
-
-    Raises:
-    ------
-        ValueError: If the provided backend is not supported.
-        ValueError: If the provided guarantee level is not supported.
-        ValueError: If both confidence_threshold and confidence_method are provided.
-        ValueError: If neither confidence_threshold nor confidence_method are provided.
-        ValueError: If the provided multiple_testing_correction is not supported.
-
-    Methods:
-    -------
-        calibrate(predictions, global_alpha, alpha_confidence, alpha_localization, alpha_classification, verbose=True)
-            Calibrates the conformalizers and returns the calibration results.
-
-    Args:
-    ----
-                predictions (ODPredictions): The predictions to be calibrated.
-                global_alpha (Optional[float]): The global alpha value for calibration. If multiple_testing_correction is None, individual alpha values will be used for each conformalizer.
-                alpha_confidence (Optional[float]): The alpha value for the confidence conformalizer.
-                alpha_localization (Optional[float]): The alpha value for the localization conformalizer.
-                alpha_classification (Optional[float]): The alpha value for the classification conformalizer.
-                verbose (bool, optional): Whether to print calibration information. Defaults to True.
-
-    Returns:
-    -------
-                dict[str, Any]: A dictionary containing the calibration results, including target alpha values and estimated lambda values for each conformalizer.
-
-    Raises:
-    ------
-                ValueError: If the multiple_testing_correction is not provided or is not valid.
-                ValueError: If the global_alpha is not provided when using the Bonferroni multiple_testing_correction.
-                ValueError: If explicit alpha values are provided when using the Bonferroni multiple_testing_correction.
-
-    Note:
-    ----
-                - The multiple_testing_correction attribute of the class must be set before calling this method.
-                - The conformalizers must be initialized before calling this method.
-
-    """
+    """Class representing conformalizers for object detection tasks."""
 
     MULTIPLE_TESTING_CORRECTIONS = ["bonferroni"]
     BACKENDS = ["auto"]
@@ -737,37 +708,32 @@ class ODConformalizer(Conformalizer):
         backend: str = "auto",
         guarantee_level: str = "image",
         matching_function: str = "hausdorff",
-        confidence_threshold: Optional[float] = None,
-        multiple_testing_correction: Optional[str] = None,
-        confidence_method: Union[ConfidenceConformalizer, str, None] = None,
-        localization_method: Union[
-            LocalizationConformalizer,
-            str,
-            None,
-        ] = None,
-        localization_prediction_set: str = "additive",  # Fix where we type check
-        classification_method: Union[
-            ClassificationConformalizer,
-            str,
-            None,
-        ] = None,
-        classification_prediction_set: str = "lac",  # Fix where we type check
+        confidence_threshold: float | None = None,
+        multiple_testing_correction: str | None = None,
+        confidence_method: ConfidenceConformalizer | str | None = None,
+        localization_method: LocalizationConformalizer | str | None = None,
+        localization_prediction_set: str = "additive",
+        classification_method: ClassificationConformalizer | str | None = None,
+        classification_prediction_set: str = "lac",
         optimizer="binary_search",
         device="cpu",
-        # TODO(leo) remove if nonessential: **kwargs,
     ):
-        """Initialize the ODClassificationConformalizer object.
+        """Initialize the ODConformalizer object.
 
-        Parameters
-        ----------
-        - backend (str): The backend used for the conformalization. Only 'auto' is supported currently.
-        - guarantee_level (str): The guarantee level for the conformalization. Must be one of ["image", "object"].
-        - confidence_threshold (Optional[float]): The confidence threshold used for objectness conformalization.  Mutually exclusive with 'confidence_method', if set, then confidence_method must be None.
-        - multiple_testing_correction (str): The method used for multiple testing correction. Must be one of ["bonferroni"] or None. None implies no correction is applied, and that a List of Alphas is expected for calibration instead.
-        - confidence_method (Union[ConfidenceConformalizer, str, None]): The method used for confidence conformalization. Mutually exclusive with 'confidence_threshold', if set, then confidence_threshold must be None. Either pass a ConfidenceConformalizer instance, a string representing the method (loss) name, or None.
-        - localization_method (Union[LocalizationConformalizer, str, None]): The method used for localization conformalization. Either pass a LocalizationConformalizer instance, a string representing the method (loss) name, or None.
-        - classification_method (Union[ClassificationConformalizer, str, None]): The method used for classification conformalization. Either pass a ClassificationConformalizer instance, a string representing the method (loss) name, or None.
-        - kwargs: Additional keyword arguments.
+        Args:
+        ----
+            backend (str, optional): Backend. Defaults to "auto".
+            guarantee_level (str, optional): Guarantee level. Defaults to "image".
+            matching_function (str, optional): Matching function. Defaults to "hausdorff".
+            confidence_threshold (Optional[float], optional): Confidence threshold. Defaults to None.
+            multiple_testing_correction (Optional[str], optional): Multiple testing correction. Defaults to None.
+            confidence_method (Union[ConfidenceConformalizer, str, None], optional): Confidence conformalizer or method. Defaults to None.
+            localization_method (Union[LocalizationConformalizer, str, None], optional): Localization conformalizer or method. Defaults to None.
+            localization_prediction_set (str, optional): Localization prediction set. Defaults to "additive".
+            classification_method (Union[ClassificationConformalizer, str, None], optional): Classification conformalizer or method. Defaults to None.
+            classification_prediction_set (str, optional): Classification prediction set. Defaults to "lac".
+            optimizer (str, optional): Optimizer. Defaults to "binary_search".
+            device (str, optional): Device. Defaults to "cpu".
 
         """
         self.device = device
@@ -795,10 +761,7 @@ class ODConformalizer(Conformalizer):
                 "No multiple_testing_correction provided, assuming no correction is needed. The explicit list of alphas is expected for calibration.",
             )
             self.multiple_testing_correction = multiple_testing_correction
-        elif (
-            multiple_testing_correction
-            not in self.MULTIPLE_TESTING_CORRECTIONS
-        ):
+        elif multiple_testing_correction not in self.MULTIPLE_TESTING_CORRECTIONS:
             raise ValueError(
                 f"multiple_testing_correction {multiple_testing_correction} not accepted, must be one of {self.MULTIPLE_TESTING_CORRECTIONS}",
             )
@@ -834,9 +797,7 @@ class ODConformalizer(Conformalizer):
         elif isinstance(localization_method, LocalizationConformalizer):
             self.localization_conformalizer = localization_method
             self.localization_method = localization_method.loss_name
-            self.localization_prediction_set = (
-                localization_method.prediction_set
-            )
+            self.localization_prediction_set = localization_method.prediction_set
         else:
             self.localization_conformalizer = None
             self.localization_method = None
@@ -857,9 +818,7 @@ class ODConformalizer(Conformalizer):
         elif isinstance(classification_method, ODClassificationConformalizer):
             self.classification_conformalizer = classification_method
             self.classification_method = classification_method.method
-            self.classification_prediction_set = (
-                classification_method.prediction_set
-            )
+            self.classification_prediction_set = classification_method.prediction_set
         else:
             self.classification_conformalizer = None
             self.classification_method = None
@@ -911,37 +870,26 @@ class ODConformalizer(Conformalizer):
     def calibrate(
         self,
         predictions: ODPredictions,
-        global_alpha: Optional[float] = None,
-        alpha_confidence: Optional[float] = None,
-        alpha_localization: Optional[float] = None,
-        alpha_classification: Optional[float] = None,
+        global_alpha: float | None = None,
+        alpha_confidence: float | None = None,
+        alpha_localization: float | None = None,
+        alpha_classification: float | None = None,
         verbose: bool = True,
     ) -> ODParameters:
         """Calibrates the conformalizers and returns the calibration results.
 
         Args:
         ----
-            predictions (ODPredictions): The predictions to be calibrated.
-            global_alpha (Optional[float]): The global alpha value for calibration. If multiple_testing_correction is None, individual alpha values will be used for each conformalizer.
-            alpha_confidence (Optional[float]): The alpha value for the confidence conformalizer.
-            alpha_localization (Optional[float]): The alpha value for the localization conformalizer.
-            alpha_classification (Optional[float]): The alpha value for the classification conformalizer.
-            verbose (bool, optional): Whether to print calibration information. Defaults to True.
+            predictions (ODPredictions): Predictions to calibrate.
+            global_alpha (Optional[float], optional): Global alpha for calibration. Defaults to None.
+            alpha_confidence (Optional[float], optional): Alpha for confidence. Defaults to None.
+            alpha_localization (Optional[float], optional): Alpha for localization. Defaults to None.
+            alpha_classification (Optional[float], optional): Alpha for classification. Defaults to None.
+            verbose (bool, optional): Verbosity. Defaults to True.
 
         Returns:
         -------
-            dict[str, Any]: A dictionary containing the calibration results, including target alpha values and estimated lambda values for each conformalizer.
-
-        Raises:
-        ------
-            ValueError: If the multiple_testing_correction is not provided or is not valid.
-            ValueError: If the global_alpha is not provided when using the Bonferroni multiple_testing_correction.
-            ValueError: If explicit alpha values are provided when using the Bonferroni multiple_testing_correction.
-
-        Note:
-        ----
-            - The multiple_testing_correction attribute of the class must be set before calling this method.
-            - The conformalizers must be initialized before calling this method.
+            ODParameters: Calibration results.
 
         """
         # Checking Multiple Testing Correction
@@ -960,24 +908,9 @@ class ODConformalizer(Conformalizer):
                     "No multiple_testing_correction provided, expecting an explicit alpha for each conformalizer. 'global_alpha' should be 'None'.",
                 )
             if (
-                (
-                    alpha_confidence
-                    is None
-                    != self.confidence_conformalizer
-                    is None
-                )
-                or (
-                    alpha_localization
-                    is None
-                    != self.localization_conformalizer
-                    is None
-                )
-                or (
-                    alpha_classification
-                    is None
-                    != self.classification_conformalizer
-                    is None
-                )
+                (alpha_confidence is None != self.confidence_conformalizer is None)
+                or (alpha_localization is None != self.localization_conformalizer is None)
+                or (alpha_classification is None != self.classification_conformalizer is None)
             ):
                 raise ValueError(
                     "No multiple_testing_correction provided, expecting an explicit alpha for each conformalizer. Explicity alphas should be set only if there's a corresponding conformalizer.",
@@ -1134,20 +1067,20 @@ class ODConformalizer(Conformalizer):
     def conformalize(
         self,
         predictions: ODPredictions,
-        parameters: Optional[ODParameters] = None,
+        parameters: ODParameters | None = None,
         verbose: bool = True,
     ) -> ODConformalizedPredictions:
-        """Conformalize the given predictions.
+        """Conformalize the given predictions using the provided parameters.
 
         Args:
         ----
-            predictions (ODPredictions): The predictions to be conformalized.
-            parameters (Optional[ODParameters]): The parameters to be used for conformalization. If None, the last parameters will be used.results
-            verbose (bool): Whether to print conformalization information.
+            predictions (ODPredictions): Predictions to conformalize.
+            parameters (Optional[ODParameters], optional): Parameters for conformalization. Defaults to None.
+            verbose (bool, optional): Verbosity. Defaults to True.
 
         Returns:
         -------
-            Tuple[torch.Tensor, torch.Tensor]: A tuple containing the conformalized predictions.
+            ODConformalizedPredictions: Conformalized predictions.
 
         """
         if verbose:
@@ -1234,6 +1167,21 @@ class ODConformalizer(Conformalizer):
         include_confidence_in_global: bool,
         verbose: bool = True,
     ) -> ODResults:
+        """Evaluate the conformalized predictions and return results.
+
+        Args:
+        ----
+            predictions (ODPredictions): Predictions to evaluate.
+            parameters (ODParameters): Parameters used for conformalization.
+            conformalized_predictions (ODConformalizedPredictions): Conformalized predictions.
+            include_confidence_in_global (bool): Whether to include confidence in global coverage.
+            verbose (bool, optional): Verbosity. Defaults to True.
+
+        Returns:
+        -------
+            ODResults: Evaluation results.
+
+        """
         print(f"Confidence threshold is {predictions.confidence_threshold}")
         print(f"Matching is : {predictions.matching is None}")
         if predictions.matching is None:
@@ -1298,31 +1246,7 @@ class ODConformalizer(Conformalizer):
 
 
 class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
-    """A class that performs risk conformalization for object detection predictions with asymptotic localization and objectness.
-
-    Args:
-    ----
-        prediction_set (str): The type of prediction set to use. Must be one of "additive", "multiplicative", or "adaptative".
-        localization_loss (str): The type of localization loss to use. Must be one of "pixelwise" or "boxwise".
-        optimizer (str): The type of optimizer to use. Must be one of "gaussianprocess", "gpr", "kriging", "mc", or "montecarlo".
-
-    Attributes:
-    ----------
-        ACCEPTED_LOSSES (dict): A dictionary mapping accepted localization losses to their corresponding classes.
-        loss_name (str): The name of the localization loss.
-        loss (Loss): An instance of the localization loss class.
-        prediction_set (str): The type of prediction set.
-        lbd (tuple): The calibrated lambda values.
-
-    Methods:
-    -------
-        _get_risk_function: Returns the risk function for optimization.
-        _correct_risk: Corrects the risk using the number of predictions and the upper bound of the loss.
-        calibrate: Calibrates the conformalizer using the given predictions.
-        conformalize: Conformalizes the predictions using the calibrated lambda values.
-        evaluate: Evaluates the conformalized predictions.
-
-    """
+    """A class that performs risk conformalization for object detection predictions with asymptotic localization and objectness."""
 
     ACCEPTED_LOSSES = {
         "pixelwise": PixelWiseRecallLoss,
@@ -1335,6 +1259,15 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         localization_loss: str = "boxwise",
         optimizer: str = "gpr",
     ):
+        """Initialize the AsymptoticLocalizationObjectnessConformalizer.
+
+        Args:
+        ----
+            prediction_set (str, optional): Prediction set type. Defaults to "additive".
+            localization_loss (str, optional): Localization loss type. Defaults to "boxwise".
+            optimizer (str, optional): Optimizer type. Defaults to "gpr".
+
+        """
         super().__init__()
         if localization_loss not in self.ACCEPTED_LOSSES:
             raise ValueError(
@@ -1356,35 +1289,29 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
                 f"optimizer {optimizer} not accepted in multidim, currently only gpr and mc",
             )
 
-    def _get_risk_function(self, predictions, alpha, **kwargs):
+    def _get_risk_function(self, predictions, alpha):
         """Returns the risk function for optimization.
 
         Args:
         ----
-            predictions (ODPredictions): The object detection predictions.
-            alpha (float): The significance level.
+            predictions (ODPredictions): Object detection predictions.
+            alpha (float): Significance level.
 
         Returns:
         -------
-            function: The risk function.
+            function: Risk function for optimization.
 
         """
 
         def risk_function(*lbd):
             lbd_loc, lbd_obj = lbd
-            pred_boxes_filtered = list(
-                [
-                    (
-                        x[y >= 1 - lbd_obj]
-                        if len(x[y >= 1 - lbd_obj]) > 0
-                        else x[None, y.argmax()]
-                    )
-                    for x, y in zip(
-                        predictions.pred_boxes,
-                        predictions.confidence,
-                    )
-                ],
-            )
+            pred_boxes_filtered = [
+                (x[y >= 1 - lbd_obj] if len(x[y >= 1 - lbd_obj]) > 0 else x[None, y.argmax()])
+                for x, y in zip(
+                    predictions.pred_boxes,
+                    predictions.confidence,
+                )
+            ]
             conf_boxes = apply_margins(
                 pred_boxes_filtered,
                 [lbd_loc, lbd_loc, lbd_loc, lbd_loc],
@@ -1410,13 +1337,13 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
 
         Args:
         ----
-            risk (torch.Tensor): The risk values.
-            n (int): The number of predictions.
-            B (float): The upper bound of the loss.
+            risk (torch.Tensor): Risk values.
+            n (int): Number of predictions.
+            B (float): Upper bound of the loss.
 
         Returns:
         -------
-            torch.Tensor: The corrected risk values.
+            torch.Tensor: Corrected risk values.
 
         """
         return (n / (n + 1)) * torch.mean(risk) + B / (n + 1)
@@ -1429,23 +1356,19 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         bounds: list = [(0, 500), (0.0, 1.0)],
         verbose: bool = True,
     ):
-        """Calibrates the conformalizer using the given predictions.
+        """Calibrate the conformalizer using the given predictions.
 
         Args:
         ----
-            predictions (ODPredictions): The object detection predictions.
-            alpha (float): The significance level.
-            steps (int): The number of optimization steps.
-            bounds (list): The bounds for the optimization variables.
-            verbose (bool): Whether to print verbose output.
+            predictions (ODPredictions): Object detection predictions.
+            alpha (float, optional): Significance level. Defaults to 0.1.
+            steps (int, optional): Number of optimization steps. Defaults to 13.
+            bounds (list, optional): Bounds for optimization. Defaults to [(0, 500), (0.0, 1.0)].
+            verbose (bool, optional): Verbosity. Defaults to True.
 
         Returns:
         -------
-            tuple: The calibrated lambda values.
-
-        Raises:
-        ------
-            ValueError: If the conformalizer has already been calibrated.
+            tuple: Calibrated lambda values.
 
         """
         if self.lbd is not None:
@@ -1466,19 +1389,16 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         return lbd
 
     def conformalize(self, predictions: ODPredictions, verbose: bool = True):
-        """Conformalizes the predictions using the calibrated lambda values.
+        """Conformalize predictions using the calibrated lambda values.
 
         Args:
         ----
-            predictions (ODPredictions): The object detection predictions.
+            predictions (ODPredictions): Object detection predictions.
+            verbose (bool, optional): Verbosity. Defaults to True.
 
         Returns:
         -------
-            list: The conformalized bounding boxes.
-
-        Raises:
-        ------
-            ValueError: If the conformalizer has not been calibrated.
+            list: Conformalized bounding boxes.
 
         """
         if self.lbd is None:
@@ -1501,21 +1421,17 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         conf_boxes: list,
         verbose: bool = True,
     ):
-        """Evaluates the conformalized predictions.
+        """Evaluate the conformalized predictions.
 
         Args:
         ----
-            predictions (ODPredictions): The object detection predictions.
-            conf_boxes (list): The conformalized bounding boxes.
-            verbose (bool): Whether to print verbose output.
+            predictions (ODPredictions): Object detection predictions.
+            conf_boxes (list): Conformalized bounding boxes.
+            verbose (bool, optional): Verbosity. Defaults to True.
 
         Returns:
         -------
-            tuple: The evaluation results.
-
-        Raises:
-        ------
-            ValueError: If the conformalizer has not been calibrated or the predictions have not been conformalized.
+            tuple: Evaluation results.
 
         """
         if self.lbd is None:
@@ -1534,8 +1450,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         ):
             cov = (
                 1
-                if len(true_boxes)
-                <= (confidence >= predictions.confidence_threshold).sum()
+                if len(true_boxes) <= (confidence >= predictions.confidence_threshold).sum()
                 else 0
             )
             set_size = (confidence >= predictions.confidence_threshold).sum()
@@ -1559,16 +1474,14 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
 
         conf_boxes = conf_boxes
         true_boxes = predictions.true_boxes
-        conf_boxes = list(
-            [
-                (
-                    x[y >= predictions.confidence_threshold]
-                    if len(x[y >= predictions.confidence_threshold]) > 0
-                    else x[None, y.argmax()]
-                )
-                for x, y in zip(conf_boxes, predictions.confidences)
-            ],
-        )
+        conf_boxes = [
+            (
+                x[y >= predictions.confidence_threshold]
+                if len(x[y >= predictions.confidence_threshold]) > 0
+                else x[None, y.argmax()]
+            )
+            for x, y in zip(conf_boxes, predictions.confidences)
+        ]
         set_size_loc = compute_set_size(conf_boxes)
         risk = compute_risk_object_level(
             conf_boxes,

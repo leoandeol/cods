@@ -1,3 +1,5 @@
+"""Tolerance region implementation for conformal classification."""
+
 from typing import Callable
 
 import torch
@@ -8,6 +10,8 @@ from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 
 
 class ClassificationToleranceRegion(ToleranceRegion):
+    """Tolerance region for conformal classification tasks."""
+
     ACCEPTED_PREPROCESS = {"softmax": torch.softmax}
 
     def __init__(
@@ -17,12 +21,26 @@ class ClassificationToleranceRegion(ToleranceRegion):
         optimizer="binary_search",
         preprocess="softmax",
         device="cpu",
-        optimizer_args={},
+        optimizer_args=None,
     ):
+        """Initialize the ClassificationToleranceRegion.
+
+        Args:
+        ----
+            loss (str or ClassificationLoss): Loss function or its name.
+            inequality (str): Inequality function name.
+            optimizer (str): Optimizer name.
+            preprocess (str or Callable): Preprocessing function or its name.
+            device (str): Device to use.
+            optimizer_args (dict, optional): Arguments for the optimizer.
+
+        """
+        if optimizer_args is None:
+            optimizer_args = {}
         super().__init__(
             inequality=inequality,
             optimizer=optimizer,
-            optimizer_args={},
+            optimizer_args=optimizer_args,
         )
         self.ACCEPTED_LOSSES = CLASSIFICATION_LOSSES
         self.lbd = None
@@ -49,9 +67,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
         if isinstance(loss, str):
             if loss not in self.ACCEPTED_LOSSES:
-                raise ValueError(
-                    f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
-                )
+                raise ValueError(f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.")
             self.loss_name = loss
             self.loss = self.ACCEPTED_LOSSES[loss]()
         elif isinstance(loss, ClassificationLoss):
@@ -59,8 +75,9 @@ class ClassificationToleranceRegion(ToleranceRegion):
             self.loss = loss
         else:
             raise ValueError(
-                f"loss must be a string or a ClassificationLoss instance, got {loss}",
+                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.",
             )
+        self.confidence_threshold = None
 
     def calibrate(
         self,
@@ -72,6 +89,23 @@ class ClassificationToleranceRegion(ToleranceRegion):
         verbose=True,
         objectness_threshold=0.8,
     ):
+        """Calibrate the tolerance region for conformal classification.
+
+        Args:
+        ----
+            predictions (ClassificationPredictions): Predictions to calibrate on.
+            alpha (float, optional): Miscoverage level. Defaults to 0.1.
+            delta (float, optional): Confidence level. Defaults to 0.1.
+            steps (int, optional): Number of optimization steps. Defaults to 13.
+            bounds (list, optional): Search bounds. Defaults to [0, 1].
+            verbose (bool, optional): Whether to print progress. Defaults to True.
+            objectness_threshold (float, optional): Objectness threshold. Defaults to 0.8.
+
+        Returns:
+        -------
+            float: The calibrated lambda value.
+
+        """
         if self.lbd is not None:
             print("Replacing previously computed lambda")
         self._n_classes = predictions.n_classes
@@ -80,7 +114,6 @@ class ClassificationToleranceRegion(ToleranceRegion):
             alpha=alpha,
             delta=delta,
             objectness_threshold=objectness_threshold,
-            # matching=matching,
         )
 
         lbd = self.optimizer.optimize(
@@ -102,13 +135,26 @@ class ClassificationToleranceRegion(ToleranceRegion):
         objectness_threshold: float,
         **kwargs,
     ) -> Callable:
+        """Return a risk function for calibration.
+
+        Args:
+        ----
+            predictions (ClassificationPredictions): Predictions to use.
+            alpha (float): Miscoverage level.
+            delta (float): Confidence level.
+            objectness_threshold (float): Objectness threshold.
+            **kwargs: Additional arguments.
+
+        Returns:
+        -------
+            Callable: Risk function for calibration.
+
+        """
         n = len(predictions.true_cls)
 
         def risk_function(lbd):
             risk = []
             for i, true_cls in enumerate(predictions.true_cls):
-                # for j, true_cls in enumerate(true_cls_img):
-                # pred_cls = predictions.cls_prob[i][matching[i][j]]
                 pred_cls = self.f_preprocess(predictions.pred_cls[i], -1)
                 conf_set = self.loss.get_set(pred_cls=pred_cls, lbd=lbd)
                 score = self.loss(true_cls=true_cls, conf_cls=conf_set)
@@ -130,7 +176,19 @@ class ClassificationToleranceRegion(ToleranceRegion):
         n: int,
         delta: float,
     ) -> torch.Tensor:
-        # TODO: fix
+        """Apply the selected inequality to correct the risk estimate.
+
+        Args:
+        ----
+            risk (torch.Tensor): Empirical risk.
+            n (int): Number of samples.
+            delta (float): Confidence level.
+
+        Returns:
+        -------
+            torch.Tensor: Corrected risk.
+
+        """
         return self.f_inequality(
             Rhat=risk,
             n=torch.tensor(n, dtype=torch.float).to(self.device),
@@ -143,6 +201,19 @@ class ClassificationToleranceRegion(ToleranceRegion):
         verbose: bool = True,
         **kwargs,
     ) -> list:
+        """Conformalize the predictions using the calibrated lambda.
+
+        Args:
+        ----
+            predictions (ClassificationPredictions): Predictions to conformalize.
+            verbose (bool, optional): Whether to print progress. Defaults to True.
+            **kwargs: Additional arguments.
+
+        Returns:
+        -------
+            list: List of conformalized prediction sets.
+
+        """
         if self.lbd is None:
             raise ValueError(
                 "Conformalizer must be calibrated before conformalizing.",
@@ -161,6 +232,20 @@ class ClassificationToleranceRegion(ToleranceRegion):
         verbose=True,
         **kwargs,
     ):
+        """Evaluate the conformalized predictions.
+
+        Args:
+        ----
+            preds (ClassificationPredictions): Predictions to evaluate.
+            conf_cls (list): Conformalized prediction sets.
+            verbose (bool, optional): Whether to print progress. Defaults to True.
+            **kwargs: Additional arguments.
+
+        Returns:
+        -------
+            tuple: Tuple of (coverage, average set size).
+
+        """
         if self.lbd is None:
             raise ValueError(
                 "Conformalizer must be calibrated before evaluating.",

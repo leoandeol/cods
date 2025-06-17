@@ -7,6 +7,19 @@ from cods.od.models.model import ODModel
 
 
 def xywh2xyxy_scaled(x, width_scale, height_scale):
+    """Convert bounding boxes from center (x, y, w, h) format to (x0, y0, x1, y1) format and scale.
+
+    Args:
+    ----
+        x (torch.Tensor): Bounding boxes in (center_x, center_y, width, height) format.
+        width_scale (float): Scaling factor for width.
+        height_scale (float): Scaling factor for height.
+
+    Returns:
+    -------
+        torch.Tensor: Bounding boxes in (x0, y0, x1, y1) format, scaled.
+
+    """
     y = x.clone()
     y[:, 0] = (x[:, 0] - x[:, 2] / 2) * width_scale  # top left x
     y[:, 1] = (x[:, 1] - x[:, 3] / 2) * height_scale  # top left y
@@ -16,11 +29,34 @@ def xywh2xyxy_scaled(x, width_scale, height_scale):
 
 
 class AlteredYOLO(YOLO):
+    """YOLO model wrapper with hooks to capture raw outputs and input shapes during prediction."""
+
     def __init__(self, model_path):
+        """Initialize the AlteredYOLO model.
+
+        Args:
+        ----
+            model_path (str): Path to the YOLO model weights.
+
+        """
         super().__init__(model_path, verbose=False)
         self.raw_output = None
 
     def predict(self, source=None, stream=False, **kwargs):
+        """Run prediction and capture raw outputs and input shapes using hooks.
+
+        Args:
+        ----
+            source: Input source for prediction.
+            stream (bool, optional): Whether to stream results. Defaults to False.
+            **kwargs: Additional keyword arguments for prediction.
+
+        Returns:
+        -------
+            The results from YOLO prediction.
+
+        """
+
         def output_hook(module, input, output):
             self.raw_output = output[0].clone()
 
@@ -43,7 +79,7 @@ class AlteredYOLO(YOLO):
 
 
 class YOLOModel(ODModel):
-    # Note: no check whether the model exists on our side
+    """Object Detection model wrapper for YOLO with custom preprocessing and postprocessing."""
 
     def __init__(
         self,
@@ -54,6 +90,18 @@ class YOLOModel(ODModel):
         save=True,
         save_dir_path=None,
     ):
+        """Initialize the YOLOModel.
+
+        Args:
+        ----
+            model_name (str, optional): Name or path of the YOLO model. Defaults to "yolov8x.pt".
+            pretrained (bool, optional): Whether to use pretrained weights. Defaults to True.
+            weights: Custom weights (not used currently).
+            device (str, optional): Device to use. Defaults to "cpu".
+            save (bool, optional): Whether to save the model. Defaults to True.
+            save_dir_path (str, optional): Directory to save the model. Defaults to None.
+
+        """
         super().__init__(
             model_name=model_name,
             save_dir_path=save_dir_path,
@@ -90,6 +138,19 @@ class YOLOModel(ODModel):
         img_shapes,
         model_input_size,
     ):
+        """Postprocess raw model outputs to obtain bounding boxes, confidences, and class probabilities.
+
+        Args:
+        ----
+            raw_output (list[torch.Tensor]): Raw outputs from the model.
+            img_shapes (torch.FloatTensor): Original image shapes.
+            model_input_size (tuple): Model input size (width, height).
+
+        Returns:
+        -------
+            tuple: (all_boxes, all_confs, all_probs) for each image in the batch.
+
+        """
         all_boxes = []
         all_confs = []
         all_probs = []
@@ -224,16 +285,18 @@ class YOLOModel(ODModel):
         return all_boxes, all_confs, all_probs
 
     def predict_batch(self, batch: list, **kwargs) -> dict:
-        """Predicts the output given a batch of input tensors.
+        """Predict the output given a batch of input tensors.
 
         Args:
         ----
-            batch (list): The input batch
+            batch (list): The input batch containing image paths, image sizes, images, and ground truth.
+            **kwargs: Additional keyword arguments for prediction.
 
         Returns:
         -------
             dict: The predicted output as a dictionary with the following keys:
                 - "image_paths" (list): The paths of the input images
+                - "image_shapes" (list): The shapes of the input images
                 - "true_boxes" (list): The true bounding boxes of the objects in the images
                 - "pred_boxes" (list): The predicted bounding boxes of the objects in the images
                 - "confidences" (list): The confidence scores of the predicted bounding boxes
@@ -257,28 +320,23 @@ class YOLOModel(ODModel):
             img_shapes,
             model_input_size,
         )
-        true_boxes = list(
-            [
-                torch.LongTensor(
+        true_boxes = [
+            torch.LongTensor(
+                [
                     [
-                        [
-                            box["bbox"][0],
-                            box["bbox"][1],
-                            box["bbox"][0] + box["bbox"][2],
-                            box["bbox"][1] + box["bbox"][3],
-                        ]
-                        for box in true_box
-                    ],
-                )
-                for true_box in ground_truth
-            ],
-        )
-        true_cls = list(
-            [
-                torch.LongTensor([box["category_id"] for box in true_box])
-                for true_box in ground_truth
-            ],
-        )
+                        box["bbox"][0],
+                        box["bbox"][1],
+                        box["bbox"][0] + box["bbox"][2],
+                        box["bbox"][1] + box["bbox"][3],
+                    ]
+                    for box in true_box
+                ],
+            )
+            for true_box in ground_truth
+        ]
+        true_cls = [
+            torch.LongTensor([box["category_id"] for box in true_box]) for true_box in ground_truth
+        ]
         true_boxes = true_boxes
 
         return {

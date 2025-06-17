@@ -1,3 +1,5 @@
+"""Visualization utilities for conformal classification predictions."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,6 +11,19 @@ def plot_predictions(
     preds: ClassificationPredictions,
     conf_cls: list = None,
 ):
+    """Plot classification predictions and optionally conformalized sets for given indices.
+
+    Args:
+    ----
+        idxs (list or int): Indices of samples to plot.
+        preds (ClassificationPredictions): Predictions object containing image paths and labels.
+        conf_cls (list, optional): List of conformalized prediction sets. Defaults to None.
+
+    Raises:
+    ------
+        ValueError: If lengths of predictions and conformalized sets do not match, or if class mapping is not set.
+
+    """
     if isinstance(idxs, int):
         idxs = [idxs]
     if conf_cls is not None and len(preds) != len(conf_cls):

@@ -60,7 +60,10 @@ indent-width = 4
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "I", "C", "D", "UP"]
-ignore = []
+ignore = [
+    "D215", # allow long lines in docstrings
+    "E501", # allow long lines anywhere the formatter can't fix
+]
 fixable = ["ALL"]
 unfixable = []
 

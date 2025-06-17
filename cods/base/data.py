@@ -1,25 +1,35 @@
+"""Base data structures for predictions, parameters, and conformalized results."""
+
 from time import time_ns
-from typing import Optional
 
 
 class Predictions:
-    """Abstract class for predictions"""
+    """Abstract base class for predictions.
+
+    Attributes
+    ----------
+        unique_id (int): Unique ID of the predictions.
+        dataset_name (str): Name of the dataset.
+        split_name (str): Name of the split.
+        task_name (str): Name of the task.
+
+    """
 
     def __init__(
         self,
         dataset_name: str,
         split_name: str,
         task_name: str,
-        unique_id: Optional[int] = None,
+        unique_id: int | None = None,
     ):
-        """Initializes a new instance of the Predictions class.
+        """Initialize a new instance of the Predictions class.
 
         Args:
         ----
-            unique_id (int): The unique ID of the predictions.
-            dataset_name (str): The name of the dataset.
-            split_name (str): The name of the split.
-            task_name (str): The name of the task.
+            dataset_name (str): Name of the dataset.
+            split_name (str): Name of the split.
+            task_name (str): Name of the task.
+            unique_id (Optional[int], optional): Unique ID of the predictions. If None, a timestamp is used.
 
         """
         if unique_id is None:
@@ -31,15 +41,22 @@ class Predictions:
 
 
 class Parameters:
-    """Abstract class for parameters"""
+    """Abstract base class for parameters.
 
-    def __init__(self, predictions_id: int, unique_id: Optional[int] = None):
-        """Initializes a new instance of the Parameters class.
+    Attributes
+    ----------
+        predictions_id (int): Unique ID of the predictions.
+        unique_id (int): Unique ID of the parameters.
 
-        Parameters
-        ----------
-        predictions_id (int): The unique ID of the predictions.
-        unique_id (int): The unique ID of the parameters.
+    """
+
+    def __init__(self, predictions_id: int, unique_id: int | None = None):
+        """Initialize a new instance of the Parameters class.
+
+        Args:
+        ----
+            predictions_id (int): Unique ID of the predictions.
+            unique_id (Optional[int], optional): Unique ID of the parameters. If None, a timestamp is used.
 
         """
         self.predictions_id = predictions_id
@@ -49,20 +66,29 @@ class Parameters:
 
 
 class ConformalizedPredictions:
-    """Abstract class for results"""
+    """Abstract base class for conformalized prediction results.
+
+    Attributes
+    ----------
+        predictions_id (int): Unique ID of the predictions.
+        parameters_id (int): Unique ID of the parameters.
+        unique_id (int): Unique ID of the conformalized predictions.
+
+    """
 
     def __init__(
         self,
         predictions_id: int,
         parameters_id: int,
-        unique_id: Optional[int] = None,
+        unique_id: int | None = None,
     ):
-        """Initializes a new instance of the Data class.
+        """Initialize a new instance of the ConformalizedPredictions class.
 
-        Parameters
-        ----------
-        predictions_id (int): The unique ID of the predictions.
-        parameters_id (int): The unique ID of the parameters.
+        Args:
+        ----
+            predictions_id (int): Unique ID of the predictions.
+            parameters_id (int): Unique ID of the parameters.
+            unique_id (Optional[int], optional): Unique ID of the conformalized predictions. If None, a timestamp is used.
 
         """
         self.predictions_id = predictions_id
@@ -73,7 +99,15 @@ class ConformalizedPredictions:
 
 
 class Results:
-    """Abstract class for results"""
+    """Abstract base class for results.
+
+    Attributes
+    ----------
+        predictions_id (int): Unique ID of the predictions.
+        parameters_id (int): Unique ID of the parameters.
+        conformalized_id (int): Unique ID of the conformalized predictions.
+
+    """
 
     def __init__(
         self,
@@ -81,13 +115,13 @@ class Results:
         parameters_id: int,
         conformalized_id: int,
     ):
-        """Initializes a new instance of the Data class.
+        """Initialize a new instance of the Results class.
 
-        Parameters
-        ----------
-        predictions_id (int): The unique ID of the predictions.
-        parameters_id (int): The unique ID of the parameters.
-        conformalized_id (int): The unique ID of the conformalized predictions.
+        Args:
+        ----
+            predictions_id (int): Unique ID of the predictions.
+            parameters_id (int): Unique ID of the parameters.
+            conformalized_id (int): Unique ID of the conformalized predictions.
 
         """
         self.predictions_id = predictions_id
