@@ -18,9 +18,9 @@ def main():
     results = model.train(
         # Required arguments
         data="/datasets/shared_datasets/SNCF/DATASET_etat_feu/sncf_dataset.yaml",
-        epochs=50,
+        epochs=200,
         imgsz=640,
-        batch=16,
+        batch=24,
         name=f"{model_name.split('.pt')[0]}_sncf",
         project="cods-sncf",
         # --- Data Augmentation Arguments ---
