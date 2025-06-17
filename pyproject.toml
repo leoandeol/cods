@@ -59,7 +59,7 @@ extend-include = ["*.ipynb"]
 indent-width = 4
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "B", "I", "C", "D"]
+select = ["E", "F", "W", "B", "I", "C", "D", "UP"]
 ignore = []
 fixable = ["ALL"]
 unfixable = []
