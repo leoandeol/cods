@@ -1,6 +1,30 @@
+[project]
+name = "cods"
+version = "0.2" # <--- IMPORTANT: Update this manually or via a script for new releases
+description = "Conformal Object Detection & Segmentation"
+authors = [
+    { name = "Léo Andéol", email = "leo@andeol.eu" },
+    { name = "Luca Mossina" },
+]
+urls = { Repository = "https://github.com/leoandeol/cods/" }
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License", # Assuming MIT, replace if different
+    "Operating System :: OS Independent",
+]
+# No 'dependencies' or 'optional-dependencies' here, as they are in requirements.txt
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["cods*"]
+
 [tool.ruff]
 target-version = "py38"
-# Exclude a variety of commonly ignored directories.
+line-length = 79
 exclude = [
     ".bzr",
     ".direnv",
@@ -29,21 +53,14 @@ exclude = [
     "site-packages",
     "venv",
 ]
-line-length = 79
 extend-include = ["*.ipynb"]
 indent-width = 4
-fix = true
-
 
 [tool.ruff.lint]
-ignore = []
-# Allow fix for all enabled rules (when `--fix`) is provided.
-#TODO too much currently disabled
-fixable = ["ALL"]
 select = ["ALL"]
-# select = ["F", "E", "B", "I", "RUF", "TCH"]
-# Disable fix for unused imports (`F401`).
-unfixable = [] # ["F401"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
 
 [tool.ruff.format]
 quote-style = "double"
@@ -54,5 +71,5 @@ docstring-code-format = true
 
 [tool.mypy]
 python_version = "3.8"
-strict = true  # Optional: enables full strict mode
+strict = true
 ignore_missing_imports = true
