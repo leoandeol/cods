@@ -1,3 +1,5 @@
+"""Visualization utilities for conformal object detection predictions."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -15,16 +17,20 @@ def plot_preds(
     idx_to_label: dict = None,
     save_as=None,
 ):
-    """Plot the predictions of an object detection model.
+    """Plot the predictions of an object detection model for a given image index.
 
     Args:
     ----
-        preds (object): Object containing the predictions.
         idx (int): Index of the image to plot.
-        conf_boxes (list): List of confidence boxes.
-        conf_cls (list): List of confidence classes.
-        confidence_threshold (float, optional): Confidence threshold for filtering predictions. If not provided, the threshold from `preds` will be used. Defaults to None.
+        predictions (ODPredictions): Object containing the predictions.
+        conformalized_predictions (ODConformalizedPredictions, optional): Conformalized predictions. Defaults to None.
+        confidence_threshold (float, optional): Confidence threshold for filtering predictions. Defaults to None.
+        idx_to_label (dict, optional): Mapping from class indices to labels. Defaults to None.
         save_as (str, optional): File path to save the plot. Defaults to None.
+
+    Raises:
+    ------
+        ValueError: If confidence threshold is not provided or cannot be inferred.
 
     """
     is_conformal = conformalized_predictions is not None
@@ -40,10 +46,7 @@ def plot_preds(
         conf_boxes = conformalized_predictions.conf_boxes[idx]
         conf_cls = conformalized_predictions.conf_cls[idx]
 
-    if (
-        confidence_threshold is None
-        and predictions.confidence_threshold is not None
-    ):
+    if confidence_threshold is None and predictions.confidence_threshold is not None:
         confidence_threshold = predictions.confidence_threshold
         print("Using confidence threshold from preds")
     else:
@@ -186,18 +189,19 @@ def create_pdf_with_plots(
     Args:
     ----
         predictions (ODPredictions): Object containing the predictions.
-        conformalized_predictions (ODConformalizedPredictions, optional): Object containing conformalized predictions. Defaults to None.
+        conformalized_predictions (ODConformalizedPredictions, optional): Conformalized predictions. Defaults to None.
         confidence_threshold (float, optional): Confidence threshold for filtering predictions. Defaults to None.
         idx_to_label (dict, optional): Mapping from class indices to labels. Defaults to None.
         output_pdf (str, optional): Path to save the output PDF. Defaults to "output.pdf".
 
+    Raises:
+    ------
+        ValueError: If confidence threshold is not provided or cannot be inferred.
+
     """
     is_conformal = conformalized_predictions is not None
 
-    if (
-        confidence_threshold is None
-        and predictions.confidence_threshold is not None
-    ):
+    if confidence_threshold is None and predictions.confidence_threshold is not None:
         confidence_threshold = predictions.confidence_threshold
     elif confidence_threshold is None:
         raise ValueError("Confidence Threshold should be provided")
@@ -274,9 +278,7 @@ def create_pdf_with_plots(
                     if isinstance(proba, torch.Tensor):
                         proba = proba.item()
                     if idx_to_label is not None:
-                        text = (
-                            f"{idx_to_label[proba]}" if proba >= 0 else "conf"
-                        )
+                        text = f"{idx_to_label[proba]}" if proba >= 0 else "conf"
                     else:
                         text = f"{proba}" if proba >= 0 else "conf"
                     ax.text(
@@ -338,14 +340,18 @@ def create_pdf_with_plots(
 
 
 def plot_histograms_predictions(predictions: ODPredictions):
+    """Plot histograms of true boxes, predicted boxes, and thresholded predictions.
+
+    Args:
+    ----
+        predictions (ODPredictions): Object containing the predictions.
+
+    """
     # Plot three histograms in the same figure, with 20 bins that use lengths3 = [len(x) for x in preds_val.true_boxes] but the same also for confidence and confidence thresholded, and pu the mean length as title of the figure,
 
     list_true = [len(x) for x in predictions.true_boxes]
     list_pred = [len(x) for x in predictions.confidences]
-    list_pred_thresh = [
-        sum(x > predictions.confidence_threshold)
-        for x in predictions.confidence
-    ]
+    list_pred_thresh = [sum(x > predictions.confidence_threshold) for x in predictions.confidence]
 
     fig, axs = plt.subplots(1, 3, figsize=(15, 5))
     axs[0].hist(list_true, bins=20)

@@ -1,5 +1,11 @@
 # 🐟 CODS - Conformal Object Detection and Segmentation 🐟
 
+[![PyPI - Version](https://img.shields.io/pypi/v/cods?logo=pypi)](https://pypi.org/project/cods/)
+[![CI Status](https://github.com/leoandeol/cods/actions/workflows/ci.yml/badge.svg)](https://github.com/leoandeol/cods/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/cods?logo=pypi)](https://pypi.org/project/cods/)
+
 *A library for distribution-free model-agnostic finite-sample uncertainty quantification applied to computer vision tasks!*
 
 ![](./docs/pics/od_main.jpg)
@@ -27,10 +33,10 @@ It is built on top of PyTorch for efficiency (with CUDA support), and is designe
 #### Using Pip
 
 ```bash
-pip install -e git+https://github.com/leoandeol/cods.git
+pip install cods
 ```
 
-#### Installing locally
+#### Installing from Source
 
 ```bash
 git clone https://github.com/leoandeol/cods.git

@@ -1,3 +1,5 @@
+"""Visualization utilities for conformal classification predictions."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -9,12 +11,27 @@ def plot_predictions(
     preds: ClassificationPredictions,
     conf_cls: list = None,
 ):
+    """Plot classification predictions and optionally conformalized sets for given indices.
+
+    Args:
+    ----
+        idxs (list or int): Indices of samples to plot.
+        preds (ClassificationPredictions): Predictions object containing image paths and labels.
+        conf_cls (list, optional): List of conformalized prediction sets. Defaults to None.
+
+    Raises:
+    ------
+        ValueError: If lengths of predictions and conformalized sets do not match, or if class mapping is not set.
+
+    """
     if isinstance(idxs, int):
         idxs = [idxs]
-    if len(preds) != len(conf_cls):
+    if conf_cls is not None and len(preds) != len(conf_cls):
         raise ValueError(
             f"len(preds)={len(preds)} and len(conf_cls)={len(conf_cls)} must be equal",
         )
+    if preds.idx_to_cls is None:
+        raise ValueError("preds.idx_to_cls must be set")
 
     n = len(idxs)
     fig, axs = plt.subplots(int(np.ceil(n / 4)), min(4, n), figsize=(12, 12))
@@ -23,9 +40,9 @@ def plot_predictions(
         image_path = preds.image_paths[idx_pred]
         image = plt.imread(image_path)
         curr_ax.imshow(image)
-        true_cls = preds.true_cls[idx_pred].item()
+        true_cls = int(preds.true_cls[idx_pred].item())
         true_cls_name = preds.idx_to_cls[true_cls]
-        pred_cls = preds.pred_cls[idx_pred].argmax().item()
+        pred_cls = int(preds.pred_cls[idx_pred].argmax().item())
         pred_cls_name = preds.idx_to_cls[pred_cls]
         if conf_cls is None:
             curr_ax.set_title(

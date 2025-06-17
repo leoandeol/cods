@@ -1,3 +1,5 @@
+from typing import Union
+
 import numpy as np
 import torch
 
@@ -108,6 +110,7 @@ class ODNCScore(NCScore):
         Args:
         ----
             pred_boxes (torch.Tensor): Predicted boxes.
+            quantile (float): Quantile value.
 
         Returns:
         -------
@@ -209,6 +212,7 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
                 torch.FloatTensor([[-1, -1, 1, 1]]).to(device),
                 Qst,
             )
+        new_boxes = torch.stack(new_boxes)
         return new_boxes
 
 
@@ -273,6 +277,7 @@ class UnionAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
                 torch.FloatTensor([[-1, -1, 1, 1]]).to(device),
                 Qst,
             )
+        new_boxes = torch.stack(new_boxes)
         return new_boxes
 
 
@@ -360,6 +365,7 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
                 torch.stack((-w, -h, w, h), axis=-1),
                 Qst,
             )
+        new_boxes = torch.stack(new_boxes)
         return new_boxes
 
 
@@ -426,4 +432,5 @@ class UnionMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
                 torch.stack((-w, -h, w, h), axis=-1),
                 Qst,
             )
+        new_boxes = torch.stack(new_boxes)
         return new_boxes

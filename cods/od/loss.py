@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import List
 
 import torch
 
@@ -10,8 +9,9 @@ from cods.classif.loss import ClassificationLoss
 from cods.od.utils import (
     assymetric_hausdorff_distance,
     f_lac,
-    # get_covered_areas_of_gt_max,
+    fast_covered_areas_of_gt,
     get_covered_areas_of_gt_union,
+    vectorized_generalized_iou,
 )
 
 logger = getLogger("cods")
@@ -19,16 +19,16 @@ logger = getLogger("cods")
 
 # Object Detection Loss, many are wrappers of Segmentation losses
 class ODLoss(Loss):
+    """Base class for Object Detection losses."""
+
     def __init__(self, upper_bound: int, device: str = "cpu", **kwargs):
         """Initialize the Object Detection Loss.
 
-        Parameters
-        ----------
-        - upper_bound (int): The upper bound of the loss.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            upper_bound (int): The upper bound of the loss.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
+            **kwargs: Additional keyword arguments.
 
         """
         super().__init__()
@@ -42,11 +42,18 @@ class ODLoss(Loss):
         conf_boxes: torch.Tensor,
         conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """Call the Object Detection Loss.
+        """Compute the object detection loss.
 
-        Returns
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes.
+            true_cls (torch.Tensor): Ground truth class labels.
+            conf_boxes (torch.Tensor): Conformalized/predicted bounding boxes.
+            conf_cls (torch.Tensor): Conformalized/predicted class labels.
+
+        Returns:
         -------
-        - None
+            torch.Tensor: The loss value.
 
         """
         raise NotImplementedError("ODLoss is an abstract class.")
@@ -54,21 +61,24 @@ class ODLoss(Loss):
 
 # LAC STYLE
 class BoxCountThresholdConfidenceLoss(ODLoss):
+    """Confidence loss based on whether the count of conformalized boxes meets or exceeds the count of true boxes.
+
+    The loss is 0 if `len(conf_boxes) >= len(true_boxes)`, and 1 otherwise.
+    """
+
     def __init__(
         self,
         upper_bound: int = 1,
         device: str = "cpu",
         **kwargs,
     ):
-        """Initialize the Confidence Loss.
+        """Initialize the BoxCountThresholdConfidenceLoss.
 
-        Parameters
-        ----------
-        - upper_bound (int): The upper bound of the loss.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            upper_bound (int, optional): The upper bound of the loss. Defaults to 1.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
+            **kwargs: Additional keyword arguments.
 
         """
         super().__init__(upper_bound=upper_bound, device=device)
@@ -80,16 +90,18 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
         conf_boxes: torch.Tensor,
         conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """Call the Confidence Loss.
+        """Compute the confidence loss based on box count threshold.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The predictions.
-        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor): Ground truth class labels for a single image.
+            conf_boxes (torch.Tensor): Conformalized/predicted bounding boxes for a single image.
+            conf_cls (torch.Tensor): Conformalized/predicted class labels for a single image.
 
-        Returns
+        Returns:
         -------
-        - torch.Tensor: The loss value.
+            torch.Tensor: The loss value.
 
         """
         return (
@@ -100,6 +112,12 @@ class BoxCountThresholdConfidenceLoss(ODLoss):
 
 
 class BoxCountTwosidedConfidenceLoss(ODLoss):
+    """Confidence loss based on whether the absolute difference between true and predicted box counts exceeds a threshold.
+
+    The loss is 1 if `abs(len(true_boxes) - len(conf_boxes)) > self.threshold`, and 0 otherwise.
+    If there are no true boxes, the loss is 0.
+    """
+
     def __init__(
         self,
         upper_bound: int = 1,
@@ -107,15 +125,14 @@ class BoxCountTwosidedConfidenceLoss(ODLoss):
         device: str = "cpu",
         **kwargs,
     ):
-        """Initialize the Confidence Loss.
+        """Initialize the BoxCountTwosidedConfidenceLoss.
 
-        Parameters
-        ----------
-        - upper_bound (int): The upper bound of the loss.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            upper_bound (int, optional): The upper bound of the loss. Defaults to 1.
+            threshold (int, optional): Allowed difference in box counts. Defaults to 3.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
+            **kwargs: Additional keyword arguments.
 
         """
         super().__init__(upper_bound=upper_bound, device=device)
@@ -123,21 +140,23 @@ class BoxCountTwosidedConfidenceLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        conf_boxes: torch.Tensor | List[torch.Tensor],
-        conf_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        conf_boxes: torch.Tensor | list[torch.Tensor],
+        conf_cls: list[torch.Tensor],
     ) -> torch.Tensor:
-        """Call the Confidence Loss.
+        """Compute the confidence loss based on two-sided box count threshold.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The predictions.
-        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+        Args:
+        ----
+            true_boxes (torch.Tensor | List[torch.Tensor]): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor | List[torch.Tensor]): Ground truth class labels for a single image.
+            conf_boxes (torch.Tensor | List[torch.Tensor]): Conformalized/predicted bounding boxes for a single image.
+            conf_cls (List[torch.Tensor]): Conformalized/predicted class labels for a single image.
 
-        Returns
+        Returns:
         -------
-        - torch.Tensor: The loss value.
+            torch.Tensor: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -153,42 +172,48 @@ class BoxCountTwosidedConfidenceLoss(ODLoss):
 
 
 class BoxCountRecallConfidenceLoss(ODLoss):
+    """Confidence loss based on the recall of box counts.
+
+    Calculates `max(0, (len(true_boxes) - len(conf_boxes)) / len(true_boxes))`.
+    If there are no true boxes, the loss is 0.
+    """
+
     def __init__(
         self,
         upper_bound: int = 1,
         device: str = "cpu",
         **kwargs,
     ):
-        """Initialize the Confidence Loss.
+        """Initialize the BoxCountRecallConfidenceLoss.
 
-        Parameters
-        ----------
-        - upper_bound (int): The upper bound of the loss.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            upper_bound (int, optional): The upper bound of the loss. Defaults to 1.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
+            **kwargs: Additional keyword arguments.
 
         """
         super().__init__(upper_bound=upper_bound, device=device)
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        conf_boxes: torch.Tensor | List[torch.Tensor],
-        conf_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        conf_boxes: torch.Tensor | list[torch.Tensor],
+        conf_cls: list[torch.Tensor],
     ) -> torch.Tensor:
-        """Call the Confidence Loss.
+        """Compute the confidence loss based on recall of box counts.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The predictions.
-        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+        Args:
+        ----
+            true_boxes (torch.Tensor | List[torch.Tensor]): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor | List[torch.Tensor]): Ground truth class labels for a single image.
+            conf_boxes (torch.Tensor | List[torch.Tensor]): Conformalized/predicted bounding boxes for a single image.
+            conf_cls (List[torch.Tensor]): Conformalized/predicted class labels for a single image.
 
-        Returns
+        Returns:
         -------
-        - torch.Tensor: The loss value.
+            torch.Tensor: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -201,65 +226,15 @@ class BoxCountRecallConfidenceLoss(ODLoss):
                 ),
             ).to(self.device)
         return loss
-        # return max(
-        #     [
-        #         (loss),
-        #     ]
-        #     + [
-        #         loss(
-        #             true_boxes, true_cls, matched_conf_boxes, matched_conf_cls
-        #         )
-        #         for loss in self.other_losses
-        #     ],
-        # )
-        # losses = []
-        # if len(true_boxes) == 0:
-        #     loss = torch.zeros(1).to(device)
-        # elif len(conf_boxes) == 0:
-        #     loss = torch.ones(1).to(device)
-        # else:
-        #     for i, true_boxes_i in enumerate(true_boxes):
-        #         # search for closest box
-        #         distances = []
-        #         for conf_boxes_i in conf_boxes[i]:
-        #             # TODO doesn"r work because of expansion fo boxes for localization
-        #             center_true_x = (true_boxes_i[0] + true_boxes_i[2]) / 2
-        #             center_true_y = (true_boxes_i[1] + true_boxes_i[3]) / 2
-        #             center_conf_x = (conf_boxes_i[0] + conf_boxes_i[2]) / 2
-        #             center_conf_y = (conf_boxes_i[1] + conf_boxes_i[3]) / 2
-        #             distance = torch.sqrt(
-        #                 (center_true_x - center_conf_x) ** 2
-        #                 + (center_true_y - center_conf_y) ** 2
-        #             )
-        #             # TODO: improve distance
-        #             distances.append(distance)
-        #         # print(f"distances: {distances}")
-        #         # TODO arbirtrary
-
-        #         if len(distances) == 0:
-        #             loss_i = torch.ones(1).to(device)
-        #             losses.append(loss_i)
-        #             continue
-
-        #         loss_i = (
-        #             torch.zeros(1).to(device)
-        #             if torch.min(torch.stack(distances))
-        #             < self.distance_threshold
-        #             else torch.ones(1).to(device)
-        #         )
-        #         losses.append(loss_i)
-        #     loss = torch.mean(torch.stack(losses))
-        # return max(
-        #     [loss]
-        #     + [
-        #         loss(true_boxes, true_cls, conf_boxes, conf_cls)
-        #         for loss in self.other_losses
-        #     ],
-        # )
 
 
-# This loss just doesn't make sense: all the boxes have maximum margins and are the size of the image ....
 class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
+    """Confidence loss based on a thresholded distance between true and predicted boxes.
+
+    This loss computes a combined distance (Hausdorff and LAC) between true and predicted boxes.
+    The loss is the mean of indicators where this distance exceeds `self.distance_threshold`.
+    """
+
     def __init__(
         self,
         upper_bound: int = 1,
@@ -267,15 +242,14 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
         device: str = "cpu",
         **kwargs,
     ):
-        """Initialize the Confidence Loss.
+        """Initialize the ThresholdedBoxDistanceConfidenceLoss.
 
-        Parameters
-        ----------
-        - upper_bound (int): The upper bound of the loss.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            upper_bound (int, optional): The upper bound of the loss. Defaults to 1.
+            distance_threshold (float, optional): Distance threshold for loss. Defaults to 0.5.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
+            **kwargs: Additional keyword arguments.
 
         """
         super().__init__(upper_bound=upper_bound, device=device)
@@ -286,21 +260,23 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        pred_boxes: torch.Tensor | List[torch.Tensor],
-        pred_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        pred_boxes: torch.Tensor | list[torch.Tensor],
+        pred_cls: list[torch.Tensor],
     ) -> torch.Tensor:
-        """Call the Confidence Loss.
+        """Compute the confidence loss based on thresholded box distance.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The predictions.
-        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+        Args:
+        ----
+            true_boxes (torch.Tensor | List[torch.Tensor]): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor | List[torch.Tensor]): Ground truth class labels for a single image.
+            pred_boxes (torch.Tensor | List[torch.Tensor]): Predicted bounding boxes for a single image.
+            pred_cls (List[torch.Tensor]): Predicted class labels for a single image.
 
-        Returns
+        Returns:
         -------
-        - torch.Tensor: The loss value.
+            torch.Tensor: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -323,17 +299,32 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
 
 
 class ODBinaryClassificationLoss(ClassificationLoss):
+    """Binary classification loss for object detection.
+
+    This loss is 1 if the true class is not in the conformalized class set, and 0 otherwise.
+    """
+
     def __init__(self):
+        """Initialize the ODBinaryClassificationLoss."""
         super().__init__(upper_bound=1)
 
     def __call__(
         self,
-        conf_cls,
-        true_cls,
+        conf_cls: torch.Tensor,
+        true_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """ """
-        # if len(conf_cls) == 0:
-        #    logger.warning(f"conf_cls is empty : {conf_cls}")
+        """Calculate the binary classification loss.
+
+        Args:
+        ----
+            conf_cls (torch.Tensor): The conformalized set of class predictions for a single object.
+            true_cls (torch.Tensor): The ground truth class label for a single object (scalar tensor).
+
+        Returns:
+        -------
+            torch.Tensor: The loss value (0 or 1), expanded to a 1-element tensor.
+
+        """
         loss = (
             torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
         )
@@ -342,19 +333,21 @@ class ODBinaryClassificationLoss(ClassificationLoss):
         return loss
 
 
-# IMAGE WISE VS BOX WISE GUARANTEE
-# wrapping classification loss, by converting the predictions from the od to the classification format
 class ClassificationLossWrapper(ODLoss):
+    """Wraps a standard classification loss for use in object detection.
+
+    This class applies a given classification loss to each true object and its
+    corresponding conformalized class predictions, then averages the losses.
+    """
+
     def __init__(self, classification_loss, device: str = "cpu", **kwargs):
-        """Initialize the Classification Loss Wrapper.
+        """Initialize the ClassificationLossWrapper.
 
-        Parameters
-        ----------
-        - classification_loss (Loss): The classification loss.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            classification_loss (Loss): The classification loss to wrap.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
+            **kwargs: Additional keyword arguments.
 
         """
         self.classification_loss = classification_loss
@@ -371,7 +364,21 @@ class ClassificationLossWrapper(ODLoss):
         conf_cls: torch.Tensor,
         verbose: bool = False,
     ) -> torch.Tensor:
-        """ """
+        """Calculate the wrapped classification loss for an image.
+
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes for the image (not directly used by this loss).
+            true_cls (torch.Tensor): Ground truth class labels for each object in the image.
+            conf_boxes (torch.Tensor): Conformalized bounding boxes for the image (not directly used by this loss).
+            conf_cls (torch.Tensor): List or Tensor of conformalized class prediction sets, one for each object.
+            verbose (bool, optional): If True, log warnings for empty inputs. Defaults to False.
+
+        Returns:
+        -------
+            torch.Tensor: The mean classification loss over all objects in the image, expanded to a 1-element tensor.
+
+        """
         losses = []
         if len(true_cls) == 0:
             if verbose:
@@ -388,59 +395,24 @@ class ClassificationLossWrapper(ODLoss):
         return torch.mean(torch.stack(losses)).expand(1)
 
 
-# # MaximumLoss : maximum of a list of losses with a list of parameters
-
-
-# # maximum of risk =!= of losses
-# class MaximumLoss(Loss):
-#     def __init__(self, *losses):
-#         """Initialize the Maximum Loss.
-
-#         Parameters
-#         ----------
-#         - losses (list): The list of losses.
-
-#         Returns
-#         -------
-#         - None
-
-#         """
-#         super().__init__()
-#         self.losses = losses
-
-#     def __call__(
-#         self,
-#         predictions: ODPredictions,
-#         conformalized_predictions: ODConformalizedPredictions,
-#     ) -> torch.Tensor:
-#         """Call the Maximum Loss.
-
-#         Returns
-#         -------
-#         - torch.Tensor: The loss value.
-
-#         """
-#         conf_boxes = conformalized_predictions.conf_boxes
-#         true_boxes = predictions.true_boxes
-#         return max([loss(conf_boxes, true_boxes) for loss in self.losses])
-
-
-# TODO: formulate in classical conformal sense!
 class ThresholdedRecallLoss(ODLoss):
+    """A recall loss that is 1 if the miscoverage (1 - recall) exceeds a threshold `beta`, and 0 otherwise.
+
+    Miscoverage is calculated based on the proportion of true boxes not sufficiently covered
+    by the union of conformalized boxes.
+    """
+
     def __init__(
         self,
         beta: float = 0.25,
         device: str = "cpu",
     ):
-        """Initialize the Hausdorff Signed Distance Loss.
+        """Initialize the ThresholdedRecallLoss.
 
-        Parameters
-        ----------
-        - beta (float): The beta value.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            beta (float, optional): The beta value. Defaults to 0.25.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
 
         """
         super().__init__(upper_bound=1, device=device)
@@ -453,16 +425,18 @@ class ThresholdedRecallLoss(ODLoss):
         conf_boxes: torch.Tensor,
         conf_cls: torch.Tensor,
     ) -> float:
-        """Call the Hausdorff Signed Distance Loss.
+        """Compute the thresholded recall loss.
 
-        Parameters
-        ----------
-        - conf_boxes (torch.Tensor): The conformal boxes.
-        - true_boxes (torch.Tensor): The true boxes.
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor): Ground truth class labels for a single image (not used).
+            conf_boxes (torch.Tensor): Conformalized bounding boxes for a single image.
+            conf_cls (torch.Tensor): Conformalized class labels for a single image (not used).
 
-        Returns
+        Returns:
         -------
-        - float: The loss value.
+            float: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -483,20 +457,23 @@ class ThresholdedRecallLoss(ODLoss):
 
 
 class ClassBoxWiseRecallLoss(ODLoss):
+    """A combined recall loss for both localization (box-wise recall) and classification.
+
+    The loss is the mean of indicators where either the true box is not sufficiently covered
+    by the union of conformalized boxes, OR the true class is not in the conformalized class set.
+    """
+
     def __init__(
         self,
         union_of_boxes: bool = True,
         device: str = "cpu",
     ):
-        """Initialize the Box-wise Recall Loss.
+        """Initialize the ClassBoxWiseRecallLoss.
 
-        Parameters
-        ----------
-        - union_of_boxes (bool): Whether to use the union of boxes.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            union_of_boxes (bool, optional): Whether to use the union of boxes. Defaults to True.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
 
         """
         super().__init__(upper_bound=1, device=device)
@@ -514,20 +491,22 @@ class ClassBoxWiseRecallLoss(ODLoss):
     def __call__(
         self,
         true_boxes: torch.Tensor,
-        true_cls,
+        true_cls: torch.Tensor,
         conf_boxes: torch.Tensor,
-        conf_cls,
+        conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """Call the Box-wise Recall Loss.
+        """Compute the class and box-wise recall loss.
 
-        Parameters
-        ----------
-        - conf_boxes (torch.Tensor): The conformal boxes.
-        - true_boxes (torch.Tensor): The true boxes.
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor): Ground truth class labels for a single image.
+            conf_boxes (torch.Tensor): Conformalized bounding boxes for a single image.
+            conf_cls (torch.Tensor): Conformalized class labels for a single image.
 
-        Returns
+        Returns:
         -------
-        - float: The loss value.
+            torch.Tensor: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -552,11 +531,8 @@ class ClassBoxWiseRecallLoss(ODLoss):
         return miscoverage
 
 
-from cods.od.utils import fast_covered_areas_of_gt
-
-
 class BoxWiseRecallLoss(ODLoss):
-    """Box-wise recall loss: 1 - mean(areas of the union of the boxes),
+    """Box-wise recall loss: 1 - mean(areas of the union of the boxes).
 
     This loss function calculates the recall loss based on the areas of the union of the predicted and true bounding boxes.
     The recall loss is defined as 1 minus the mean of the areas of the union of the boxes.
@@ -567,15 +543,12 @@ class BoxWiseRecallLoss(ODLoss):
         union_of_boxes: bool = True,
         device: str = "cpu",
     ):
-        """Initialize the Box-wise Recall Loss.
+        """Initialize the BoxWiseRecallLoss.
 
-        Parameters
-        ----------
-        - union_of_boxes (bool): Whether to use the union of boxes.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            union_of_boxes (bool, optional): Whether to use the union of boxes. Defaults to True.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
 
         """
         super().__init__(upper_bound=1, device=device)
@@ -595,16 +568,18 @@ class BoxWiseRecallLoss(ODLoss):
         conf_boxes: torch.Tensor,
         conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """Call the Box-wise Recall Loss.
+        """Compute the box-wise recall loss.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The predictions.
-        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor): Ground truth class labels for a single image (not used).
+            conf_boxes (torch.Tensor): Conformalized bounding boxes for a single image.
+            conf_cls (torch.Tensor): Conformalized class labels for a single image (not used).
 
-        Returns
+        Returns:
         -------
-        - float: The loss value.
+            torch.Tensor: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -628,20 +603,23 @@ class BoxWiseRecallLoss(ODLoss):
 
 
 class PixelWiseRecallLoss(ODLoss):
+    """Pixel-wise recall loss.
+
+    Calculates `1 - mean(areas)`, where `areas` are the fractions of each true box
+    covered by the corresponding (matched) conformalized box.
+    """
+
     def __init__(
         self,
         union_of_boxes: bool = True,
         device: str = "cpu",
     ):
-        """Initialize the Pixel-wise Recall Loss.
+        """Initialize the PixelWiseRecallLoss.
 
-        Parameters
-        ----------
-        - union_of_boxes (bool): Whether to use the union of boxes.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            union_of_boxes (bool, optional): Whether to use the union of boxes. Defaults to True.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
 
         """
         super().__init__(upper_bound=1, device=device)
@@ -661,16 +639,18 @@ class PixelWiseRecallLoss(ODLoss):
         conf_boxes: torch.Tensor,
         conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """Call the Pixel-wise Recall Loss.
+        """Compute the pixel-wise recall loss.
 
-        Parameters
-        ----------
-        - conf_boxes (torch.Tensor): The conformal boxes.
-        - true_boxes (torch.Tensor): The true boxes.
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor): Ground truth class labels for a single image (not used).
+            conf_boxes (torch.Tensor): Conformalized bounding boxes for a single image.
+            conf_cls (torch.Tensor): Conformalized class labels for a single image (not used).
 
-        Returns
+        Returns:
         -------
-        - torch.Tensor: The loss value.
+            torch.Tensor: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -684,10 +664,10 @@ class PixelWiseRecallLoss(ODLoss):
 
 #### TESTS:
 class BoxWisePrecisionLoss(ODLoss):
-    """Box-wise PRECISION loss: 1 - mean(areas of the union of the boxes),
+    """Box-wise precision loss.
 
-    This loss function calculates the recall loss based on the areas of the union of the predicted and true bounding boxes.
-    The recall loss is defined as 1 minus the mean of the areas of the union of the boxes.
+    For each conformalized box, it finds the maximum overlap (area of contained part of true box)
+    with any true box. The loss is the mean of indicators where this maximum overlap is insufficient (e.g., < 0.999).
     """
 
     def __init__(
@@ -695,15 +675,12 @@ class BoxWisePrecisionLoss(ODLoss):
         union_of_boxes: bool = True,
         device: str = "cpu",
     ):
-        """Initialize the Box-wise Recall Loss.
+        """Initialize the BoxWisePrecisionLoss.
 
-        Parameters
-        ----------
-        - union_of_boxes (bool): Whether to use the union of boxes.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            union_of_boxes (bool, optional): Whether to use the union of boxes. Defaults to True.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
 
         """
         super().__init__(upper_bound=1, device=device)
@@ -723,16 +700,18 @@ class BoxWisePrecisionLoss(ODLoss):
         conf_boxes: torch.Tensor,
         conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """Call the Box-wise Recall Loss.
+        """Compute the box-wise precision loss.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The predictions.
-        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor): Ground truth class labels for a single image (not used).
+            conf_boxes (torch.Tensor): Conformalized bounding boxes for a single image.
+            conf_cls (torch.Tensor): Conformalized class labels for a single image (not used).
 
-        Returns
+        Returns:
         -------
-        - float: The loss value.
+            torch.Tensor: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -751,14 +730,11 @@ class BoxWisePrecisionLoss(ODLoss):
         return miscoverage
 
 
-from cods.od.utils import vectorized_generalized_iou
-
-
 class BoxWiseIoULoss(ODLoss):
-    """Box-wise PRECISION loss: 1 - mean(areas of the union of the boxes),
+    """Box-wise IoU loss.
 
-    This loss function calculates the recall loss based on the areas of the union of the predicted and true bounding boxes.
-    The recall loss is defined as 1 minus the mean of the areas of the union of the boxes.
+    Calculates the mean of indicators where the Generalized IoU (GIoU) between true boxes and
+    conformalized boxes is less than a threshold (e.g., 0.9).
     """
 
     def __init__(
@@ -766,15 +742,12 @@ class BoxWiseIoULoss(ODLoss):
         union_of_boxes: bool = True,
         device: str = "cpu",
     ):
-        """Initialize the Box-wise Recall Loss.
+        """Initialize the BoxWiseIoULoss.
 
-        Parameters
-        ----------
-        - union_of_boxes (bool): Whether to use the union of boxes.
-
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            union_of_boxes (bool, optional): Whether to use the union of boxes. Defaults to True.
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
 
         """
         super().__init__(upper_bound=1, device=device)
@@ -794,16 +767,18 @@ class BoxWiseIoULoss(ODLoss):
         conf_boxes: torch.Tensor,
         conf_cls: torch.Tensor,
     ) -> torch.Tensor:
-        """Call the Box-wise Recall Loss.
+        """Compute the box-wise IoU loss.
 
-        Parameters
-        ----------
-        - predictions (ODPredictions): The predictions.
-        - conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
+        Args:
+        ----
+            true_boxes (torch.Tensor): Ground truth bounding boxes for a single image.
+            true_cls (torch.Tensor): Ground truth class labels for a single image (not used).
+            conf_boxes (torch.Tensor): Conformalized bounding boxes for a single image.
+            conf_cls (torch.Tensor): Conformalized class labels for a single image (not used).
 
-        Returns
+        Returns:
         -------
-        - float: The loss value.
+            torch.Tensor: The loss value.
 
         """
         if len(true_boxes) == 0:
@@ -822,15 +797,21 @@ class BoxWiseIoULoss(ODLoss):
 
 
 class NumberPredictionsGapLoss(ODLoss):
+    """Loss based on the normalized difference between the number of true boxes and conformalized boxes.
+
+    Calculates `(len(true_boxes) - len(conf_boxes)) / max(len(true_boxes), 1)`, capped at 1.
+    Note: This loss is currently not implemented.
+    """
+
     def __init__(
         self,
         device: str = "cpu",
     ):
-        """Initialize the Number Predictions Gap Loss.
+        """Initialize the NumberPredictionsGapLoss.
 
-        Returns
-        -------
-        - None
+        Args:
+        ----
+            device (str, optional): Device to use for tensors. Defaults to "cpu".
 
         """
         super().__init__(upper_bound=1, device=device)
@@ -840,16 +821,16 @@ class NumberPredictionsGapLoss(ODLoss):
         conf_boxes: torch.Tensor,
         true_boxes: torch.Tensor,
     ) -> float:
-        """Call the Number Predictions Gap Loss.
+        """Compute the number predictions gap loss.
 
-        Parameters
-        ----------
-        - conf_boxes (torch.Tensor): The conformal boxes.
-        - true_boxes (torch.Tensor): The true boxes.
+        Args:
+        ----
+            conf_boxes (torch.Tensor): Conformalized bounding boxes for a single image.
+            true_boxes (torch.Tensor): Ground truth bounding boxes for a single image.
 
-        Returns
+        Returns:
         -------
-        - float: The loss value.
+            float: The loss value.
 
         """
         raise NotImplementedError(
