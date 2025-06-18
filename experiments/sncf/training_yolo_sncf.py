@@ -1,15 +1,17 @@
 # File: train_yolo.py
-from ultralytics import YOLO
+from ultralytics import RTDETR
 
 import wandb
 from wandb.integration.ultralytics import add_wandb_callback
 
 
 def main():
-    model_name = "yolo11x.pt"
+    # model_name = "yolo10x.pt"
+    model_name = "rtdetr-x.pt"
 
     # 1. Load a pre-trained model
-    model = YOLO(model_name)
+    # model = YOLO(model_name)
+    model = RTDETR(model_name)
 
     # wandb.init(
     add_wandb_callback(model, enable_model_checkpointing=True)
@@ -20,13 +22,14 @@ def main():
     results = model.train(
         # Required arguments
         data="/datasets/shared_datasets/SNCF/DATASET_etat_feu/sncf_dataset.yaml",
-        epochs=100,
+        epochs=300,
         imgsz=640,  # Considerer plus grand TODO
-        batch=8,
+        batch=18,  # 24 passe mais beaucoup plus lent! # 8,
+        device=[0, 1],
         # autoanchor=True,
         optimizer="auto",
-        pretrained="./runs/detect/yolov8_sncf_augmented_training4/weights/best.pt",
-        multi_scale=True,
+        pretrained=True,  # "./runs/detect/yolov8_sncf_augmented_training4/weights/best.pt",
+        # multi_scale=True,
         amp=True,
         name=f"{model_name.split('.pt')[0]}_sncf",
         project="cods-sncf",
