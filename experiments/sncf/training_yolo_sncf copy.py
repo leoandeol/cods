@@ -6,7 +6,7 @@ from wandb.integration.ultralytics import add_wandb_callback
 
 
 def main():
-    model_name = "yolo10x.pt"
+    model_name = "yolo12x.pt"
     # model_name = "rtdetr-x.pt"
 
     # 1. Load a pre-trained model
