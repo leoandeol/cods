@@ -17,7 +17,7 @@ def create_four_way_split_files_absolute():
     images_dir_path = os.path.join(DATASET_ROOT, IMAGES_DIR_NAME)
     if not os.path.isdir(images_dir_path):
         print(
-            f"FATAL ERROR: Images directory not found at '{images_dir_path}'"
+            f"FATAL ERROR: Images directory not found at '{images_dir_path}'",
         )
         return
 
@@ -51,7 +51,7 @@ def create_four_way_split_files_absolute():
         with open(output_path, "w") as f:
             f.write("\n".join(paths_to_write))
         print(
-            f"Created {split_name}.txt with {len(file_list)} absolute paths."
+            f"Created {split_name}.txt with {len(file_list)} absolute paths.",
         )
 
     # Write all four files
@@ -61,7 +61,7 @@ def create_four_way_split_files_absolute():
     write_split_file("test", test_files)
     print("\nSplitting complete. Files now contain absolute paths.")
     print(
-        f"Example path written to files: {os.path.abspath(os.path.join(images_dir_path, all_filenames[0]))}"
+        f"Example path written to files: {os.path.abspath(os.path.join(images_dir_path, all_filenames[0]))}",
     )
 
 
@@ -124,7 +124,7 @@ if __name__ == "__main__":
 
     # IMPORTANT: Verify this dictionary matches your classes.txt and label indices
     with open(
-        "/datasets/shared_datasets/SNCF/DATASET_etat_feu/classes.txt"
+        "/datasets/shared_datasets/SNCF/DATASET_etat_feu/classes.txt",
     ) as f:
         classes_raw = f.read().splitlines()
         classes_raw = [c.split(" ") for c in classes_raw if len(c) > 0]

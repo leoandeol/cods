@@ -1,7 +1,8 @@
 # File: train_yolo.py
-
-
 from ultralytics import YOLO
+
+import wandb
+from wandb.integration.ultralytics import add_wandb_callback
 
 
 def main():
@@ -11,6 +12,7 @@ def main():
     model = YOLO(model_name)
 
     # wandb.init(
+    add_wandb_callback(model, enable_model_checkpointing=True)
 
     # add_wandb_callback(model, enable_model_checkpointing=True)
 
@@ -18,9 +20,14 @@ def main():
     results = model.train(
         # Required arguments
         data="/datasets/shared_datasets/SNCF/DATASET_etat_feu/sncf_dataset.yaml",
-        epochs=200,
-        imgsz=640,
-        batch=24,
+        epochs=100,
+        imgsz=640,  # Considerer plus grand TODO
+        batch=8,
+        # autoanchor=True,
+        optimizer="auto",
+        pretrained="./runs/detect/yolov8_sncf_augmented_training4/weights/best.pt",
+        multi_scale=True,
+        amp=True,
         name=f"{model_name.split('.pt')[0]}_sncf",
         project="cods-sncf",
         # --- Data Augmentation Arguments ---
@@ -46,7 +53,7 @@ def main():
     print("Training finished.")
     print(f"Best model weights saved at: {results.save_dir}/weights/best.pt")
 
-    # wandb.finish()
+    wandb.finish()
 
 
 if __name__ == "__main__":

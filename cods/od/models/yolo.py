@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torchvision.transforms as T
 from ultralytics import YOLO
+from ultralytics.utils.ops import scale_boxes
 
 from cods.od.models.model import ODModel
 
@@ -97,7 +98,7 @@ class YOLOModel(ODModel):
         all_probs = []
         model_width, model_height = model_input_size
         for i in range(len(raw_output)):
-            original_width, original_height = img_shapes[i]
+            original_width, original_height = img_shapes[i].cpu().numpy()
 
             box_output = raw_output[i].t()
 
@@ -107,7 +108,16 @@ class YOLOModel(ODModel):
 
             # convert to [x0, y0, x1, y1] format
             out_boxes = box_output[:, :4]
-            boxes = xywh2xyxy_scaled(out_boxes, width_scale, height_scale)
+            boxes = xywh2xyxy_scaled(
+                out_boxes,
+                1,
+                1,
+            )  # TODO(leo): tmp attemptwidth_scale, height_scale)
+            boxes = scale_boxes(
+                (model_height, model_width),
+                boxes,
+                (original_height, original_width),
+            )
 
             temp = 1  # 0.2
             cls_probs = torch.softmax(box_output[:, 4:] / temp, dim=-1)
@@ -288,10 +298,10 @@ class YOLOModel(ODModel):
         else:
             # For SNCF, should be standardized in the dataset class rather
             true_boxes = list(
-                [torch.LongTensor(x["boxes"]) for x in ground_truth]
+                [torch.LongTensor(x["boxes"]) for x in ground_truth],
             )
             true_cls = list(
-                [torch.LongTensor(x["labels"]) for x in ground_truth]
+                [torch.LongTensor(x["labels"]) for x in ground_truth],
             )
 
         return {
