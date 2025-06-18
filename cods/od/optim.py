@@ -592,12 +592,14 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         )
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
-        sorted_confidence_image_indices = confidence_image_idx[indices]
-        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[
-            0:-1
+        sorted_stacked_confidences[:-1] = sorted_stacked_confidences[
+            1:
         ].clone()
-        # We let the first be, it should occur no change anyways ?
-        # sorted_confidence_image_indices[0] = ???
+        sorted_stacked_confidences[-1] = 1.0  # last one is always 1.0
+        sorted_confidence_image_indices = confidence_image_idx[indices]
+        # sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[
+        #    0:-1
+        # ].clone()
 
         lambda_conf = 1
 
@@ -632,21 +634,14 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            # print(matched_pred_boxes_i.shape)
-            matched_pred_cls_i = list(
-                [
-                    (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ],
-            )
-            # if len(matched_pred_boxes_i.shape)==1:
-            #     matched_pred_boxes_i = matched_pred_boxes_i[None,...]
-            # if len(matched_pred_cls_i.shape)==1:
-            #     matched_pred_cls_i = matched_pred_cls_i[None,...]
+            matched_pred_cls_i = [
+                (
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
 
             matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
                 matched_pred_boxes_i,
@@ -700,26 +695,19 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 )
                 for j in range(len(true_boxes_i))
             ]
-            # print([x.shape for x in tmp_matched_boxes_i])
             matched_pred_boxes_i = (
                 torch.stack(tmp_matched_boxes_i)
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            matched_pred_cls_i = list(
-                [
-                    (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ],
-            )
-
-            # print(matched_pred_boxes_i.shape)
-            # print(matched_pred_boxes_i)
-
+            matched_pred_cls_i = [
+                (
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
             matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
                 matched_pred_boxes_i,
                 matched_pred_cls_i,
@@ -736,8 +724,6 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             old_loss_i = losses[i]
             losses[i] = loss_i
 
-            # risk = torch.mean(torch.stack(losses))
-            # Faster
             risk = risk + (loss_i - old_loss_i) / n_losses
 
             self.all_risks_raw.append(risk.detach().cpu().numpy())
@@ -752,6 +738,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             # Stopping condition: when we reached desired lbd_conf
             if final_lbd_conf >= lambda_conf:
                 return risk
+        return None
 
     def optimize(
         self,
