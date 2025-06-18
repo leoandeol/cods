@@ -24,7 +24,7 @@ def main():
         data="/datasets/shared_datasets/SNCF/DATASET_etat_feu/sncf_dataset.yaml",
         epochs=300,
         imgsz=640,  # Considerer plus grand TODO
-        batch=18,  # 24 passe mais beaucoup plus lent! # 8,
+        batch=24,  # 24 passe mais beaucoup plus lent! # 8,
         device=[0, 1],
         # autoanchor=True,
         optimizer="auto",
