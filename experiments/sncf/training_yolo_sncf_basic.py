@@ -22,10 +22,10 @@ def main():
     results = model.train(
         # Required arguments
         data="/datasets/shared_datasets/SNCF/DATASET_etat_feu/sncf_dataset.yaml",
-        epochs=300,
-        patience=50,
+        epochs=200,
+        patience=40,
         imgsz=1024,  # Considerer plus grand TODO
-        batch=12,  # 24 passe mais beaucoup plus lent! # 8,
+        batch=8,  # 24 passe mais beaucoup plus lent! # 8,
         device=[0, 1],
         # autoanchor=True,
         optimizer="auto",
