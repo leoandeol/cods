@@ -579,7 +579,6 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         pred_boxes = predictions.pred_boxes
         true_cls = predictions.true_cls
         pred_cls = predictions.pred_cls
-        image_shapes = predictions.image_shapes
         confidences = predictions.confidences
         device = predictions.true_boxes[0].device
 
@@ -721,14 +720,15 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 matched_conf_cls_i,
             )
 
-            old_loss_i = losses[i]
+            old_loss_i = losses[i].copy()
+            # loss_i = max(old_loss_i, loss_i)
             losses[i] = loss_i
 
             risk = risk + (loss_i - old_loss_i) / n_losses
 
-            self.all_risks_raw.append(risk.detach().cpu().numpy())
-
             risk = max(risk, previous_risk)
+
+            # self.all_risks_raw.append(risk.detach().cpu().numpy())
 
             self.all_risks_mon.append(risk.detach().cpu().numpy())
 
