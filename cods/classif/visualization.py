@@ -49,11 +49,9 @@ def plot_predictions(
                 f"True: {true_cls_name},\n Pred: {pred_cls_name}",
             )
         else:
-            conf_cls_name = list(
-                [preds.idx_to_cls[x.item()] for x in conf_cls[idx_pred]],
-            )
+            conf_cls_name = [preds.idx_to_cls[x.item()] for x in conf_cls[idx_pred]]
             curr_ax.set_title(
-                f"True: {true_cls_name},\n Pred: {pred_cls_name},\n Conf: {conf_cls_name if len(conf_cls_name) == 1 else 'len='+str(len(conf_cls_name))}",
+                f"True: {true_cls_name},\n Pred: {pred_cls_name},\n Conf: {conf_cls_name if len(conf_cls_name) == 1 else 'len=' + str(len(conf_cls_name))}",
             )
             curr_ax.axis("off")
     plt.show()

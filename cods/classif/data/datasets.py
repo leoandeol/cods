@@ -65,7 +65,10 @@ class ClassificationDataset(ImageDataset):
             generator=generator,
         )
         for dataset in datasets:
-            if not isinstance(dataset, ClassificationDataset) or dataset.idx_to_cls is None:
+            if (
+                not isinstance(dataset, ClassificationDataset)
+                or dataset.idx_to_cls is None
+            ):
                 raise ValueError("idx_to_cls should've been set!")
             dataset.idx_to_cls = self.idx_to_cls
             yield dataset
@@ -138,7 +141,7 @@ class ImageNetDataset(ClassificationDataset):
             tuple: (image path, image, label)
 
         """
-        img, label = super(ImageNetDataset, self).__getitem__(item)
+        img, label = super().__getitem__(item)
         if self.transforms is not None:
             img = self.transforms(img)
 

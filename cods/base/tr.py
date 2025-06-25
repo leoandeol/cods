@@ -161,7 +161,7 @@ class ToleranceRegion:
         self,
         inequality: Union[str, Callable] = "binomial_inverse_cdf",
         optimizer: str = "binary_search",
-        optimizer_args: dict = {},
+        optimizer_args: dict = None,
     ):
         """Initialize a ToleranceRegion instance.
 
@@ -178,7 +178,9 @@ class ToleranceRegion:
         """
         if isinstance(inequality, str):
             if inequality not in self.AVAILABLE_INEQUALITIES.keys():
-                raise ValueError(f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}")
+                raise ValueError(
+                    f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}"
+                )
             self.inequality_name = inequality
             self.f_inequality = self.AVAILABLE_INEQUALITIES[inequality]
         elif isinstance(inequality, Callable):
@@ -193,6 +195,8 @@ class ToleranceRegion:
                 f"Available optimizers are {self.ACCEPTED_OPTIMIZERS.keys()}",
             )
         self.optimizer_name = optimizer
+        if optimizer_args is None:
+            optimizer_args = {}
         self.optimizer = self.ACCEPTED_OPTIMIZERS[optimizer](**optimizer_args)
 
     def calibrate(
@@ -298,17 +302,15 @@ class CombiningToleranceRegions(ToleranceRegion):
         if parameters is None:
             parameters = [{} for _ in range(len(self.tregions))]
         if self.mode == "bonferroni":
-            return list(
-                [
-                    conformalizer.calibrate(
-                        preds,
-                        alpha=alpha / len(self.tregions),
-                        delta=delta / len(self.tregions),
-                        **parameters[i],
-                    )
-                    for i, conformalizer in enumerate(self.tregions)
-                ],
-            )
+            return [
+                conformalizer.calibrate(
+                    preds,
+                    alpha=alpha / len(self.tregions),
+                    delta=delta / len(self.tregions),
+                    **parameters[i],
+                )
+                for i, conformalizer in enumerate(self.tregions)
+            ]
 
     def conformalize(self, preds):
         """Conformalize predictions using all tolerance regions.
@@ -322,7 +324,7 @@ class CombiningToleranceRegions(ToleranceRegion):
             list: Conformalized predictions for each region.
 
         """
-        return list([tregion.conformalize(preds) for tregion in self.tregions])
+        return [tregion.conformalize(preds) for tregion in self.tregions]
 
     def evaluate(self, preds, verbose=True):
         """Evaluate all tolerance regions on the given predictions.
@@ -337,6 +339,7 @@ class CombiningToleranceRegions(ToleranceRegion):
             list: Evaluation results for each region.
 
         """
-        return list(
-            [tregion.evaluate(preds, verbose=verbose) for tregion in self.tregions],
-        )
+        return [
+            tregion.evaluate(preds, verbose=verbose)
+            for tregion in self.tregions
+        ]

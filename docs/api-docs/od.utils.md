@@ -301,7 +301,7 @@ Matching predictions to true boxes. Done in place, modifies the preds object.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L497"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L499"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `apply_margins`
 
@@ -316,7 +316,7 @@ apply_margins(pred_boxes: List[Tensor], Qs, mode='additive')
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L531"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L533"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_object_level`
 
@@ -329,12 +329,12 @@ compute_risk_object_level(
 ) → Tensor
 ```
 
-Input : conformal and true boxes of a all images 
+Input : conformal and true boxes of a all images. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L593"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L595"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_image_level`
 

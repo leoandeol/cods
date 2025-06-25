@@ -11,7 +11,7 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L13"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L15"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODPredictions`
 Class representing predictions for object detection tasks. 
@@ -52,24 +52,24 @@ Methods:
  - <b>`__len__`</b>:  Returns the number of image paths. 
  - <b>`__str__`</b>:  Returns a string representation of the ODPredictions object. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L48"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L50"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
 __init__(
-    dataset_name: str,
-    split_name: str,
-    image_paths: List[str],
-    image_shapes: List[Tensor],
-    true_boxes: List[Tensor],
-    pred_boxes: List[Tensor],
-    confidences: List[Tensor],
-    true_cls: List[Tensor],
-    pred_cls: List[Tensor],
-    names: List[str],
-    pred_boxes_uncertainty: List[Tensor] = None,
-    unique_id: Optional[int] = None
+    dataset_name: 'str',
+    split_name: 'str',
+    image_paths: 'list[str]',
+    image_shapes: 'list[Tensor]',
+    true_boxes: 'list[Tensor]',
+    pred_boxes: 'list[Tensor]',
+    confidences: 'list[Tensor]',
+    true_cls: 'list[Tensor]',
+    pred_cls: 'list[Tensor]',
+    names: 'list[str]',
+    pred_boxes_uncertainty: 'list[Tensor]' = None,
+    unique_id: 'int | None' = None
 )
 ```
 
@@ -82,12 +82,12 @@ __init__(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L94"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L96"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `to`
 
 ```python
-to(device: str)
+to(device: 'str')
 ```
 
 Move the data to the specified device. 
@@ -98,28 +98,28 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L114"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L116"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODParameters`
 Class representing parameters for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L117"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L119"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
 __init__(
-    global_alpha: float,
-    confidence_threshold: float,
-    predictions_id: int,
-    alpha_confidence: Optional[float] = None,
-    alpha_localization: Optional[float] = None,
-    alpha_classification: Optional[float] = None,
-    lambda_confidence_plus: Optional[float] = None,
-    lambda_confidence_minus: Optional[float] = None,
-    lambda_localization: Optional[float] = None,
-    lambda_classification: Optional[float] = None,
-    unique_id: Optional[int] = None
+    global_alpha: 'float',
+    confidence_threshold: 'float',
+    predictions_id: 'int',
+    alpha_confidence: 'float | None' = None,
+    alpha_localization: 'float | None' = None,
+    alpha_classification: 'float | None' = None,
+    lambda_confidence_plus: 'float | None' = None,
+    lambda_confidence_minus: 'float | None' = None,
+    lambda_localization: 'float | None' = None,
+    lambda_classification: 'float | None' = None,
+    unique_id: 'int | None' = None
 )
 ```
 
@@ -134,21 +134,21 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L160"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L162"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODConformalizedPredictions`
 Class representing conformalized predictions for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L163"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L165"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
 __init__(
-    predictions: ODPredictions,
-    parameters: ODParameters,
-    conf_boxes: Optional[Tensor] = None,
-    conf_cls: Optional[Tensor] = None
+    predictions: 'ODPredictions',
+    parameters: 'ODParameters',
+    conf_boxes: 'Tensor | None' = None,
+    conf_cls: 'Tensor | None' = None
 )
 ```
 
@@ -163,27 +163,27 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L189"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L191"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODResults`
 Class representing results for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L192"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L194"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
 ```python
 __init__(
-    predictions: ODPredictions,
-    parameters: Parameters,
-    conformalized_predictions: ODConformalizedPredictions,
-    confidence_set_sizes: Optional[Tensor, List[float]] = None,
-    confidence_coverages: Optional[Tensor, List[float]] = None,
-    localization_set_sizes: Optional[Tensor, List[float]] = None,
-    localization_coverages: Optional[Tensor, List[float]] = None,
-    classification_set_sizes: Optional[Tensor, List[float]] = None,
-    classification_coverages: Optional[Tensor, List[float]] = None,
-    global_coverage: Optional[Tensor, float] = None
+    predictions: 'ODPredictions',
+    parameters: 'Parameters',
+    conformalized_predictions: 'ODConformalizedPredictions',
+    confidence_set_sizes: 'Tensor | list[float] | None' = None,
+    confidence_coverages: 'Tensor | list[float] | None' = None,
+    localization_set_sizes: 'Tensor | list[float] | None' = None,
+    localization_coverages: 'Tensor | list[float] | None' = None,
+    classification_set_sizes: 'Tensor | list[float] | None' = None,
+    classification_coverages: 'Tensor | list[float] | None' = None,
+    global_coverage: 'Tensor | float | None' = None
 )
 ```
 

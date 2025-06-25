@@ -95,7 +95,7 @@ Builds predictions for the given dataset.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L288"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L272"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 

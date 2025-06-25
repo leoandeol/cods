@@ -54,9 +54,7 @@ class ClassifNCScore(NCScore):
 
         """
         ys = list(range(self.n_classes))
-        pred_set = list(
-            [y for y in ys if self._score_function(pred_cls, y) <= quantile],
-        )
+        pred_set = [y for y in ys if self._score_function(pred_cls, y) <= quantile]
         pred_set = torch.tensor(pred_set)
         return pred_set
 

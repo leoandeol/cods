@@ -3,20 +3,21 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `base.data`
-
-
-
+Base data structures for predictions, parameters, and conformalized results. 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L5"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L7"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Predictions`
-Abstract class for predictions 
+Abstract base class for predictions. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L8"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+Attributes 
+----------  unique_id (int): Unique ID of the predictions.  dataset_name (str): Name of the dataset.  split_name (str): Name of the split.  task_name (str): Name of the task. 
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L19"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -29,17 +30,17 @@ __init__(
 )
 ```
 
-Initializes a new instance of the Predictions class. 
+Initialize a new instance of the Predictions class. 
 
 
 
 **Args:**
  
 ---- 
- - <b>`unique_id`</b> (int):  The unique ID of the predictions. 
- - <b>`dataset_name`</b> (str):  The name of the dataset. 
- - <b>`split_name`</b> (str):  The name of the split. 
- - <b>`task_name`</b> (str):  The name of the task. 
+ - <b>`dataset_name`</b> (str):  Name of the dataset. 
+ - <b>`split_name`</b> (str):  Name of the split. 
+ - <b>`task_name`</b> (str):  Name of the task. 
+ - <b>`unique_id`</b> (Optional[int], optional):  Unique ID of the predictions. If None, a timestamp is used. 
 
 
 
@@ -47,12 +48,15 @@ Initializes a new instance of the Predictions class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L33"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L44"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Parameters`
-Abstract class for parameters 
+Abstract base class for parameters. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L36"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+Attributes 
+----------  predictions_id (int): Unique ID of the predictions.  unique_id (int): Unique ID of the parameters. 
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L54"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -60,10 +64,15 @@ Abstract class for parameters
 __init__(predictions_id: int, unique_id: Optional[int] = None)
 ```
 
-Initializes a new instance of the Parameters class. 
+Initialize a new instance of the Parameters class. 
 
-Parameters 
----------- predictions_id (int): The unique ID of the predictions. unique_id (int): The unique ID of the parameters. 
+
+
+**Args:**
+ 
+---- 
+ - <b>`predictions_id`</b> (int):  Unique ID of the predictions. 
+ - <b>`unique_id`</b> (Optional[int], optional):  Unique ID of the parameters. If None, a timestamp is used. 
 
 
 
@@ -71,12 +80,15 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L51"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L69"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ConformalizedPredictions`
-Abstract class for results 
+Abstract base class for conformalized prediction results. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L54"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+Attributes 
+----------  predictions_id (int): Unique ID of the predictions.  parameters_id (int): Unique ID of the parameters.  unique_id (int): Unique ID of the conformalized predictions. 
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L80"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -88,10 +100,16 @@ __init__(
 )
 ```
 
-Initializes a new instance of the Data class. 
+Initialize a new instance of the ConformalizedPredictions class. 
 
-Parameters 
----------- predictions_id (int): The unique ID of the predictions. parameters_id (int): The unique ID of the parameters. 
+
+
+**Args:**
+ 
+---- 
+ - <b>`predictions_id`</b> (int):  Unique ID of the predictions. 
+ - <b>`parameters_id`</b> (int):  Unique ID of the parameters. 
+ - <b>`unique_id`</b> (Optional[int], optional):  Unique ID of the conformalized predictions. If None, a timestamp is used. 
 
 
 
@@ -99,12 +117,15 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L75"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L102"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Results`
-Abstract class for results 
+Abstract base class for results. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L78"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+Attributes 
+----------  predictions_id (int): Unique ID of the predictions.  parameters_id (int): Unique ID of the parameters.  conformalized_id (int): Unique ID of the conformalized predictions. 
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L113"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -112,10 +133,16 @@ Abstract class for results
 __init__(predictions_id: int, parameters_id: int, conformalized_id: int)
 ```
 
-Initializes a new instance of the Data class. 
+Initialize a new instance of the Results class. 
 
-Parameters 
----------- predictions_id (int): The unique ID of the predictions. parameters_id (int): The unique ID of the parameters. conformalized_id (int): The unique ID of the conformalized predictions. 
+
+
+**Args:**
+ 
+---- 
+ - <b>`predictions_id`</b> (int):  Unique ID of the predictions. 
+ - <b>`parameters_id`</b> (int):  Unique ID of the parameters. 
+ - <b>`conformalized_id`</b> (int):  Unique ID of the conformalized predictions. 
 
 
 

@@ -129,14 +129,13 @@ class DETRModel(ODModel):
             np.stack([image.size for image in images]),
         ).to(self.device)
         images = [self.transform(image) for image in images]
-        images = list([image.to(self.device) for image in images])
+        images = [image.to(self.device) for image in images]
         outputs = self.model(images)
         pred_boxes, confidences, pred_cls = self.postprocess(
             outputs,
             img_shapes,
         )
-        true_boxes = list(
-            [
+        true_boxes = [
                 torch.LongTensor(
                     [
                         [
@@ -149,14 +148,11 @@ class DETRModel(ODModel):
                     ],
                 )
                 for true_box in ground_truth
-            ],
-        )
-        true_cls = list(
-            [
+            ]
+        true_cls = [
                 torch.LongTensor([box["category_id"] for box in true_box])
                 for true_box in ground_truth
-            ],
-        )
+            ]
         true_boxes = true_boxes
 
         return {

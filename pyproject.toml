@@ -18,8 +18,8 @@ classifiers = [
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-pyproject.toml = true
+#[tool.setuptools]
+#pyproject.toml = true
 
 [tool.setuptools.packages.find]
 include = ["cods*"]

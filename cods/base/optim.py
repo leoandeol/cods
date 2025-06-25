@@ -81,10 +81,10 @@ class BinarySearchOptimizer(Optimizer):
             lower, upper = bound
             lowers.append(lower)
             uppers.append(upper)
-        good_lbds = list([])
-        current_lbds = list(
-            [(upper - lower) / 2 for lower, upper in zip(lowers, uppers)],
-        )
+        good_lbds = []
+        current_lbds = [
+            (upper - lower) / 2 for lower, upper in zip(lowers, uppers)
+        ]
 
         pbar = tqdm(range(steps), disable=not verbose)
 
@@ -157,13 +157,18 @@ class GaussianProcessOptimizer(Optimizer):
 
         def fun_opti(params):
             corr_risk = objective_function(*params)
-            return 5 * (corr_risk - alpha + 1e-3) if alpha < corr_risk else alpha - corr_risk
+            return (
+                5 * (corr_risk - alpha + 1e-3)
+                if alpha < corr_risk
+                else alpha - corr_risk
+            )
 
         res = gp_minimize(
             fun_opti,
             (
                 [bounds]
-                if not isinstance(bounds[0], list) and not isinstance(bounds[0], tuple)
+                if not isinstance(bounds[0], list)
+                and not isinstance(bounds[0], tuple)
                 else bounds
             ),
             n_calls=steps,
@@ -214,7 +219,7 @@ class MonteCarloOptimizer(Optimizer):
         lbds_risks = []
 
         pbar = tqdm(range(steps), disable=not verbose)
-        for it in pbar:
+        for _it in pbar:
             lbd = np.random.uniform(size=len(bounds))
             for i, bound in enumerate(bounds):
                 lower, upper = bound

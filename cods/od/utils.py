@@ -377,8 +377,10 @@ def match_predictions_to_true_boxes(
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
     # TODO(leo): switch to gpu
-    dist_iou = lambda x, y: -f_iou(x, y)
-    dist_generalized_iou = lambda x, y: -generalized_iou(x, y)
+    def dist_iou(x, y):
+        return -f_iou(x, y)
+    def dist_generalized_iou(x, y):
+        return -generalized_iou(x, y)
     DISTANCE_FUNCTIONS = {
         "iou": dist_iou,
         "giou": dist_generalized_iou,
@@ -395,7 +397,7 @@ def match_predictions_to_true_boxes(
             f"Distance function {distance_function} not supported, must be one of {DISTANCE_FUNCTIONS.keys()}",
         )
 
-    f_dist = DISTANCE_FUNCTIONS[distance_function]
+    DISTANCE_FUNCTIONS[distance_function]
 
     all_matching = []
     if overload_confidence_threshold is not None:
@@ -408,7 +410,7 @@ def match_predictions_to_true_boxes(
     if not isinstance(conf_thr, torch.Tensor):
         conf_thr = torch.tensor(conf_thr)
 
-    device = preds.pred_boxes[0].device
+    preds.pred_boxes[0].device
 
     # To only update it on a single image
     if idx is not None:
@@ -427,13 +429,13 @@ def match_predictions_to_true_boxes(
             x[y >= conf_thr]
             for x, y in zip(preds.pred_boxes, preds.confidences)
         ]
-        true_boxess = [true_boxes_i for true_boxes_i in preds.true_boxes]
+        true_boxess = list(preds.true_boxes)
 
         preds_clss = [
             x[y >= conf_thr] for x, y in zip(preds.pred_cls, preds.confidences)
         ]
 
-        true_clss = [true_cls_i for true_cls_i in preds.true_cls]
+        true_clss = list(preds.true_cls)
 
     for pred_boxes, true_boxes, pred_cls, true_cls in tqdm(
         zip(pred_boxess, true_boxess, preds_clss, true_clss),
@@ -534,7 +536,7 @@ def compute_risk_object_level(
     loss,
     return_list: bool = False,
 ) -> torch.Tensor:
-    """Input : conformal and true boxes of a all images"""
+    """Input : conformal and true boxes of a all images."""
     # filter out boxes with low objectness
     losses = []
     true_boxes = predictions.true_boxes
@@ -649,16 +651,14 @@ def compute_risk_image_level(
             else torch.tensor([]).float().to(device)
         )
         # print(matched_conf_boxes_i.shape)
-        matched_conf_cls_i = list(
-            [
+        matched_conf_cls_i = [
                 (
                     torch.stack([conf_cls_i[m] for m in matching_i[j]])
                     if len(matching_i[j]) > 0
                     else torch.tensor([]).float().to(device)
                 )
                 for j in range(len(true_boxes_i))
-            ],
-        )
+            ]
         # print(type(matched_conf_boxes_i), type(true_boxes_i))
         # print("Shape", true_boxes_i.shape, matched_conf_boxes_i.shape)
         loss_value = loss(
@@ -720,16 +720,14 @@ def compute_risk_image_level_confidence(
             if len(tmp_matched_boxes) > 0
             else torch.tensor([]).float().to(device)
         )
-        matched_conf_cls_i = list(
-            [
+        matched_conf_cls_i = [
                 (
                     torch.stack([conf_cls_i[m] for m in matching_i[j]])
                     if len(matching_i[j]) > 0
                     else torch.tensor([]).float().to(device)
                 )
                 for j in range(len(true_boxes_i))
-            ],
-        )
+            ]
         conf_loss_value_i = confidence_loss(
             true_boxes_i,
             true_cls_i,

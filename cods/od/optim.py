@@ -53,7 +53,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         alpha: float,
         device: str,
         B: float = 1,
-        bounds: List[float] = [0, 1],
+        bounds: List[float] = None,
         init_lambda: float = 1,
         verbose: bool = False,
     ):
@@ -82,6 +82,8 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             ValueError: If no solution is found satisfying the constraints.
 
         """
+        if bounds is None:
+            bounds = [0, 1]
         true_boxes = predictions.true_boxes
         pred_boxes = predictions.pred_boxes
         true_cls = predictions.true_cls
@@ -90,15 +92,20 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         confidences = predictions.confidences
 
         stacked_confidences = torch.concatenate(
-            [x for x in confidences],  # .squeeze()
+            list(confidences),  # .squeeze()
         )
         confidence_image_idx = torch.concatenate(
-            [torch.ones_like(x, dtype=int) * i for i, x in enumerate(confidences)],
+            [
+                torch.ones_like(x, dtype=int) * i
+                for i, x in enumerate(confidences)
+            ],
         )
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
         sorted_confidence_image_indices = confidence_image_idx[indices]
-        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[0:-1].clone()
+        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[
+            0:-1
+        ].clone()
         # We let the first be, it should occur no change anyways ?
         # sorted_confidence_image_indices[0] = ???
 
@@ -130,7 +137,11 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             matching_i = predictions.matching[i]
 
             pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - lambda_conf]
+            pred_cls_i = [
+                x
+                for x, c in zip(pred_cls_i, confidences_i)
+                if c >= 1 - lambda_conf
+            ]
             pred_cls_i = (
                 torch.stack(pred_cls_i)
                 if len(pred_cls_i) > 0
@@ -159,16 +170,16 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 else torch.tensor([]).float().to(device)
             )
             # print(matched_pred_boxes_i.shape)
-            matched_pred_cls_i = list(
-                [
+            matched_pred_cls_i = [
                     (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
+                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[
+                            0
+                        ]  # TODO zero here ?
                         if len(matching_i[j]) > 0
                         else torch.tensor([]).float().to(device)
                     )
                     for j in range(len(true_boxes_i))
-                ],
-            )
+                ]
             margin = np.concatenate((image_shape, image_shape))
             matched_conf_boxes_i = apply_margins(
                 [matched_pred_boxes_i],
@@ -281,7 +292,11 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             image_shape = image_shapes[i]
 
             pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - lambda_conf]
+            pred_cls_i = [
+                x
+                for x, c in zip(pred_cls_i, confidences_i)
+                if c >= 1 - lambda_conf
+            ]
             pred_cls_i = (
                 torch.stack(pred_cls_i)
                 if len(pred_cls_i) > 0
@@ -331,16 +346,14 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            matched_pred_cls_i = list(
-                [
+            matched_pred_cls_i = [
                     (
                         torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
                         if len(matching_i[j]) > 0
                         else torch.tensor([]).float().to(device)
                     )
                     for j in range(len(true_boxes_i))
-                ],
-            )
+                ]
 
             margin = np.concatenate((image_shape, image_shape))
             matched_conf_boxes_i = apply_margins(
@@ -506,9 +519,13 @@ class FirstStepMonotonizingOptimizer(Optimizer):
 
                     matching_i = predictions.matching[i]
 
-                    pred_boxes_i = pred_boxes_i[confidences_i >= 1 - previous_lbd]
+                    pred_boxes_i = pred_boxes_i[
+                        confidences_i >= 1 - previous_lbd
+                    ]
                     pred_cls_i = [
-                        x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - previous_lbd
+                        x
+                        for x, c in zip(pred_cls_i, confidences_i)
+                        if c >= 1 - previous_lbd
                     ]
                     confidence_loss_i = confidence_loss(
                         true_boxes_i,
@@ -608,18 +625,22 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         pred_boxes = predictions.pred_boxes
         true_cls = predictions.true_cls
         pred_cls = predictions.pred_cls
-        image_shapes = predictions.image_shapes
         confidences = predictions.confidences
         device = predictions.true_boxes[0].device
 
         stacked_confidences = torch.concatenate(confidences)
         confidence_image_idx = torch.concatenate(
-            [torch.ones_like(x, dtype=torch.int) * i for i, x in enumerate(confidences)],
+            [
+                torch.ones_like(x, dtype=torch.int) * i
+                for i, x in enumerate(confidences)
+            ],
         )
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
         sorted_confidence_image_indices = confidence_image_idx[indices]
-        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[0:-1].clone()
+        sorted_confidence_image_indices[1:] = sorted_confidence_image_indices[
+            0:-1
+        ].clone()
         # We let the first be, it should occur no change anyways ?
         # sorted_confidence_image_indices[0] = ???
 
@@ -657,16 +678,14 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 else torch.tensor([]).float().to(device)
             )
             # print(matched_pred_boxes_i.shape)
-            matched_pred_cls_i = list(
-                [
+            matched_pred_cls_i = [
                     (
                         torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
                         if len(matching_i[j]) > 0
                         else torch.tensor([]).float().to(device)
                     )
                     for j in range(len(true_boxes_i))
-                ],
-            )
+                ]
             # if len(matched_pred_boxes_i.shape)==1:
             #     matched_pred_boxes_i = matched_pred_boxes_i[None,...]
             # if len(matched_pred_cls_i.shape)==1:
@@ -730,16 +749,14 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            matched_pred_cls_i = list(
-                [
+            matched_pred_cls_i = [
                     (
                         torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
                         if len(matching_i[j]) > 0
                         else torch.tensor([]).float().to(device)
                     )
                     for j in range(len(true_boxes_i))
-                ],
-            )
+                ]
 
             # print(matched_pred_boxes_i.shape)
             # print(matched_pred_boxes_i)
@@ -786,7 +803,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         alpha: float,
         device: str,
         B: float = 1,
-        bounds: List[float] = [0, 1],
+        bounds: List[float] = None,
         steps=13,
         epsilon=1e-10,
         verbose: bool = False,
@@ -816,6 +833,8 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             ValueError: If no good lambda is found.
 
         """
+        if bounds is None:
+            bounds = [0, 1]
         self.all_risks_raw = []
         self.all_risks_mon = []
         self.all_lbds_cnf = []
@@ -839,7 +858,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
         pbar = tqdm(range(steps), disable=not verbose)
 
-        for step in pbar:
+        for _step in pbar:
             # Evaluating the risk in this lbd, requires to remonotonize the loss in this lbd_loc/cls wrt the lbd_cnf
             risk = self.evaluate_risk(
                 lbd,

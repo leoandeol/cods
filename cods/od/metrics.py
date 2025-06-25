@@ -145,7 +145,7 @@ def compute_global_coverage(
                     print(conf_boxes_i.shape)
                     print(predictions.matching[i][j][0])
                     print(predictions.matching[i])
-                    assert False
+                    raise AssertionError()
 
             else:
                 loc_loss = 0
@@ -177,7 +177,8 @@ def getStretch(
 
     """
     stretches = []
-    area = lambda x: (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
+    def area(x):
+        return (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
     pred_boxes = od_predictions.pred_boxes
     for i in range(len(pred_boxes)):
         stretches.append(area(conf_boxes[i]) / area(pred_boxes[i]))
@@ -523,8 +524,7 @@ class ODEvaluator:
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            matched_conf_cls_i = list(
-                [
+            matched_conf_cls_i = [
                     (
                         torch.stack([conf_cls_i[m] for m in matching_i[j]])[
                             0
@@ -533,8 +533,7 @@ class ODEvaluator:
                         else torch.tensor([]).float().to(device)
                     )
                     for j in range(len(true_boxes_i))
-                ],
-            )
+                ]
 
             # if matched_conf_boxes_i.size() == 0:
             #     matched_conf_boxes_i = torch.tensor([]).float().to(device)

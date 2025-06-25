@@ -173,12 +173,12 @@ Optimize using Gaussian Process Regression (Bayesian optimization).
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L181"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L186"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MonteCarloOptimizer`
 Optimizer using Monte Carlo random search for risk calibration. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L184"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L189"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -193,7 +193,7 @@ Initialize the MonteCarloOptimizer.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L188"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L193"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `optimize`
 

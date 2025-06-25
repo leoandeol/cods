@@ -23,7 +23,7 @@ bayesod(
 )
 ```
 
-_summary_ 
+_summary_. 
 
 
 
@@ -38,7 +38,7 @@ _summary_
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/utils.py#L114"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/utils.py#L112"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `filter_preds`
 

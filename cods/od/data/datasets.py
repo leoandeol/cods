@@ -270,7 +270,7 @@ class MSCOCODataset(Dataset):
         return new_dataset_1, new_dataset_2
 
     def _collate_fn(self, batch):
-        return list([list(x) for x in zip(*batch)])
+        return [list(x) for x in zip(*batch)]
         # didn't check the above
 
 
@@ -300,7 +300,7 @@ class VOCDataset(VOCDetection):
 
     def __getitem__(self, index: int) -> Tuple[Any, Any, Any, Any]:
         """Args:
-            index (int): Index
+            index (int): Index.
 
         Returns
         -------

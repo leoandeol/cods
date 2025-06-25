@@ -67,7 +67,9 @@ class ClassificationToleranceRegion(ToleranceRegion):
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
         if isinstance(loss, str):
             if loss not in self.ACCEPTED_LOSSES:
-                raise ValueError(f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.")
+                raise ValueError(
+                    f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
+                )
             self.loss_name = loss
             self.loss = self.ACCEPTED_LOSSES[loss]()
         elif isinstance(loss, ClassificationLoss):
@@ -85,7 +87,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
         alpha=0.1,
         delta=0.1,
         steps=13,
-        bounds=[0, 1],
+        bounds=None,
         verbose=True,
         objectness_threshold=0.8,
     ):
@@ -106,6 +108,8 @@ class ClassificationToleranceRegion(ToleranceRegion):
             float: The calibrated lambda value.
 
         """
+        if bounds is None:
+            bounds = [0, 1]
         if self.lbd is not None:
             print("Replacing previously computed lambda")
         self._n_classes = predictions.n_classes

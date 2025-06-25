@@ -21,7 +21,7 @@ def bayesod(
     pred_cls: torch.Tensor,
     iou_threshold: float,
 ):
-    """_summary_
+    """_summary_.
 
     Args:
     ----
@@ -56,13 +56,11 @@ def bayesod(
         tmp_cluster = torch.where(row).cpu().numpy().tolist()
 
         # TODO(leo) @luca : there's absolutely a better way to do that
-        cluster = list(
-            [
+        cluster = [
                 element
                 for element in tmp_cluster
                 if element not in already_used
-            ],
-        )
+            ]
 
         if len(cluster) > 0:
             clusters.append(cluster)

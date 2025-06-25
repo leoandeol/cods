@@ -7,9 +7,9 @@ from time import time
 
 import numpy as np
 import torch
+import wandb
 from tqdm import tqdm
 
-import wandb
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
 from cods.od.metrics import get_recall_precision
@@ -148,7 +148,7 @@ class Benchmark:
         # Load model
         if experiment["model"] not in self.MODELS:
             raise NotImplementedError(
-                f"Model { experiment['model']} not implemented yet.",
+                f"Model {experiment['model']} not implemented yet.",
             )
         model = self.MODELS[experiment["model"]](
             pretrained=True,

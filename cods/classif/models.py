@@ -94,7 +94,7 @@ class ClassificationModel(Model):
             print("Building predictions...")
         ids = []
         with torch.no_grad():
-            for i, data in enumerate(tqdm(dataloader, disable=not verbose)):
+            for _i, data in enumerate(tqdm(dataloader, disable=not verbose)):
                 id, images, labels = data
                 images = images.to(self.device)
                 labels = labels.to(self.device)

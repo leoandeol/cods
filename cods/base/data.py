@@ -1,6 +1,7 @@
 """Base data structures for predictions, parameters, and conformalized results."""
 
 from time import time_ns
+from typing import Union
 
 
 class Predictions:
@@ -20,7 +21,7 @@ class Predictions:
         dataset_name: str,
         split_name: str,
         task_name: str,
-        unique_id: int | None = None,
+        unique_id: Union[int, None] = None,
     ):
         """Initialize a new instance of the Predictions class.
 
@@ -50,7 +51,7 @@ class Parameters:
 
     """
 
-    def __init__(self, predictions_id: int, unique_id: int | None = None):
+    def __init__(self, predictions_id: int, unique_id: Union[int, None] = None):
         """Initialize a new instance of the Parameters class.
 
         Args:
@@ -80,7 +81,7 @@ class ConformalizedPredictions:
         self,
         predictions_id: int,
         parameters_id: int,
-        unique_id: int | None = None,
+        unique_id: Union[int, None] = None,
     ):
         """Initialize a new instance of the ConformalizedPredictions class.
 
