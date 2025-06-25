@@ -1,6 +1,7 @@
 """Tests for classification data structures."""
-import torch
+
 import numpy as np
+import torch
 
 from cods.classif.data.predictions import ClassificationPredictions
 
@@ -12,16 +13,16 @@ def test_classification_predictions_init():
     idx_to_cls = {0: "cat", 1: "dog", 2: "bird"}
     true_cls = torch.tensor([1, 0])
     pred_cls = torch.tensor([[0.1, 0.7, 0.2], [0.8, 0.1, 0.1]])
-    
+
     pred = ClassificationPredictions(
         dataset_name="test_dataset",
         split_name="test_split",
         image_paths=image_paths,
         idx_to_cls=idx_to_cls,
         true_cls=true_cls,
-        pred_cls=pred_cls
+        pred_cls=pred_cls,
     )
-    
+
     assert pred is not None
     assert pred.dataset_name == "test_dataset"
     assert pred.split_name == "test_split"
@@ -36,17 +37,19 @@ def test_classification_predictions_length():
     image_paths = ["img1.jpg", "img2.jpg", "img3.jpg"]
     idx_to_cls = {0: "cat", 1: "dog", 2: "bird"}
     true_cls = torch.tensor([1, 0, 2])
-    pred_cls = torch.tensor([[0.1, 0.7, 0.2], [0.8, 0.1, 0.1], [0.3, 0.3, 0.4]])
-    
+    pred_cls = torch.tensor(
+        [[0.1, 0.7, 0.2], [0.8, 0.1, 0.1], [0.3, 0.3, 0.4]]
+    )
+
     pred = ClassificationPredictions(
         dataset_name="test",
         split_name="test",
         image_paths=image_paths,
         idx_to_cls=idx_to_cls,
         true_cls=true_cls,
-        pred_cls=pred_cls
+        pred_cls=pred_cls,
     )
-    
+
     assert len(pred) == 3
 
 
@@ -56,16 +59,16 @@ def test_classification_predictions_with_numpy():
     idx_to_cls = {0: "cat", 1: "dog", 2: "bird"}
     true_cls = np.array([1, 0])
     pred_cls = np.array([[0.1, 0.7, 0.2], [0.8, 0.1, 0.1]])
-    
+
     pred = ClassificationPredictions(
         dataset_name="test_dataset",
         split_name="test_split",
         image_paths=image_paths,
         idx_to_cls=idx_to_cls,
         true_cls=torch.from_numpy(true_cls),
-        pred_cls=torch.from_numpy(pred_cls)
+        pred_cls=torch.from_numpy(pred_cls),
     )
-    
+
     assert pred is not None
     assert isinstance(pred.true_cls, torch.Tensor)
     assert isinstance(pred.pred_cls, torch.Tensor)
@@ -77,27 +80,27 @@ def test_classification_predictions_device_handling():
     idx_to_cls = {0: "cat", 1: "dog", 2: "bird"}
     true_cls = torch.tensor([1, 0])
     pred_cls = torch.tensor([[0.1, 0.7, 0.2], [0.8, 0.1, 0.1]])
-    
+
     pred = ClassificationPredictions(
         dataset_name="test",
         split_name="test",
         image_paths=image_paths,
         idx_to_cls=idx_to_cls,
         true_cls=true_cls,
-        pred_cls=pred_cls
+        pred_cls=pred_cls,
     )
-    
+
     # Test device conversion if available
-    if torch.cuda.is_available() and hasattr(pred, 'to'):
+    if torch.cuda.is_available() and hasattr(pred, "to"):
         pred_cuda = pred.to("cuda")
-        if hasattr(pred_cuda, 'true_cls'):
+        if hasattr(pred_cuda, "true_cls"):
             assert pred_cuda.true_cls.device.type == "cuda"
             assert pred_cuda.pred_cls.device.type == "cuda"
-    
+
     # Test CPU
-    if hasattr(pred, 'to'):
+    if hasattr(pred, "to"):
         pred_cpu = pred.to("cpu")
-        if hasattr(pred_cpu, 'true_cls'):
+        if hasattr(pred_cpu, "true_cls"):
             assert pred_cpu.true_cls.device.type == "cpu"
             assert pred_cpu.pred_cls.device.type == "cpu"
 
@@ -108,16 +111,16 @@ def test_classification_predictions_string_representation():
     idx_to_cls = {0: "cat", 1: "dog", 2: "bird"}
     true_cls = torch.tensor([1])
     pred_cls = torch.tensor([[0.1, 0.7, 0.2]])
-    
+
     pred = ClassificationPredictions(
         dataset_name="test",
         split_name="test",
         image_paths=image_paths,
         idx_to_cls=idx_to_cls,
         true_cls=true_cls,
-        pred_cls=pred_cls
+        pred_cls=pred_cls,
     )
-    
+
     str_repr = str(pred)
     # Check that it has some representation
     assert isinstance(str_repr, str)

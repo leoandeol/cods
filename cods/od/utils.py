@@ -423,7 +423,7 @@ def match_predictions_to_true_boxes(
     if not isinstance(conf_thr, torch.Tensor):
         conf_thr = torch.tensor(conf_thr)
 
-    device = preds.pred_boxes[0].device
+    preds.pred_boxes[0].device
 
     # To only update it on a single image
     if idx is not None:
