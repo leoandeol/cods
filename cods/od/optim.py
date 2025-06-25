@@ -858,7 +858,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 f"[{left:.2f}, {right:.2f}] -> λ={lbd}. Corrected Risk = {corrected_risk:.2f}",
             )
 
-            if risk <= alpha:
+            if corrected_risk <= alpha:
                 good_lbds.append(lbd)
                 if risk >= alpha - epsilon:
                     break

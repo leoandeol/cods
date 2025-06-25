@@ -29,7 +29,7 @@ Compute mesh function.
  - <b>`y1`</b> (int):  y-coordinate of the top-left corner of the bounding box. 
  - <b>`x2`</b> (int):  x-coordinate of the bottom-right corner of the bounding box. 
  - <b>`y2`</b> (int):  y-coordinate of the bottom-right corner of the bounding box. 
- - <b>`pbs`</b> (List[List[int]]):  List of predicted bounding boxes. 
+ - <b>`pbs`</b> (torch.Tensor):  List of predicted bounding boxes. 
 
 
 

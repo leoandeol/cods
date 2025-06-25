@@ -9,3 +9,4 @@ line_profiler
 pre-commit
 pytest
 mypy
+setuptools
