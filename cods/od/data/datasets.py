@@ -1,3 +1,9 @@
+"""Dataset classes for object detection tasks.
+
+This module provides dataset implementations for object detection, including
+MS-COCO and VOC datasets with support for conformal prediction workflows.
+"""
+
 import json
 import os
 import random

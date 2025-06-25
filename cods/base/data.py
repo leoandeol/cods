@@ -51,7 +51,9 @@ class Parameters:
 
     """
 
-    def __init__(self, predictions_id: int, unique_id: Union[int, None] = None):
+    def __init__(
+        self, predictions_id: int, unique_id: Union[int, None] = None
+    ):
         """Initialize a new instance of the Parameters class.
 
         Args:

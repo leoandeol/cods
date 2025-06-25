@@ -1,3 +1,10 @@
+"""Data structures for object detection predictions and results.
+
+This module defines the data structures used to store and manipulate
+object detection predictions, parameters, conformalized predictions,
+and evaluation results in the conformal prediction framework.
+"""
+
 from __future__ import annotations
 
 from typing import Any

@@ -1,3 +1,10 @@
+"""YOLO model implementation for object detection with conformal prediction.
+
+This module provides the YOLO model wrapper for object detection tasks,
+including model loading, prediction generation, and post-processing
+utilities for bounding box format conversion and scaling.
+"""
+
 import numpy as np
 import torch
 import torchvision.transforms as T

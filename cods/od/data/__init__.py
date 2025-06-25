@@ -1,8 +1,9 @@
 """Data handling for object detection tasks."""
-from .datasets import MSCOCODataset, VOCDataset
+
+from .datasets import MSCOCODataset as MSCOCODataset, VOCDataset as VOCDataset
 from .predictions import (
-    ODConformalizedPredictions,
-    ODParameters,
-    ODPredictions,
-    ODResults,
+    ODConformalizedPredictions as ODConformalizedPredictions,
+    ODParameters as ODParameters,
+    ODPredictions as ODPredictions,
+    ODResults as ODResults,
 )

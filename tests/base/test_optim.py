@@ -1,4 +1,5 @@
 """Tests for optimization functions."""
+
 from cods.base.optim import (
     BinarySearchOptimizer,
     GaussianProcessOptimizer,

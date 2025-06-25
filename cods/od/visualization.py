@@ -334,7 +334,11 @@ def create_pdf_with_plots(
                         "",
                         xy=(true_box[0], true_box[1]),
                         xytext=(matching_pred_box[0], matching_pred_box[1]),
-                        arrowprops={"arrowstyle": "->", "lw": 2, "color": "blue"},
+                        arrowprops={
+                            "arrowstyle": "->",
+                            "lw": 2,
+                            "color": "blue",
+                        },
                     )
                 except Exception as e:
                     print(e)

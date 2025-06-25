@@ -1,3 +1,10 @@
+"""Utility functions and classes for object detection models.
+
+This module provides utility functions and classes for object detection models,
+including channel resizing, Bayesian object detection postprocessing, and
+prediction filtering utilities.
+"""
+
 import torch
 from torch import nn
 from torchvision.ops import box_iou
@@ -57,10 +64,8 @@ def bayesod(
 
         # TODO(leo) @luca : there's absolutely a better way to do that
         cluster = [
-                element
-                for element in tmp_cluster
-                if element not in already_used
-            ]
+            element for element in tmp_cluster if element not in already_used
+        ]
 
         if len(cluster) > 0:
             clusters.append(cluster)

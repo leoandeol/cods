@@ -1,3 +1,10 @@
+"""Base object detection model class for conformal prediction.
+
+This module provides the abstract base class for object detection models,
+defining the interface for prediction generation, model loading, and
+integration with the conformal prediction framework.
+"""
+
 from hashlib import sha256
 from typing import Optional
 
@@ -155,33 +162,37 @@ class ODModel(Model):
                 all_true_cls.append(true_cls)
                 all_pred_cls.append(pred_cls)
 
-        all_image_paths = [path for arr_path in all_image_paths for path in arr_path]
-        all_image_shapes = [shape for arr_shape in all_image_shapes for shape in arr_shape]
+        all_image_paths = [
+            path for arr_path in all_image_paths for path in arr_path
+        ]
+        all_image_shapes = [
+            shape for arr_shape in all_image_shapes for shape in arr_shape
+        ]
         all_true_boxes = [
-                box.to(self.device)
-                for arr_box in all_true_boxes
-                for box in arr_box
-            ]
+            box.to(self.device)
+            for arr_box in all_true_boxes
+            for box in arr_box
+        ]
         all_pred_boxes = [box for arr_box in all_pred_boxes for box in arr_box]
         if len(all_pred_boxes_unc) > 0:
             all_pred_boxes_unc = [
-                    box_unc
-                    for arr_box_unc in all_pred_boxes_unc
-                    for box_unc in arr_box_unc
-                ]
+                box_unc
+                for arr_box_unc in all_pred_boxes_unc
+                for box_unc in arr_box_unc
+            ]
         else:
             all_pred_boxes_unc = None
         all_confidences = [
-                confidence
-                for arr_confidence in all_confidences
-                for confidence in arr_confidence
-            ]
+            confidence
+            for arr_confidence in all_confidences
+            for confidence in arr_confidence
+        ]
         all_true_cls = [
-                cls.to(self.device)
-                for arr_cls in all_true_cls
-                for cls in arr_cls
-            ]
-        all_pred_cls = [proba for arr_proba in all_pred_cls for proba in arr_proba]
+            cls.to(self.device) for arr_cls in all_true_cls for cls in arr_cls
+        ]
+        all_pred_cls = [
+            proba for arr_proba in all_pred_cls for proba in arr_proba
+        ]
 
         preds = ODPredictions(
             dataset_name=dataset_name,

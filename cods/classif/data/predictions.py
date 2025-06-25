@@ -1,3 +1,5 @@
+"""Data structures for classification predictions."""
+
 from typing import Dict, List, Union
 
 import torch

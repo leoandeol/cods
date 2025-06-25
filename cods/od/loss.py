@@ -1,3 +1,10 @@
+"""Loss functions for object detection conformal prediction.
+
+This module implements various loss functions used in object detection conformal
+prediction, including localization losses, size-based losses, and classification
+losses adapted for object detection tasks.
+"""
+
 from __future__ import annotations
 
 from logging import getLogger

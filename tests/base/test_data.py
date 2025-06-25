@@ -1,4 +1,5 @@
 """Tests for base data structures."""
+
 from cods.base.data import (
     ConformalizedPredictions,
     Parameters,
@@ -33,7 +34,9 @@ def test_conformalized_predictions_init():
 
 def test_results_init():
     """Test Results initialization."""
-    result = Results(predictions_id=123, parameters_id=456, conformalized_id=789)
+    result = Results(
+        predictions_id=123, parameters_id=456, conformalized_id=789
+    )
     assert result is not None
     assert result.predictions_id == 123
     assert result.parameters_id == 456

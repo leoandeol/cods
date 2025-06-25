@@ -1,4 +1,5 @@
 """Tests for object detection conformal prediction."""
+
 from cods.od.cp import ODConformalizer
 
 

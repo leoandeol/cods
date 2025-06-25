@@ -3,14 +3,14 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `od.utils`
+Utility functions for object detection tasks and conformal prediction. 
 
-
-
+This module provides various utility functions for object detection tasks, including geometric computations, IoU calculations, optimization utilities, and distance metrics used in conformal prediction workflows. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L13"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L19"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `mesh_func`
 
@@ -41,7 +41,7 @@ Compute mesh function.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L52"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L58"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `get_covered_areas_of_gt_union`
 
@@ -56,7 +56,7 @@ get_covered_areas_of_gt_union(pred_boxes, true_boxes)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L72"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L78"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `fast_covered_areas_of_gt`
 
@@ -71,7 +71,7 @@ fast_covered_areas_of_gt(pred_boxes, true_boxes)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L90"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L96"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `contained`
 
@@ -99,7 +99,7 @@ Compute the intersection over union (IoU) between two bounding boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L119"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L125"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `contained_old`
 
@@ -127,7 +127,7 @@ Compute the intersection over union (IoU) between two bounding boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L144"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L150"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `f_iou`
 
@@ -155,7 +155,7 @@ Compute the intersection over union (IoU) between two bounding boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L171"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L177"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `generalized_iou`
 
@@ -183,7 +183,7 @@ Compute the Generalized Intersection over Union (GIoU) between two bounding boxe
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L214"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L220"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `vectorized_generalized_iou`
 
@@ -220,7 +220,7 @@ Calculates the GIoU for every pair of boxes between boxesA and boxesB.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L328"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L334"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `assymetric_hausdorff_distance_old`
 
@@ -228,14 +228,12 @@ Calculates the GIoU for every pair of boxes between boxesA and boxesB.
 assymetric_hausdorff_distance_old(true_box, pred_box)
 ```
 
-
-
-
+Calculate asymmetric Hausdorff distance between true and predicted box (legacy version). 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L343"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L350"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `assymetric_hausdorff_distance`
 
@@ -243,14 +241,12 @@ assymetric_hausdorff_distance_old(true_box, pred_box)
 assymetric_hausdorff_distance(true_boxes, pred_boxes)
 ```
 
-
-
-
+Calculate asymmetric Hausdorff distance between sets of boxes. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L353"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L361"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `f_lac`
 
@@ -258,14 +254,12 @@ assymetric_hausdorff_distance(true_boxes, pred_boxes)
 f_lac(true_cls, pred_cls)
 ```
 
-
-
-
+Calculate LAC (Loss Adaptive Conformal) score for classification. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L361"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L370"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `rank_distance`
 
@@ -273,14 +267,12 @@ f_lac(true_cls, pred_cls)
 rank_distance(true_cls, pred_cls)
 ```
 
-
-
-
+Calculate rank distance between true and predicted classes. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L369"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L379"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `match_predictions_to_true_boxes`
 
@@ -296,12 +288,12 @@ match_predictions_to_true_boxes(
 ) → None
 ```
 
-Matching predictions to true boxes. Done in place, modifies the preds object. 
+Match predictions to true boxes. Done in place, modifies the preds object. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L499"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L512"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `apply_margins`
 
@@ -309,14 +301,12 @@ Matching predictions to true boxes. Done in place, modifies the preds object.
 apply_margins(pred_boxes: List[Tensor], Qs, mode='additive')
 ```
 
-
-
-
+Apply margins to predicted bounding boxes for conformal prediction. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L533"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L547"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_object_level`
 
@@ -334,7 +324,7 @@ Input : conformal and true boxes of a all images.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L595"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L609"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_image_level`
 
@@ -347,14 +337,12 @@ compute_risk_image_level(
 ) → Tensor
 ```
 
-
-
-
+Compute image-level risk for conformal prediction. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L676"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L691"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_image_level_confidence`
 
@@ -368,9 +356,7 @@ compute_risk_image_level_confidence(
 ) → Tensor
 ```
 
-
-
-
+Compute image-level confidence risk for conformal prediction. 
 
 
 

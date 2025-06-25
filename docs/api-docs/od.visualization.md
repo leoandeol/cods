@@ -84,7 +84,7 @@ Create a PDF with plots for each image in the predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/visualization.py#L350"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/visualization.py#L354"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `plot_histograms_predictions`
 

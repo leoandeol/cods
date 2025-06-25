@@ -171,15 +171,15 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             )
             # print(matched_pred_boxes_i.shape)
             matched_pred_cls_i = [
-                    (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[
-                            0
-                        ]  # TODO zero here ?
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ]
+                (
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[
+                        0
+                    ]  # TODO zero here ?
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
             margin = np.concatenate((image_shape, image_shape))
             matched_conf_boxes_i = apply_margins(
                 [matched_pred_boxes_i],
@@ -347,13 +347,13 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 else torch.tensor([]).float().to(device)
             )
             matched_pred_cls_i = [
-                    (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ]
+                (
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
 
             margin = np.concatenate((image_shape, image_shape))
             matched_conf_boxes_i = apply_margins(
@@ -679,13 +679,13 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             )
             # print(matched_pred_boxes_i.shape)
             matched_pred_cls_i = [
-                    (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ]
+                (
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
             # if len(matched_pred_boxes_i.shape)==1:
             #     matched_pred_boxes_i = matched_pred_boxes_i[None,...]
             # if len(matched_pred_cls_i.shape)==1:
@@ -750,13 +750,13 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 else torch.tensor([]).float().to(device)
             )
             matched_pred_cls_i = [
-                    (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ]
+                (
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
 
             # print(matched_pred_boxes_i.shape)
             # print(matched_pred_boxes_i)

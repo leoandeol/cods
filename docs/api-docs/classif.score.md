@@ -65,12 +65,12 @@ Get the conformal prediction set for a given quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L62"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L64"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `LACNCScore`
 Non-conformity score for Least Ambiguous Conformal (LAC) prediction sets. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L65"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L67"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -93,7 +93,7 @@ Initialize the LACNCScore class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L92"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L94"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_set`
 
@@ -121,12 +121,12 @@ Get the conformal prediction set for a given quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L108"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L110"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `APSNCScore`
 Non-conformity score for Adaptive Prediction Sets (APS). 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L111"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L113"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -149,7 +149,7 @@ Initialize the APSNCScore class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L157"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/score.py#L159"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_set`
 

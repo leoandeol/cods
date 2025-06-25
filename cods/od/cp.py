@@ -1,3 +1,5 @@
+"""Conformal prediction implementations for object detection."""
+
 from __future__ import annotations
 
 import logging
@@ -1319,7 +1321,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             )
 
     def _get_risk_function(self, predictions, alpha):
-        """Returns the risk function for optimization.
+        """Get the risk function for optimization.
 
         Args:
         ----

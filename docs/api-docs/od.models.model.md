@@ -3,22 +3,22 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `od.models.model`
+Base object detection model class for conformal prediction. 
 
-
-
+This module provides the abstract base class for object detection models, defining the interface for prediction generation, model loading, and integration with the conformal prediction framework. 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L13"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L20"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODModel`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L14"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L21"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -50,7 +50,7 @@ Initializes an instance of the ODModel class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L41"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L48"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `build_predictions`
 
@@ -95,7 +95,7 @@ Builds predictions for the given dataset.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L272"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L283"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 

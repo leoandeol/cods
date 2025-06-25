@@ -3,14 +3,14 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `od.metrics`
+Metrics computation and evaluation for object detection conformal prediction. 
 
-
-
+This module provides functions to compute various metrics for evaluating object detection models with conformal prediction, including coverage metrics, precision-recall computation, and performance visualization tools. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L20"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L27"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_global_coverage`
 
@@ -53,7 +53,7 @@ Compute the global coverage for object detection predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L163"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L170"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `getStretch`
 
@@ -81,7 +81,7 @@ Get the stretch of object detection predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L188"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L197"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `get_recall_precision`
 
@@ -118,7 +118,7 @@ Get the recall and precision for object detection predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L260"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L269"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `getAveragePrecision`
 
@@ -151,7 +151,7 @@ Get the average precision for object detection predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L302"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L311"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `plot_recall_precision`
 
@@ -177,7 +177,7 @@ Plot the recall and precision given objectness threshold or IoU threshold.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L327"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L336"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `unroll_metrics`
 
@@ -214,12 +214,12 @@ Compute and return various metrics for object detection predictions and conforma
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L398"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L407"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODEvaluator`
 Evaluator for object detection predictions using specified loss functions. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L401"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L410"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -243,7 +243,7 @@ Initialize the ODEvaluator.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L420"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L429"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `evaluate`
 

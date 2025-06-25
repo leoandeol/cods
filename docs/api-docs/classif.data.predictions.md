@@ -3,22 +3,20 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/classif/data/predictions.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `classif.data.predictions`
-
-
-
+Data structures for classification predictions. 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/data/predictions.py#L8"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/data/predictions.py#L10"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ClassificationPredictions`
 Container for predictions from a classification model. 
 
 Stores image paths, true and predicted class labels, and class index mapping for a classification task. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/data/predictions.py#L14"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/data/predictions.py#L16"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -52,7 +50,7 @@ Initialize ClassificationPredictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/data/predictions.py#L51"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/classif/data/predictions.py#L53"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `split`
 

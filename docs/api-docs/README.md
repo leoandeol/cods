@@ -15,29 +15,29 @@
 - [`classif.cp`](./classif.cp.md#module-classifcp): Conformalizer for conformal classification tasks.
 - [`classif.data`](./classif.data.md#module-classifdata): Data handling for classification tasks.
 - [`classif.data.datasets`](./classif.data.datasets.md#module-classifdatadatasets): Datasets for conformal classification tasks.
-- [`classif.data.predictions`](./classif.data.predictions.md#module-classifdatapredictions)
+- [`classif.data.predictions`](./classif.data.predictions.md#module-classifdatapredictions): Data structures for classification predictions.
 - [`classif.loss`](./classif.loss.md#module-classifloss): Loss functions for conformal classification.
 - [`classif.metrics`](./classif.metrics.md#module-classifmetrics): Metrics for evaluating conformal classification predictions.
 - [`classif.models`](./classif.models.md#module-classifmodels): Model wrapper for conformal classification tasks.
 - [`classif.score`](./classif.score.md#module-classifscore): Non-conformity scores for conformal classification.
 - [`classif.tr`](./classif.tr.md#module-classiftr): Tolerance region implementation for conformal classification.
 - [`classif.visualization`](./classif.visualization.md#module-classifvisualization): Visualization utilities for conformal classification predictions.
-- [`od`](./od.md#module-od)
-- [`od.cp`](./od.cp.md#module-odcp)
+- [`od`](./od.md#module-od): Object detection module for conformal prediction.
+- [`od.cp`](./od.cp.md#module-odcp): Conformal prediction implementations for object detection.
 - [`od.data`](./od.data.md#module-oddata): Data handling for object detection tasks.
-- [`od.data.datasets`](./od.data.datasets.md#module-oddatadatasets)
-- [`od.data.predictions`](./od.data.predictions.md#module-oddatapredictions)
-- [`od.evaluate`](./od.evaluate.md#module-odevaluate)
-- [`od.loss`](./od.loss.md#module-odloss)
-- [`od.metrics`](./od.metrics.md#module-odmetrics)
-- [`od.models`](./od.models.md#module-odmodels)
-- [`od.models.detr`](./od.models.detr.md#module-odmodelsdetr)
-- [`od.models.model`](./od.models.model.md#module-odmodelsmodel)
-- [`od.models.utils`](./od.models.utils.md#module-odmodelsutils)
-- [`od.models.yolo`](./od.models.yolo.md#module-odmodelsyolo)
+- [`od.data.datasets`](./od.data.datasets.md#module-oddatadatasets): Dataset classes for object detection tasks.
+- [`od.data.predictions`](./od.data.predictions.md#module-oddatapredictions): Data structures for object detection predictions and results.
+- [`od.evaluate`](./od.evaluate.md#module-odevaluate): Evaluation functionality for object detection models with conformal prediction.
+- [`od.loss`](./od.loss.md#module-odloss): Loss functions for object detection conformal prediction.
+- [`od.metrics`](./od.metrics.md#module-odmetrics): Metrics computation and evaluation for object detection conformal prediction.
+- [`od.models`](./od.models.md#module-odmodels): Object detection models for conformal prediction.
+- [`od.models.detr`](./od.models.detr.md#module-odmodelsdetr): DETR (DEtection TRansformer) model implementation for object detection.
+- [`od.models.model`](./od.models.model.md#module-odmodelsmodel): Base object detection model class for conformal prediction.
+- [`od.models.utils`](./od.models.utils.md#module-odmodelsutils): Utility functions and classes for object detection models.
+- [`od.models.yolo`](./od.models.yolo.md#module-odmodelsyolo): YOLO model implementation for object detection with conformal prediction.
 - [`od.optim`](./od.optim.md#module-odoptim): Optimizers for conformal object detection calibration and risk control.
-- [`od.score`](./od.score.md#module-odscore)
-- [`od.utils`](./od.utils.md#module-odutils)
+- [`od.score`](./od.score.md#module-odscore): Non-conformity scoring functions for object detection conformal prediction.
+- [`od.utils`](./od.utils.md#module-odutils): Utility functions for object detection tasks and conformal prediction.
 - [`od.visualization`](./od.visualization.md#module-odvisualization): Visualization utilities for conformal object detection predictions.
 
 ## Classes
@@ -133,22 +133,22 @@
 - [`utils.bayesod`](./od.models.utils.md#function-bayesod): _summary_.
 - [`utils.filter_preds`](./od.models.utils.md#function-filter_preds)
 - [`yolo.xywh2xyxy_scaled`](./od.models.yolo.md#function-xywh2xyxy_scaled): Convert bounding boxes from center (x, y, w, h) format to (x0, y0, x1, y1) format and scale.
-- [`utils.apply_margins`](./od.utils.md#function-apply_margins)
-- [`utils.assymetric_hausdorff_distance`](./od.utils.md#function-assymetric_hausdorff_distance)
-- [`utils.assymetric_hausdorff_distance_old`](./od.utils.md#function-assymetric_hausdorff_distance_old)
-- [`utils.compute_risk_image_level`](./od.utils.md#function-compute_risk_image_level)
-- [`utils.compute_risk_image_level_confidence`](./od.utils.md#function-compute_risk_image_level_confidence)
+- [`utils.apply_margins`](./od.utils.md#function-apply_margins): Apply margins to predicted bounding boxes for conformal prediction.
+- [`utils.assymetric_hausdorff_distance`](./od.utils.md#function-assymetric_hausdorff_distance): Calculate asymmetric Hausdorff distance between sets of boxes.
+- [`utils.assymetric_hausdorff_distance_old`](./od.utils.md#function-assymetric_hausdorff_distance_old): Calculate asymmetric Hausdorff distance between true and predicted box (legacy version).
+- [`utils.compute_risk_image_level`](./od.utils.md#function-compute_risk_image_level): Compute image-level risk for conformal prediction.
+- [`utils.compute_risk_image_level_confidence`](./od.utils.md#function-compute_risk_image_level_confidence): Compute image-level confidence risk for conformal prediction.
 - [`utils.compute_risk_object_level`](./od.utils.md#function-compute_risk_object_level): Input : conformal and true boxes of a all images.
 - [`utils.contained`](./od.utils.md#function-contained): Compute the intersection over union (IoU) between two bounding boxes.
 - [`utils.contained_old`](./od.utils.md#function-contained_old): Compute the intersection over union (IoU) between two bounding boxes.
 - [`utils.f_iou`](./od.utils.md#function-f_iou): Compute the intersection over union (IoU) between two bounding boxes.
-- [`utils.f_lac`](./od.utils.md#function-f_lac)
+- [`utils.f_lac`](./od.utils.md#function-f_lac): Calculate LAC (Loss Adaptive Conformal) score for classification.
 - [`utils.fast_covered_areas_of_gt`](./od.utils.md#function-fast_covered_areas_of_gt)
 - [`utils.generalized_iou`](./od.utils.md#function-generalized_iou): Compute the Generalized Intersection over Union (GIoU) between two bounding boxes.
 - [`utils.get_covered_areas_of_gt_union`](./od.utils.md#function-get_covered_areas_of_gt_union)
-- [`utils.match_predictions_to_true_boxes`](./od.utils.md#function-match_predictions_to_true_boxes): Matching predictions to true boxes. Done in place, modifies the preds object.
+- [`utils.match_predictions_to_true_boxes`](./od.utils.md#function-match_predictions_to_true_boxes): Match predictions to true boxes. Done in place, modifies the preds object.
 - [`utils.mesh_func`](./od.utils.md#function-mesh_func): Compute mesh function.
-- [`utils.rank_distance`](./od.utils.md#function-rank_distance)
+- [`utils.rank_distance`](./od.utils.md#function-rank_distance): Calculate rank distance between true and predicted classes.
 - [`utils.vectorized_generalized_iou`](./od.utils.md#function-vectorized_generalized_iou): Compute the Generalized Intersection over Union (GIoU) between two sets of
 - [`visualization.create_pdf_with_plots`](./od.visualization.md#function-create_pdf_with_plots): Create a PDF with plots for each image in the predictions.
 - [`visualization.plot_histograms_predictions`](./od.visualization.md#function-plot_histograms_predictions): Plot histograms of true boxes, predicted boxes, and thresholded predictions.

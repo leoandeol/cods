@@ -3,14 +3,14 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `od.models.detr`
+DETR (DEtection TRansformer) model implementation for object detection. 
 
-
-
+This module provides the DETR model wrapper for object detection with conformal prediction support, including model loading, prediction generation, and post-processing utilities for bounding box transformations. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L15"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L22"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `box_cxcywh_to_xyxy`
 
@@ -25,7 +25,7 @@ box_cxcywh_to_xyxy(x)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L21"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L28"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `box_xyxy_to_cxcywh`
 
@@ -40,7 +40,7 @@ box_xyxy_to_cxcywh(x)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L27"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L34"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `rescale_bboxes`
 
@@ -55,14 +55,14 @@ rescale_bboxes(out_bbox, size)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L34"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L41"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `DETRModel`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L40"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L47"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -86,7 +86,7 @@ __init__(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L87"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L94"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `postprocess`
 
@@ -100,7 +100,7 @@ postprocess(outputs, image_sizes)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L109"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/detr.py#L116"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 

@@ -80,7 +80,7 @@ Initialize a new instance of the Parameters class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L69"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L71"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ConformalizedPredictions`
 Abstract base class for conformalized prediction results. 
@@ -88,7 +88,7 @@ Abstract base class for conformalized prediction results.
 Attributes 
 ----------  predictions_id (int): Unique ID of the predictions.  parameters_id (int): Unique ID of the parameters.  unique_id (int): Unique ID of the conformalized predictions. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L80"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L82"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -117,7 +117,7 @@ Initialize a new instance of the ConformalizedPredictions class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L102"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L104"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Results`
 Abstract base class for results. 
@@ -125,7 +125,7 @@ Abstract base class for results.
 Attributes 
 ----------  predictions_id (int): Unique ID of the predictions.  parameters_id (int): Unique ID of the parameters.  conformalized_id (int): Unique ID of the conformalized predictions. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L113"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L115"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 

@@ -1,4 +1,5 @@
 """Tests for classification scoring functions."""
+
 import numpy as np
 
 from cods.classif.score import LACNCScore

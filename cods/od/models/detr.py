@@ -1,3 +1,10 @@
+"""DETR (DEtection TRansformer) model implementation for object detection.
+
+This module provides the DETR model wrapper for object detection with conformal
+prediction support, including model loading, prediction generation, and
+post-processing utilities for bounding box transformations.
+"""
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -136,23 +143,23 @@ class DETRModel(ODModel):
             img_shapes,
         )
         true_boxes = [
-                torch.LongTensor(
+            torch.LongTensor(
+                [
                     [
-                        [
-                            box["bbox"][0],
-                            box["bbox"][1],
-                            box["bbox"][0] + box["bbox"][2],
-                            box["bbox"][1] + box["bbox"][3],
-                        ]
-                        for box in true_box
-                    ],
-                )
-                for true_box in ground_truth
-            ]
+                        box["bbox"][0],
+                        box["bbox"][1],
+                        box["bbox"][0] + box["bbox"][2],
+                        box["bbox"][1] + box["bbox"][3],
+                    ]
+                    for box in true_box
+                ],
+            )
+            for true_box in ground_truth
+        ]
         true_cls = [
-                torch.LongTensor([box["category_id"] for box in true_box])
-                for true_box in ground_truth
-            ]
+            torch.LongTensor([box["category_id"] for box in true_box])
+            for true_box in ground_truth
+        ]
         true_boxes = true_boxes
 
         return {

@@ -1,11 +1,17 @@
+"""Utility functions for object detection tasks and conformal prediction.
+
+This module provides various utility functions for object detection tasks,
+including geometric computations, IoU calculations, optimization utilities,
+and distance metrics used in conformal prediction workflows.
+"""
+
 from logging import getLogger
 from typing import List
 
-logger = getLogger("cods")
-
-
 import numpy as np
 import torch
+
+logger = getLogger("cods")
 from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
 
@@ -326,6 +332,7 @@ def vectorized_generalized_iou(
 
 
 def assymetric_hausdorff_distance_old(true_box, pred_box):
+    """Calculate asymmetric Hausdorff distance between true and predicted box (legacy version)."""
     up_distance = pred_box[1] - true_box[1]
     down_distance = true_box[3] - pred_box[3]
     left_distance = pred_box[0] - true_box[0]
@@ -341,6 +348,7 @@ def assymetric_hausdorff_distance_old(true_box, pred_box):
 
 
 def assymetric_hausdorff_distance(true_boxes, pred_boxes):
+    """Calculate asymmetric Hausdorff distance between sets of boxes."""
     true_boxes = true_boxes.clone()
     pred_boxes = pred_boxes.clone()
     true_boxes[:, :2] *= -1
@@ -351,6 +359,7 @@ def assymetric_hausdorff_distance(true_boxes, pred_boxes):
 
 
 def f_lac(true_cls, pred_cls):
+    """Calculate LAC (Loss Adaptive Conformal) score for classification."""
     m = len(pred_cls)
     n = len(true_cls)
     result = pred_cls.gather(1, true_cls.unsqueeze(0).expand(m, n)).T
@@ -359,6 +368,7 @@ def f_lac(true_cls, pred_cls):
 
 
 def rank_distance(true_cls, pred_cls):
+    """Calculate rank distance between true and predicted classes."""
     sorted_indices = torch.argsort(pred_cls, descending=True, dim=1)
     ranks = (sorted_indices == true_cls.unsqueeze(1, 1)).nonzero(
         as_tuple=True,
@@ -375,12 +385,15 @@ def match_predictions_to_true_boxes(
     idx=None,
     class_factor: float = 0.25,
 ) -> None:
-    """Matching predictions to true boxes. Done in place, modifies the preds object."""
+    """Match predictions to true boxes. Done in place, modifies the preds object."""
+
     # TODO(leo): switch to gpu
     def dist_iou(x, y):
         return -f_iou(x, y)
+
     def dist_generalized_iou(x, y):
         return -generalized_iou(x, y)
+
     DISTANCE_FUNCTIONS = {
         "iou": dist_iou,
         "giou": dist_generalized_iou,
@@ -410,7 +423,7 @@ def match_predictions_to_true_boxes(
     if not isinstance(conf_thr, torch.Tensor):
         conf_thr = torch.tensor(conf_thr)
 
-    preds.pred_boxes[0].device
+    device = preds.pred_boxes[0].device
 
     # To only update it on a single image
     if idx is not None:
@@ -497,6 +510,7 @@ def match_predictions_to_true_boxes(
 
 
 def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
+    """Apply margins to predicted bounding boxes for conformal prediction."""
     n = len(pred_boxes)
     new_boxes = []
     device = pred_boxes[0].device
@@ -599,6 +613,7 @@ def compute_risk_image_level(
     # aggregator="mean",
     return_list: bool = False,
 ) -> torch.Tensor:
+    """Compute image-level risk for conformal prediction."""
     # aggregtion_funcs = {
     #     "mean": torch.mean,
     #     "sum": torch.sum,
@@ -652,13 +667,13 @@ def compute_risk_image_level(
         )
         # print(matched_conf_boxes_i.shape)
         matched_conf_cls_i = [
-                (
-                    torch.stack([conf_cls_i[m] for m in matching_i[j]])
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
+            (
+                torch.stack([conf_cls_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
         # print(type(matched_conf_boxes_i), type(true_boxes_i))
         # print("Shape", true_boxes_i.shape, matched_conf_boxes_i.shape)
         loss_value = loss(
@@ -681,6 +696,7 @@ def compute_risk_image_level_confidence(
     # aggregator="mean",
     return_list: bool = False,
 ) -> torch.Tensor:
+    """Compute image-level confidence risk for conformal prediction."""
     # aggregtion_funcs = {
     #     "mean": torch.mean,
     #     "sum": torch.sum,
@@ -721,13 +737,13 @@ def compute_risk_image_level_confidence(
             else torch.tensor([]).float().to(device)
         )
         matched_conf_cls_i = [
-                (
-                    torch.stack([conf_cls_i[m] for m in matching_i[j]])
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
+            (
+                torch.stack([conf_cls_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
         conf_loss_value_i = confidence_loss(
             true_boxes_i,
             true_cls_i,

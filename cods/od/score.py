@@ -1,3 +1,9 @@
+"""Non-conformity scoring functions for object detection conformal prediction.
+
+This module provides non-conformity scoring classes for object detection tasks,
+including objectness scoring and other metrics used in the conformal prediction
+framework to quantify prediction uncertainty.
+"""
 
 import numpy as np
 import torch

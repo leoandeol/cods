@@ -3,9 +3,7 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `od.cp`
-
-
-
+Conformal prediction implementations for object detection. 
 
 **Global Variables**
 ---------------
@@ -14,7 +12,7 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L66"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L68"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `LocalizationConformalizer`
 A class for performing localization conformalization. Should be used within an ODConformalizer. 
@@ -22,7 +20,7 @@ A class for performing localization conformalization. Should be used within an O
 Attributes 
 ----------  BACKENDS (list): Supported backends.  accepted_methods (dict): Mapping of accepted method names to score functions.  PREDICTION_SETS (list): Supported prediction sets.  LOSSES (dict): Mapping of loss names to loss classes.  OPTIMIZERS (dict): Mapping of optimizer names to optimizer classes.  GUARANTEE_LEVELS (list): Supported guarantee levels. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L103"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L105"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -60,7 +58,7 @@ Initialize the LocalizationConformalizer.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L193"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L195"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
@@ -98,7 +96,7 @@ Calibrate the conformalizer for localization.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L282"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L284"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
@@ -131,12 +129,12 @@ Conformalize predictions using the calibrated lambda values for localization.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L339"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L341"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ConfidenceConformalizer`
 Conformalizer for confidence/objectness in object detection. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L349"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L351"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -170,7 +168,7 @@ Initialize the ConfidenceConformalizer.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L402"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L404"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
@@ -206,7 +204,7 @@ Calibrate the conformalizer for confidence/objectness.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L462"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L464"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
@@ -234,12 +232,12 @@ Conformalize the object detection predictions using calibrated lambda values.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L488"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L490"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODClassificationConformalizer`
 Conformalizer for classification in object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L501"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L503"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -275,7 +273,7 @@ Initialize the ODClassificationConformalizer.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L574"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L576"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
@@ -313,7 +311,7 @@ Calibrate the conformalizer for classification.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L670"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L672"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
@@ -341,12 +339,12 @@ Conformalize the predictions for classification.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L707"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L709"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODConformalizer`
 Class representing conformalizers for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L715"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L717"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -392,7 +390,7 @@ Initialize the ODConformalizer object.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L886"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L888"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
@@ -430,7 +428,7 @@ Calibrates the conformalizers and returns the calibration results.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1098"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1100"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
@@ -462,7 +460,7 @@ Conformalize the given predictions using the provided parameters.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1191"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1193"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `evaluate`
 
@@ -499,12 +497,12 @@ Evaluate the conformalized predictions and return results.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1277"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1279"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `AsymptoticLocalizationObjectnessConformalizer`
 A class that performs risk conformalization for object detection predictions with asymptotic localization and objectness. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1285"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1287"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -532,7 +530,7 @@ Initialize the AsymptoticLocalizationObjectnessConformalizer.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1384"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1386"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `calibrate`
 
@@ -568,7 +566,7 @@ Calibrate the conformalizer using the given predictions.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1426"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1428"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `conformalize`
 
@@ -595,7 +593,7 @@ Conformalize predictions using the calibrated lambda values.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1453"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/cp.py#L1455"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `evaluate`
 

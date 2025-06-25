@@ -1,3 +1,10 @@
+"""Evaluation functionality for object detection models with conformal prediction.
+
+This module provides comprehensive evaluation capabilities for object detection
+models using conformal prediction, including hyperparameter tuning, model
+comparison, and performance metric computation across different evaluation modes.
+"""
+
 import argparse
 import json
 import pickle

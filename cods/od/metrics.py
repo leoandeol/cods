@@ -1,3 +1,10 @@
+"""Metrics computation and evaluation for object detection conformal prediction.
+
+This module provides functions to compute various metrics for evaluating
+object detection models with conformal prediction, including coverage metrics,
+precision-recall computation, and performance visualization tools.
+"""
+
 from logging import getLogger
 from typing import Callable, Optional, Union
 
@@ -177,8 +184,10 @@ def getStretch(
 
     """
     stretches = []
+
     def area(x):
         return (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
+
     pred_boxes = od_predictions.pred_boxes
     for i in range(len(pred_boxes)):
         stretches.append(area(conf_boxes[i]) / area(pred_boxes[i]))
@@ -525,15 +534,15 @@ class ODEvaluator:
                 else torch.tensor([]).float().to(device)
             )
             matched_conf_cls_i = [
-                    (
-                        torch.stack([conf_cls_i[m] for m in matching_i[j]])[
-                            0
-                        ]  # TODO zero here ?
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ]
+                (
+                    torch.stack([conf_cls_i[m] for m in matching_i[j]])[
+                        0
+                    ]  # TODO zero here ?
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
 
             # if matched_conf_boxes_i.size() == 0:
             #     matched_conf_boxes_i = torch.tensor([]).float().to(device)

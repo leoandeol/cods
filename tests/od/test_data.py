@@ -1,4 +1,5 @@
 """Tests for object detection data structures."""
+
 import torch
 
 from cods.od.data.predictions import (
@@ -17,9 +18,7 @@ def test_od_predictions_import():
 def test_od_parameters_simple():
     """Test ODParameters initialization with required args."""
     param = ODParameters(
-        global_alpha=0.1,
-        confidence_threshold=0.5,
-        predictions_id=123
+        global_alpha=0.1, confidence_threshold=0.5, predictions_id=123
     )
     assert param is not None
     assert param.global_alpha == 0.1
@@ -40,7 +39,7 @@ def test_od_predictions_with_minimal_data():
         confidences=[torch.tensor([0.8])],
         true_cls=[torch.tensor([1])],
         pred_cls=[torch.tensor([[1, 0]])],
-        names=["class1"]
+        names=["class1"],
     )
     assert pred is not None
     assert pred.dataset_name == "test_dataset"
@@ -60,20 +59,17 @@ def test_od_conformalized_predictions_init():
         confidences=[torch.tensor([0.8])],
         true_cls=[torch.tensor([1])],
         pred_cls=[torch.tensor([[1, 0]])],
-        names=["class1"]
+        names=["class1"],
     )
 
     # Create ODParameters
     parameters = ODParameters(
-        global_alpha=0.1,
-        confidence_threshold=0.5,
-        predictions_id=123
+        global_alpha=0.1, confidence_threshold=0.5, predictions_id=123
     )
 
     # Create ODConformalizedPredictions
     conf_pred = ODConformalizedPredictions(
-        predictions=predictions,
-        parameters=parameters
+        predictions=predictions, parameters=parameters
     )
     assert conf_pred is not None
 

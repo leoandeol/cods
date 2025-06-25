@@ -1,4 +1,5 @@
 """Script to generate PDF visualization of COCO dataset."""
+
 import io
 import logging
 import math

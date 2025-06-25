@@ -3,14 +3,14 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `od.models.yolo`
+YOLO model implementation for object detection with conformal prediction. 
 
-
-
+This module provides the YOLO model wrapper for object detection tasks, including model loading, prediction generation, and post-processing utilities for bounding box format conversion and scaling. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L9"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L16"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `xywh2xyxy_scaled`
 
@@ -39,12 +39,12 @@ Convert bounding boxes from center (x, y, w, h) format to (x0, y0, x1, y1) forma
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L31"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L38"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `AlteredYOLO`
 YOLO model wrapper with hooks to capture raw outputs and input shapes during prediction. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L34"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L41"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -156,7 +156,7 @@ This property returns the transformations if they are defined in the model. The 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L45"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L52"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict`
 
@@ -184,12 +184,12 @@ Run prediction and capture raw outputs and input shapes using hooks.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L81"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L88"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `YOLOModel`
 Object Detection model wrapper for YOLO with custom preprocessing and postprocessing. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L84"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L91"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -223,7 +223,7 @@ Initialize the YOLOModel.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L135"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L142"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `postprocess`
 
@@ -251,7 +251,7 @@ Postprocess raw model outputs to obtain bounding boxes, confidences, and class p
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L287"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/yolo.py#L294"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 
