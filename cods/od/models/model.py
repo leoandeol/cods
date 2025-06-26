@@ -1,3 +1,10 @@
+"""Base object detection model class for conformal prediction.
+
+This module provides the abstract base class for object detection models,
+defining the interface for prediction generation, model loading, and
+integration with the conformal prediction framework.
+"""
+
 from hashlib import sha256
 from typing import Optional
 
@@ -11,6 +18,13 @@ from cods.od.models.utils import bayesod, filter_preds
 
 
 class ODModel(Model):
+    """Abstract base class for object detection models.
+
+    Provides the interface and common functionality for object detection models
+    used in conformal prediction workflows, including prediction building,
+    caching, and post-processing capabilities.
+    """
+
     def __init__(
         self,
         model_name: str,
@@ -19,7 +33,7 @@ class ODModel(Model):
         weights: Optional[str] = None,
         device: str = "cpu",
     ):
-        """Initializes an instance of the ODModel class.
+        """Initialize an instance of the ODModel class.
 
         Args:
         ----
@@ -38,7 +52,7 @@ class ODModel(Model):
             device=device,
         )
 
-    def build_predictions(
+    def build_predictions(  # noqa: C901
         self,
         dataset,
         dataset_name: str,
@@ -52,7 +66,7 @@ class ODModel(Model):
         filter_preds_by_confidence: Optional[float] = None,
         **kwargs,
     ) -> ODPredictions:
-        """Builds predictions for the given dataset.
+        """Build predictions for the given dataset.
 
         Args:
         ----
@@ -62,8 +76,11 @@ class ODModel(Model):
             batch_size (int): The batch size for prediction.
             shuffle (bool, optional): Whether to shuffle the dataset. Defaults to False.
             verbose (bool, optional): Prints progress. Defaults to True.
+            force_recompute (bool, optional): Whether to force recomputation of predictions. Defaults to False.
+            deletion_method (str, optional): Method for deleting redundant boxes. Defaults to "nms".
+            iou_threshold (float, optional): IoU threshold for filtering. Defaults to 0.5.
+            filter_preds_by_confidence (float, optional): Confidence threshold for filtering predictions. Defaults to None.
             **kwargs: Additional keyword arguments for the DataLoader.
-            #TODO(leo): not up to date
 
         Returns:
         -------
@@ -124,7 +141,7 @@ class ODModel(Model):
         all_true_cls = []
         all_pred_cls = []
         with torch.no_grad():
-            for i, batch in pbar:
+            for _i, batch in pbar:
                 res = self.predict_batch(batch)
 
                 image_paths = res["image_paths"]
@@ -155,49 +172,37 @@ class ODModel(Model):
                 all_true_cls.append(true_cls)
                 all_pred_cls.append(pred_cls)
 
-        all_image_paths = list(
-            [path for arr_path in all_image_paths for path in arr_path],
-        )
-        all_image_shapes = list(
-            [shape for arr_shape in all_image_shapes for shape in arr_shape],
-        )
-        all_true_boxes = list(
-            [
-                box.to(self.device)
-                for arr_box in all_true_boxes
-                for box in arr_box
-            ],
-        )
-        all_pred_boxes = list(
-            [box for arr_box in all_pred_boxes for box in arr_box],
-        )
+        all_image_paths = [
+            path for arr_path in all_image_paths for path in arr_path
+        ]
+        all_image_shapes = [
+            shape for arr_shape in all_image_shapes for shape in arr_shape
+        ]
+        all_true_boxes = [
+            box.to(self.device)
+            for arr_box in all_true_boxes
+            for box in arr_box
+        ]
+        all_pred_boxes = [box for arr_box in all_pred_boxes for box in arr_box]
         if len(all_pred_boxes_unc) > 0:
-            all_pred_boxes_unc = list(
-                [
-                    box_unc
-                    for arr_box_unc in all_pred_boxes_unc
-                    for box_unc in arr_box_unc
-                ],
-            )
+            all_pred_boxes_unc = [
+                box_unc
+                for arr_box_unc in all_pred_boxes_unc
+                for box_unc in arr_box_unc
+            ]
         else:
             all_pred_boxes_unc = None
-        all_confidences = list(
-            [
-                confidence
-                for arr_confidence in all_confidences
-                for confidence in arr_confidence
-            ],
-        )
-        all_true_cls = list(
-            [
-                cls.to(self.device)
-                for arr_cls in all_true_cls
-                for cls in arr_cls
-            ],
-        )
-        all_pred_cls = list(
-            [proba for arr_proba in all_pred_cls for proba in arr_proba],
-        )
+        all_confidences = [
+            confidence
+            for arr_confidence in all_confidences
+            for confidence in arr_confidence
+        ]
+        all_true_cls = [
+            cls.to(self.device) for arr_cls in all_true_cls for cls in arr_cls
+        ]
+        all_pred_cls = [
+            proba for arr_proba in all_pred_cls for proba in arr_proba
+        ]
 
         preds = ODPredictions(
             dataset_name=dataset_name,
@@ -231,7 +236,7 @@ class ODModel(Model):
         iou_threshold=0.5,
         method: str = "nms",
     ):
-        """Filters the predicted bounding boxes based on the confidence scores and IoU threshold.
+        """Filter the predicted bounding boxes based on the confidence scores and IoU threshold.
 
         Args:
         ----
@@ -291,6 +296,7 @@ class ODModel(Model):
         Args:
         ----
             batch (list): The input batch.
+            **kwargs: Additional keyword arguments passed to the prediction method.
 
         Returns:
         -------

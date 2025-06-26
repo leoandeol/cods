@@ -1,3 +1,9 @@
+"""Dataset classes for object detection tasks.
+
+This module provides dataset implementations for object detection, including
+MS-COCO and VOC datasets with support for conformal prediction workflows.
+"""
+
 import json
 import os
 import random
@@ -22,6 +28,16 @@ logger = getLogger("cods")
 
 
 class MSCOCODataset(Dataset):
+    """MS-COCO dataset implementation for object detection.
+
+    Provides access to the MS-COCO dataset with support for train/val/test splits,
+    image loading, annotation handling, and dataset splitting for conformal prediction.
+
+    Attributes:
+        NAMES (dict): Mapping from class IDs to class names for MS-COCO dataset.
+
+    """
+
     NAMES = {
         1: "person",
         2: "bicycle",
@@ -116,7 +132,19 @@ class MSCOCODataset(Dataset):
         91: "hair brush",
     }
 
-    def __init__(self, root, split, transforms=None, image_ids=None):
+    def __init__(self, root, split, transforms=None, image_ids=None):  # noqa: C901
+        """Initialize the MS-COCO dataset.
+
+        Args:
+            root (str): Root directory path to the MS-COCO dataset.
+            split (str): Dataset split ('train', 'val', or 'test').
+            transforms (callable, optional): Transformations to apply to images.
+            image_ids (list, optional): Specific image IDs to use. If None, uses all images.
+
+        Raises:
+            ValueError: If split is not one of ['train', 'val', 'test'].
+
+        """
         super().__init__()
         self.name = "MSCOCO"
         self.split = split
@@ -175,7 +203,7 @@ class MSCOCODataset(Dataset):
         self.transforms = transforms
 
     def __repr__(self) -> str:
-        """String representation of the dataset.
+        """Return string representation of the dataset.
 
         Returns:
             str: String representation of the dataset.
@@ -217,6 +245,19 @@ class MSCOCODataset(Dataset):
         return self.reindexed_annotations[new_idx]
 
     def __getitem__(self, idx: int) -> Tuple[Any, Any, Any, Any]:
+        """Get item from dataset by index.
+
+        Args:
+            idx (int): Index of the item to retrieve.
+
+        Returns:
+            tuple: (image_path, image_size, image, target) where:
+                - image_path (str): Path to the image file
+                - image_size (tuple): Original image size (width, height)
+                - image (PIL.Image): Loaded and transformed image
+                - target (list): List of annotations for the image
+
+        """
         img, img_path = self._load_image_with_path(idx)
         target = self._load_target(idx)
 
@@ -228,12 +269,28 @@ class MSCOCODataset(Dataset):
         return img_path, image_size, img, target
 
     def __iter__(self):
+        """Iterate over image paths in the dataset.
+
+        Returns:
+            iterator: Iterator over image paths.
+
+        """
         return iter(self.images_path)
 
     def __contains__(self, item):
+        """Check if item is in the dataset.
+
+        Args:
+            item: Item to search for in image paths.
+
+        Returns:
+            bool: True if item is found in image paths, False otherwise.
+
+        """
         return item in self.images_path
 
     def shuffle(self):
+        """Randomly shuffle the order of images in the dataset."""
         random.shuffle(self.image_ids)
 
     def split_dataset(
@@ -242,6 +299,19 @@ class MSCOCODataset(Dataset):
         shuffle=False,
         n_calib_test: Optional[int] = None,
     ):
+        """Split the dataset into two parts.
+
+        Args:
+            proportion (float): Proportion of data for the first split (0-1).
+            shuffle (bool, optional): Whether to shuffle before splitting. Defaults to False.
+            n_calib_test (int, optional): Maximum number of samples to use for splitting.
+                If None, uses all samples.
+
+        Returns:
+            tuple: (dataset1, dataset2) where dataset1 contains the first `proportion`
+                of the data and dataset2 contains the remaining data.
+
+        """
         if shuffle:
             logger.info("Shuffling dataset")
             self.shuffle()
@@ -270,11 +340,21 @@ class MSCOCODataset(Dataset):
         return new_dataset_1, new_dataset_2
 
     def _collate_fn(self, batch):
-        return list([list(x) for x in zip(*batch)])
+        return [list(x) for x in zip(*batch)]
         # didn't check the above
 
 
 class VOCDataset(VOCDetection):
+    """PASCAL VOC dataset implementation for object detection.
+
+    Extends torchvision's VOCDetection to provide consistent interface
+    with other dataset classes in the CODS framework.
+
+    Attributes:
+        VOC_CLASSES (list): List of class names in PASCAL VOC dataset.
+
+    """
+
     VOC_CLASSES = [
         "aeroplane",
         "bicycle",
@@ -299,10 +379,12 @@ class VOCDataset(VOCDetection):
     ]
 
     def __getitem__(self, index: int) -> Tuple[Any, Any, Any, Any]:
-        """Args:
-            index (int): Index
+        """Get item from dataset by index.
 
-        Returns
+        Args:
+            index (int): Index.
+
+        Returns:
         -------
             tuple: (image, target) where target is a dictionary of the XML tree.
 

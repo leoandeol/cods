@@ -1,3 +1,5 @@
+"""Visualization utilities for conformal object detection predictions."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -7,7 +9,7 @@ from PIL import Image
 from cods.od.data import ODConformalizedPredictions, ODPredictions
 
 
-def plot_preds(
+def plot_preds(  # noqa: C901
     idx,
     predictions: ODPredictions,
     conformalized_predictions: ODConformalizedPredictions = None,
@@ -15,16 +17,20 @@ def plot_preds(
     idx_to_label: dict = None,
     save_as=None,
 ):
-    """Plot the predictions of an object detection model.
+    """Plot the predictions of an object detection model for a given image index.
 
     Args:
     ----
-        preds (object): Object containing the predictions.
         idx (int): Index of the image to plot.
-        conf_boxes (list): List of confidence boxes.
-        conf_cls (list): List of confidence classes.
-        confidence_threshold (float, optional): Confidence threshold for filtering predictions. If not provided, the threshold from `preds` will be used. Defaults to None.
+        predictions (ODPredictions): Object containing the predictions.
+        conformalized_predictions (ODConformalizedPredictions, optional): Conformalized predictions. Defaults to None.
+        confidence_threshold (float, optional): Confidence threshold for filtering predictions. Defaults to None.
+        idx_to_label (dict, optional): Mapping from class indices to labels. Defaults to None.
         save_as (str, optional): File path to save the plot. Defaults to None.
+
+    Raises:
+    ------
+        ValueError: If confidence threshold is not provided or cannot be inferred.
 
     """
     is_conformal = conformalized_predictions is not None
@@ -70,6 +76,7 @@ def plot_preds(
             box (list): List of coordinates [x1, y1, x2, y2] of the rectangle.
             color (str): Color of the rectangle.
             proba (int or numpy.ndarray): Probability or probability distribution of the class.
+            conformal (bool, optional): Whether this is a conformal prediction. Defaults to False.
 
         """
         x1, y1, x2, y2 = box
@@ -104,7 +111,7 @@ def plot_preds(
                     y1,
                     text,
                     fontsize=15,
-                    bbox=dict(facecolor=color, alpha=0.5),
+                    bbox={"facecolor": color, "alpha": 0.5},
                 )
             else:
                 # Print nb of labels
@@ -114,7 +121,7 @@ def plot_preds(
                     y1,
                     text,
                     fontsize=15,
-                    bbox=dict(facecolor=color, alpha=0.5),
+                    bbox={"facecolor": color, "alpha": 0.5},
                 )
         elif isinstance(proba, int) or len(proba.shape) == 0:
             if isinstance(proba, torch.Tensor):
@@ -128,7 +135,7 @@ def plot_preds(
                 y2,
                 text,
                 fontsize=15,
-                bbox=dict(facecolor=color, alpha=0.5),
+                bbox={"facecolor": color, "alpha": 0.5},
             )
         else:
             cl = proba.argmax().item()
@@ -142,7 +149,7 @@ def plot_preds(
                 y1,
                 text,
                 fontsize=15,
-                bbox=dict(facecolor=color, alpha=0.5),
+                bbox={"facecolor": color, "alpha": 0.5},
             )
 
     ax = plt.gca()
@@ -165,7 +172,7 @@ def plot_preds(
             "",
             xy=(true_box[0], true_box[1]),
             xytext=(matching_pred_box[0], matching_pred_box[1]),
-            arrowprops=dict(arrowstyle="->", lw=2, color="blue"),
+            arrowprops={"arrowstyle": "->", "lw": 2, "color": "blue"},
         )
 
     plt.axis("off")
@@ -174,7 +181,7 @@ def plot_preds(
     plt.show()
 
 
-def create_pdf_with_plots(
+def create_pdf_with_plots(  # noqa: C901
     predictions: ODPredictions,
     conformalized_predictions: ODConformalizedPredictions = None,
     confidence_threshold=None,
@@ -186,10 +193,14 @@ def create_pdf_with_plots(
     Args:
     ----
         predictions (ODPredictions): Object containing the predictions.
-        conformalized_predictions (ODConformalizedPredictions, optional): Object containing conformalized predictions. Defaults to None.
+        conformalized_predictions (ODConformalizedPredictions, optional): Conformalized predictions. Defaults to None.
         confidence_threshold (float, optional): Confidence threshold for filtering predictions. Defaults to None.
         idx_to_label (dict, optional): Mapping from class indices to labels. Defaults to None.
         output_pdf (str, optional): Path to save the output PDF. Defaults to "output.pdf".
+
+    Raises:
+    ------
+        ValueError: If confidence threshold is not provided or cannot be inferred.
 
     """
     is_conformal = conformalized_predictions is not None
@@ -227,12 +238,20 @@ def create_pdf_with_plots(
             plt.figure(figsize=(14, 14))
             plt.imshow(image)
 
-            def draw_rect(ax, box, color, proba, conformal=False):
+            def draw_rect(
+                ax,
+                box,
+                color,
+                proba,
+                conformal=False,
+                img_width=image_width,
+                img_height=image_height,
+            ):
                 x1, y1, x2, y2 = box
                 x1 = max(0, x1)
                 y1 = max(0, y1)
-                x2 = min(image_width, x2)
-                y2 = min(image_height, y2)
+                x2 = min(img_width, x2)
+                y2 = min(img_height, y2)
 
                 ax.add_patch(
                     plt.Rectangle(
@@ -259,7 +278,7 @@ def create_pdf_with_plots(
                             y1,
                             text,
                             fontsize=15,
-                            bbox=dict(facecolor=color, alpha=0.5),
+                            bbox={"facecolor": color, "alpha": 0.5},
                         )
                     else:
                         text = f"{len(proba)} labels"
@@ -268,7 +287,7 @@ def create_pdf_with_plots(
                             y1,
                             text,
                             fontsize=15,
-                            bbox=dict(facecolor=color, alpha=0.5),
+                            bbox={"facecolor": color, "alpha": 0.5},
                         )
                 elif isinstance(proba, int) or len(proba.shape) == 0:
                     if isinstance(proba, torch.Tensor):
@@ -284,7 +303,7 @@ def create_pdf_with_plots(
                         y2,
                         text,
                         fontsize=15,
-                        bbox=dict(facecolor=color, alpha=0.5),
+                        bbox={"facecolor": color, "alpha": 0.5},
                     )
                 else:
                     cl = proba.argmax().item()
@@ -298,7 +317,7 @@ def create_pdf_with_plots(
                         y1,
                         text,
                         fontsize=15,
-                        bbox=dict(facecolor=color, alpha=0.5),
+                        bbox={"facecolor": color, "alpha": 0.5},
                     )
 
             ax = plt.gca()
@@ -324,7 +343,11 @@ def create_pdf_with_plots(
                         "",
                         xy=(true_box[0], true_box[1]),
                         xytext=(matching_pred_box[0], matching_pred_box[1]),
-                        arrowprops=dict(arrowstyle="->", lw=2, color="blue"),
+                        arrowprops={
+                            "arrowstyle": "->",
+                            "lw": 2,
+                            "color": "blue",
+                        },
                     )
                 except Exception as e:
                     print(e)
@@ -338,6 +361,13 @@ def create_pdf_with_plots(
 
 
 def plot_histograms_predictions(predictions: ODPredictions):
+    """Plot histograms of true boxes, predicted boxes, and thresholded predictions.
+
+    Args:
+    ----
+        predictions (ODPredictions): Object containing the predictions.
+
+    """
     # Plot three histograms in the same figure, with 20 bins that use lengths3 = [len(x) for x in preds_val.true_boxes] but the same also for confidence and confidence thresholded, and pu the mean length as title of the figure,
 
     list_true = [len(x) for x in predictions.true_boxes]

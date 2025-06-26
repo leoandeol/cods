@@ -1,3 +1,5 @@
+"""Base model class for machine learning models in the cods library."""
+
 import os
 import pickle
 from logging import getLogger
@@ -11,6 +13,8 @@ logger = getLogger("cods")
 
 
 class Model:
+    """Abstract base class for models in the cods library."""
+
     def __init__(
         self,
         model_name: str,
@@ -19,6 +23,17 @@ class Model:
         weights=None,
         device="cpu",
     ):
+        """Initialize the Model base class.
+
+        Args:
+        ----
+            model_name (str): Name of the model.
+            save_dir_path (str): Directory path to save predictions.
+            pretrained (bool, optional): Whether to use pretrained weights. Defaults to True.
+            weights (optional): Model weights. Defaults to None.
+            device (str, optional): Device to use. Defaults to 'cpu'.
+
+        """
         self.model_name = model_name
         self.model = None  # TODO: add model loading
         self.pretrained = pretrained
@@ -35,15 +50,33 @@ class Model:
         verbose=True,
         **kwargs,
     ) -> Predictions:
-        raise NotImplementedError("Please Implement this method")
-
-    def _save_preds(self, predictions: Predictions, hash: str, verbose=True):
-        """Save predictions to file
+        """Build predictions for the given dataloader.
 
         Args:
         ----
-            predictions (Predictions): predictions object
-            path (str): path to file
+            dataloader (torch.utils.data.DataLoader): DataLoader to generate predictions from.
+            verbose (bool, optional): Whether to print progress. Defaults to True.
+            **kwargs: Additional arguments.
+
+        Returns:
+        -------
+            Predictions: Predictions object.
+
+        Raises:
+        ------
+            NotImplementedError: If not implemented in subclass.
+
+        """
+        raise NotImplementedError("Please Implement this method")
+
+    def _save_preds(self, predictions: Predictions, hash: str, verbose=True):
+        """Save predictions to file.
+
+        Args:
+        ----
+            predictions (Predictions): Predictions object to save.
+            hash (str): Hash string for filename.
+            verbose (bool, optional): Whether to print progress. Defaults to True.
 
         """
         path = f"{self.save_dir_path}/{hash}.pkl"
@@ -64,15 +97,16 @@ class Model:
         hash: str,
         verbose: bool = True,
     ) -> Optional[Predictions]:
-        """Load predictions if they exist, else return None
+        """Load predictions from file if they exist, else return None.
 
         Args:
         ----
-            path (str): path to predictions file
+            hash (str): Hash string for filename.
+            verbose (bool, optional): Whether to print progress. Defaults to True.
 
         Returns:
         -------
-            Predictions: predictions object
+            Optional[Predictions]: Loaded predictions object, or None if not found.
 
         """
         path = f"{self.save_dir_path}/{hash}.pkl"

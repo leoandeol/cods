@@ -5,6 +5,11 @@ notebook
 ipykernel
 wandb
 lazydocs
+mkdocs
+mkdocstrings
+mkdocs-awesome-pages-plugin
 line_profiler
 pre-commit
 pytest
+# mypy  # Removed due to 622+ errors requiring extensive refactoring
+setuptools

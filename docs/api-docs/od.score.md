@@ -3,15 +3,15 @@
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L0"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 # <kbd>module</kbd> `od.score`
+Non-conformity scoring functions for object detection conformal prediction. 
 
-
-
+This module provides non-conformity scoring classes for object detection tasks, including objectness scoring and other metrics used in the conformal prediction framework to quantify prediction uncertainty. 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L7"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L14"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ObjectnessNCScore`
 ObjectnessNCScore is a class that calculates the score for objectness prediction. 
@@ -33,7 +33,7 @@ Methods:
 ------- 
  - <b>`__call__`</b> (self, n_gt, confidence):  Calculates the score based on the number of ground truth objects and confidence values. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L24"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L31"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -41,9 +41,13 @@ Methods:
 __init__(**kwargs)
 ```
 
+Initialize the NCScore. 
 
 
 
+**Args:**
+ 
+ - <b>`**kwargs`</b>:  Additional keyword arguments. 
 
 
 
@@ -51,7 +55,7 @@ __init__(**kwargs)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L44"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L57"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODNCScore`
 ODNCScore is an abstract class for calculating the score in object detection tasks. 
@@ -75,7 +79,7 @@ Methods:
  - <b>`get_set`</b> (self, pred_boxes, quantile):  Returns the set of boxes based on predicted boxes and quantile. 
  - <b>`apply_margins`</b> (self, pred_boxes):  Applies margins to the predicted boxes. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L63"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L76"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -83,16 +87,20 @@ Methods:
 __init__(**kwargs)
 ```
 
+Initialize the ODNCScore. 
 
 
 
+**Args:**
+ 
+ - <b>`**kwargs`</b>:  Additional keyword arguments. 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L105"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L125"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `apply_margins`
 
@@ -100,7 +108,7 @@ __init__(**kwargs)
 apply_margins(pred_boxes: Tensor) → Tensor
 ```
 
-Applies margins to the predicted boxes. 
+Apply margins to the predicted boxes. 
 
 
 
@@ -108,6 +116,7 @@ Applies margins to the predicted boxes.
  
 ---- 
  - <b>`pred_boxes`</b> (torch.Tensor):  Predicted boxes. 
+ - <b>`quantile`</b> (float):  Quantile value. 
 
 
 
@@ -118,7 +127,7 @@ Applies margins to the predicted boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_set`
 
@@ -126,7 +135,7 @@ Applies margins to the predicted boxes.
 get_set(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Returns the set of boxes based on predicted boxes and quantile. 
+Return the set of boxes based on predicted boxes and quantile. 
 
 
 
@@ -146,7 +155,7 @@ Returns the set of boxes based on predicted boxes and quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L120"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L141"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MinAdditiveSignedAssymetricHausdorffNCScore`
 MinAdditiveSignedAssymetricHausdorffNCScore is a class that calculates the score using the minimum additive signed asymmetric Hausdorff distance. 
@@ -170,7 +179,7 @@ Methods:
  - <b>`__call__`</b> (self, pred_boxes, true_box):  Calculates the score based on predicted boxes and true box. 
  - <b>`apply_margins`</b> (self, pred_boxes, quantile):  Applies margins to the predicted boxes based on quantile. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L138"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L159"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -178,16 +187,20 @@ Methods:
 __init__(image_shape: Tensor)
 ```
 
+Initialize the IoUNCScore with image shape. 
 
 
 
+**Args:**
+ 
+ - <b>`image_shape`</b> (torch.Tensor):  The shape of the image. 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L186"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L213"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `apply_margins`
 
@@ -195,7 +208,7 @@ __init__(image_shape: Tensor)
 apply_margins(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Applies margins to the predicted boxes based on quantile. 
+Apply margins to the predicted boxes based on quantile. 
 
 
 
@@ -214,7 +227,7 @@ Applies margins to the predicted boxes based on quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_set`
 
@@ -222,7 +235,7 @@ Applies margins to the predicted boxes based on quantile.
 get_set(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Returns the set of boxes based on predicted boxes and quantile. 
+Return the set of boxes based on predicted boxes and quantile. 
 
 
 
@@ -242,7 +255,7 @@ Returns the set of boxes based on predicted boxes and quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L215"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L243"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `UnionAdditiveSignedAssymetricHausdorffNCScore`
 UnionAdditiveSignedAssymetricHausdorffNCScore is a class that calculates the score using the union additive signed asymmetric Hausdorff distance. 
@@ -263,7 +276,7 @@ Methods:
 ------- 
  - <b>`apply_margins`</b> (self, pred_boxes, quantile):  Applies margins to the predicted boxes based on quantile. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L232"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L260"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -271,16 +284,14 @@ Methods:
 __init__()
 ```
 
-
-
-
+Initialize the GIoUNCScore. 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L250"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L279"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `apply_margins`
 
@@ -288,7 +299,7 @@ __init__()
 apply_margins(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Applies margins to the predicted boxes based on quantile. 
+Apply margins to the predicted boxes based on quantile. 
 
 
 
@@ -307,7 +318,7 @@ Applies margins to the predicted boxes based on quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_set`
 
@@ -315,7 +326,7 @@ Applies margins to the predicted boxes based on quantile.
 get_set(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Returns the set of boxes based on predicted boxes and quantile. 
+Return the set of boxes based on predicted boxes and quantile. 
 
 
 
@@ -335,7 +346,7 @@ Returns the set of boxes based on predicted boxes and quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L279"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L309"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MinMultiplicativeSignedAssymetricHausdorffNCScore`
 MinMultiplicativeSignedAssymetricHausdorffNCScore is a class that calculates the score using the minimum multiplicative signed asymmetric Hausdorff distance. 
@@ -357,7 +368,7 @@ Methods:
  - <b>`__call__`</b> (self, pred_boxes, true_box):  Calculates the score based on predicted boxes and true box. 
  - <b>`apply_margins`</b> (self, pred_boxes, quantile):  Applies margins to the predicted boxes based on quantile. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L297"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L327"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -365,16 +376,14 @@ Methods:
 __init__()
 ```
 
-
-
-
+Initialize the GIoUNCScore. 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L335"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L366"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `apply_margins`
 
@@ -382,7 +391,7 @@ __init__()
 apply_margins(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Applies margins to the predicted boxes based on quantile. 
+Apply margins to the predicted boxes based on quantile. 
 
 
 
@@ -401,7 +410,7 @@ Applies margins to the predicted boxes based on quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_set`
 
@@ -409,7 +418,7 @@ Applies margins to the predicted boxes based on quantile.
 get_set(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Returns the set of boxes based on predicted boxes and quantile. 
+Return the set of boxes based on predicted boxes and quantile. 
 
 
 
@@ -429,7 +438,7 @@ Returns the set of boxes based on predicted boxes and quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L366"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L398"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `UnionMultiplicativeSignedAssymetricHausdorffNCScore`
 UnionMultiplicativeSignedAssymetricHausdorffNCScore is a class that calculates the score using the union multiplicative signed asymmetric Hausdorff distance. 
@@ -450,7 +459,7 @@ Methods:
 ------- 
  - <b>`apply_margins`</b> (self, pred_boxes, quantile):  Applies margins to the predicted boxes based on quantile. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L383"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L415"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -458,16 +467,14 @@ Methods:
 __init__()
 ```
 
-
-
-
+Initialize the GIoUNCScore. 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L401"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L434"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `apply_margins`
 
@@ -475,7 +482,7 @@ __init__()
 apply_margins(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Applies margins to the predicted boxes based on quantile. 
+Apply margins to the predicted boxes based on quantile. 
 
 
 
@@ -494,7 +501,7 @@ Applies margins to the predicted boxes based on quantile.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/score.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `get_set`
 
@@ -502,7 +509,7 @@ Applies margins to the predicted boxes based on quantile.
 get_set(pred_boxes: Tensor, quantile: float) → Tensor
 ```
 
-Returns the set of boxes based on predicted boxes and quantile. 
+Return the set of boxes based on predicted boxes and quantile. 
 
 
 

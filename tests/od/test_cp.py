@@ -1,7 +1,10 @@
+"""Tests for object detection conformal prediction."""
+
 from cods.od.cp import ODConformalizer
 
 
 def test_conformalizer():
+    """Test ODConformalizer initialization."""
     conf = ODConformalizer(
         backend="auto",
         guarantee_level="image",
@@ -13,3 +16,4 @@ def test_conformalizer():
         classification_method="binary",
         classification_prediction_set="lac",
     )
+    assert conf is not None

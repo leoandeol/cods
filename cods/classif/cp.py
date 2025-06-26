@@ -1,3 +1,5 @@
+"""Conformalizer for conformal classification tasks."""
+
 from typing import Any, Optional, Tuple
 
 import torch
@@ -8,10 +10,25 @@ from cods.classif.score import APSNCScore, ClassifNCScore, LACNCScore
 
 
 class ClassificationConformalizer(Conformalizer):
+    """Implements conformal prediction for classification using various non-conformity scores."""
+
     ACCEPTED_METHODS = {"lac": LACNCScore, "aps": APSNCScore}
     ACCEPTED_PREPROCESS = {"softmax": torch.softmax}
 
     def __init__(self, method="lac", preprocess="softmax", device="cpu"):
+        """Initialize the ClassificationConformalizer.
+
+        Args:
+        ----
+            method (str or ClassifNCScore): Non-conformity score method or instance.
+            preprocess (str): Preprocessing function name.
+            device (str): Device to use.
+
+        Raises:
+        ------
+            ValueError: If method or preprocess is not accepted.
+
+        """
         if method not in self.ACCEPTED_METHODS.keys() and not isinstance(
             method,
             ClassifNCScore,
@@ -43,6 +60,20 @@ class ClassificationConformalizer(Conformalizer):
         verbose: bool = True,
         lbd_minus: bool = False,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Calibrate the conformalizer and compute the quantile for the non-conformity scores.
+
+        Args:
+        ----
+            preds (ClassificationPredictions): Predictions to calibrate on.
+            alpha (float, optional): Miscoverage level. Defaults to 0.1.
+            verbose (bool, optional): Whether to print progress. Defaults to True.
+            lbd_minus (bool, optional): Whether to use the minus quantile. Defaults to False.
+
+        Returns:
+        -------
+            Tuple[torch.Tensor, torch.Tensor]: The calibrated quantile and the non-conformity scores.
+
+        """
         self._n_classes = preds.n_classes
         if self._score_function is None:
             self._score_function = self.ACCEPTED_METHODS[self.method](
@@ -87,6 +118,21 @@ class ClassificationConformalizer(Conformalizer):
         return quantile, scores
 
     def conformalize(self, preds: ClassificationPredictions) -> list:
+        """Conformalize the predictions using the calibrated quantile.
+
+        Args:
+        ----
+            preds (ClassificationPredictions): Predictions to conformalize.
+
+        Returns:
+        -------
+            list: List of conformalized prediction sets.
+
+        Raises:
+        ------
+            ValueError: If the conformalizer is not calibrated.
+
+        """
         if self._quantile is None:
             raise ValueError(
                 "Conformalizer must be calibrated before conformalizing.",
@@ -114,6 +160,23 @@ class ClassificationConformalizer(Conformalizer):
         conf_cls: list,
         verbose=True,
     ):
+        """Evaluate the conformalized predictions.
+
+        Args:
+        ----
+            preds (ClassificationPredictions): Predictions to evaluate.
+            conf_cls (list): Conformalized prediction sets.
+            verbose (bool, optional): Whether to print progress. Defaults to True.
+
+        Returns:
+        -------
+            tuple: Tuple of (coverage, average set size).
+
+        Raises:
+        ------
+            ValueError: If the conformalizer is not calibrated or predictions are not conformalized.
+
+        """
         if self._quantile is None:
             raise ValueError(
                 "Conformalizer must be calibrated before evaluating.",

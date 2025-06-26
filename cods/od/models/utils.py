@@ -1,15 +1,43 @@
+"""Utility functions and classes for object detection models.
+
+This module provides utility functions and classes for object detection models,
+including channel resizing, Bayesian object detection postprocessing, and
+prediction filtering utilities.
+"""
+
 import torch
 from torch import nn
 from torchvision.ops import box_iou
 
 
 class ResizeChannels(nn.Module):
+    """Module to resize image channels.
+
+    Converts single-channel images to 3-channel by repeating the channel,
+    useful for ensuring model input compatibility.
+    """
+
     def __init__(self, num_channels):
+        """Initialize the ResizeChannels module.
+
+        Args:
+            num_channels (int): Target number of channels.
+
+        """
         super().__init__()
         self.num_channels = num_channels
 
     # for if 1 channel, repeat 3 times, if 3 channels, don't change the image
     def forward(self, image):
+        """Forward pass to resize image channels.
+
+        Args:
+            image (torch.Tensor): Input image tensor.
+
+        Returns:
+            torch.Tensor: Image with resized channels.
+
+        """
         if image.shape[0] == 1:
             return image.repeat(3, 1, 1)
         return image
@@ -21,7 +49,7 @@ def bayesod(
     pred_cls: torch.Tensor,
     iou_threshold: float,
 ):
-    """_summary_
+    """_summary_.
 
     Args:
     ----
@@ -56,13 +84,9 @@ def bayesod(
         tmp_cluster = torch.where(row).cpu().numpy().tolist()
 
         # TODO(leo) @luca : there's absolutely a better way to do that
-        cluster = list(
-            [
-                element
-                for element in tmp_cluster
-                if element not in already_used
-            ],
-        )
+        cluster = [
+            element for element in tmp_cluster if element not in already_used
+        ]
 
         if len(cluster) > 0:
             clusters.append(cluster)
@@ -94,7 +118,7 @@ def bayesod(
         # merge the softmax probabilities in a weighted way
         # such that it is guaranteed to still be probability distribution
         new_cls = torch.zeros_like(pred_cls[0])
-        for i, c in enumerate(cluster):
+        for c in cluster:
             new_cls += pred_cls[c] * confidences[c]
         new_cls /= confidences[cluster].sum()
         assert (new_cls.sum().item() - 1) < 1e-8
@@ -112,6 +136,16 @@ def bayesod(
 
 
 def filter_preds(preds, confidence_threshold=0.001):
+    """Filter predictions based on confidence threshold.
+
+    Args:
+        preds: Predictions object containing boxes, confidences, and classes.
+        confidence_threshold (float, optional): Minimum confidence threshold. Defaults to 0.001.
+
+    Returns:
+        Filtered predictions object with low-confidence predictions removed.
+
+    """
     filters = [
         conf > confidence_threshold
         if (conf > confidence_threshold).any()

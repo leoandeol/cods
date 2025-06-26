@@ -1,4 +1,13 @@
-from typing import Any, List, Optional, Union
+"""Data structures for object detection predictions and results.
+
+This module defines the data structures used to store and manipulate
+object detection predictions, parameters, conformalized predictions,
+and evaluation results in the conformal prediction framework.
+"""
+
+from __future__ import annotations
+
+from typing import Any
 
 import torch
 
@@ -49,17 +58,34 @@ class ODPredictions(Predictions):
         self,
         dataset_name: str,
         split_name: str,
-        image_paths: List[str],
-        image_shapes: List[torch.Tensor],
-        true_boxes: List[torch.Tensor],
-        pred_boxes: List[torch.Tensor],
-        confidences: List[torch.Tensor],
-        true_cls: List[torch.Tensor],
-        pred_cls: List[torch.Tensor],
-        names: List[str],
-        pred_boxes_uncertainty: List[torch.Tensor] = None,
-        unique_id: Optional[int] = None,
+        image_paths: list[str],
+        image_shapes: list[torch.Tensor],
+        true_boxes: list[torch.Tensor],
+        pred_boxes: list[torch.Tensor],
+        confidences: list[torch.Tensor],
+        true_cls: list[torch.Tensor],
+        pred_cls: list[torch.Tensor],
+        names: list[str],
+        pred_boxes_uncertainty: list[torch.Tensor] = None,
+        unique_id: int | None = None,
     ):
+        """Initialize object detection predictions.
+
+        Args:
+            dataset_name (str): Name of the dataset.
+            split_name (str): Name of the dataset split.
+            image_paths (list[str]): List of image file paths.
+            image_shapes (list[torch.Tensor]): List of image shapes.
+            true_boxes (list[torch.Tensor]): List of ground truth bounding boxes.
+            pred_boxes (list[torch.Tensor]): List of predicted bounding boxes.
+            confidences (list[torch.Tensor]): List of confidence scores.
+            true_cls (list[torch.Tensor]): List of ground truth class labels.
+            pred_cls (list[torch.Tensor]): List of predicted class probabilities.
+            names (list[str]): List of class names.
+            pred_boxes_uncertainty (list[torch.Tensor], optional): List of prediction uncertainties.
+            unique_id (int, optional): Unique identifier for the predictions.
+
+        """
         super().__init__(
             unique_id=unique_id,
             dataset_name=dataset_name,
@@ -78,24 +104,35 @@ class ODPredictions(Predictions):
 
         # ClassificationPredictions instance
         # TODO(leo)
-        self.preds_cls: Optional[Any] = None
+        self.preds_cls: Any | None = None
 
         self.n_classes = len(self.pred_cls[0][0])
-        self.matching: Optional[Any] = None
-        self.confidence_threshold: Optional[Union[float, torch.Tensor]] = None
+        self.matching: Any | None = None
+        self.confidence_threshold: float | torch.Tensor | None = None
         # TODO: if change matching, then must reset the mathcing
 
     def __len__(self):
+        """Return the number of images in the predictions.
+
+        Returns:
+            int: Number of images.
+
+        """
         return len(self.image_paths)
 
     def __str__(self):
+        """Return string representation of the predictions.
+
+        Returns:
+            str: String representation.
+
+        """
         return f"ODPredictions_len={len(self)}"
 
     def to(self, device: str):
         """Move the data to the specified device.
 
-        Parameters
-        ----------
+        Args:
             device (str): The device to move the data to.
 
         """
@@ -119,30 +156,29 @@ class ODParameters(Parameters):
         global_alpha: float,
         confidence_threshold: float,
         predictions_id: int,
-        alpha_confidence: Optional[float] = None,
-        alpha_localization: Optional[float] = None,
-        alpha_classification: Optional[float] = None,
-        lambda_confidence_plus: Optional[float] = None,
-        lambda_confidence_minus: Optional[float] = None,
-        lambda_localization: Optional[float] = None,
-        lambda_classification: Optional[float] = None,
-        unique_id: Optional[int] = None,
+        alpha_confidence: float | None = None,
+        alpha_localization: float | None = None,
+        alpha_classification: float | None = None,
+        lambda_confidence_plus: float | None = None,
+        lambda_confidence_minus: float | None = None,
+        lambda_localization: float | None = None,
+        lambda_classification: float | None = None,
+        unique_id: int | None = None,
     ):
-        """Initializes a new instance of the ODParameters class.
+        """Initialize a new instance of the ODParameters class.
 
-        Parameters
-        ----------
+        Args:
             global_alpha (float): The global alpha (the sum of the non-None alphas).
-            alpha_confidence (float): The alpha for confidence.
-            alpha_localization (float): The alpha for localization.
-            alpha_classification (float): The alpha for classification
-            lambda_confidence_plus (float): The lambda for confidence (conservative).
-            lambda_confidence_minus (float): The lambda for confidence (optimistic).
-            lambda_localization (float): The lambda for localization.
-            lambda_classification (float): The lambda for classification.
             confidence_threshold (float): The confidence threshold.
             predictions_id (int): The unique ID of the predictions.
-            unique_id (int): The unique ID of the parameters.
+            alpha_confidence (float, optional): The alpha for confidence. Defaults to None.
+            alpha_localization (float, optional): The alpha for localization. Defaults to None.
+            alpha_classification (float, optional): The alpha for classification. Defaults to None.
+            lambda_confidence_plus (float, optional): The lambda for confidence (conservative). Defaults to None.
+            lambda_confidence_minus (float, optional): The lambda for confidence (optimistic). Defaults to None.
+            lambda_localization (float, optional): The lambda for localization. Defaults to None.
+            lambda_classification (float, optional): The lambda for classification. Defaults to None.
+            unique_id (int, optional): The unique ID of the parameters. Defaults to None.
 
         """
         super().__init__(predictions_id, unique_id)
@@ -164,17 +200,16 @@ class ODConformalizedPredictions(ConformalizedPredictions):
         self,
         predictions: ODPredictions,
         parameters: ODParameters,
-        conf_boxes: Optional[torch.Tensor] = None,
-        conf_cls: Optional[torch.Tensor] = None,
+        conf_boxes: torch.Tensor | None = None,
+        conf_cls: torch.Tensor | None = None,
     ):
-        """Initializes a new instance of the ODResults class.
+        """Initialize a new instance of the ODConformalizedPredictions class.
 
-        Parameters
-        ----------
+        Args:
             predictions (ODPredictions): The object detection predictions.
             parameters (ODParameters): The conformalizers parameters.
-            conf_boxes (torch.Tensor): The conformal boxes, after filtering.
-            conf_cls (torch.Tensor): The conformal prediction sets for class labels of each box.
+            conf_boxes (torch.Tensor, optional): The conformal boxes, after filtering. Defaults to None.
+            conf_cls (torch.Tensor, optional): The conformal prediction sets for class labels of each box. Defaults to None.
 
         """
         super().__init__(
@@ -194,28 +229,27 @@ class ODResults(Results):
         predictions: ODPredictions,
         parameters: Parameters,
         conformalized_predictions: ODConformalizedPredictions,
-        confidence_set_sizes: Optional[torch.Tensor | List[float]] = None,
-        confidence_coverages: Optional[torch.Tensor | List[float]] = None,
-        localization_set_sizes: Optional[torch.Tensor | List[float]] = None,
-        localization_coverages: Optional[torch.Tensor | List[float]] = None,
-        classification_set_sizes: Optional[torch.Tensor | List[float]] = None,
-        classification_coverages: Optional[torch.Tensor | List[float]] = None,
-        global_coverage: Optional[torch.Tensor | float] = None,
+        confidence_set_sizes: torch.Tensor | list[float] | None = None,
+        confidence_coverages: torch.Tensor | list[float] | None = None,
+        localization_set_sizes: torch.Tensor | list[float] | None = None,
+        localization_coverages: torch.Tensor | list[float] | None = None,
+        classification_set_sizes: torch.Tensor | list[float] | None = None,
+        classification_coverages: torch.Tensor | list[float] | None = None,
+        global_coverage: torch.Tensor | float | None = None,
     ):
-        """Initializes a new instance of the ODResults class.
+        """Initialize a new instance of the ODResults class.
 
-        Parameters
-        ----------
+        Args:
             predictions (ODPredictions): The object detection predictions.
-            parameters (ODParameters): The conformalizers parameters.
+            parameters (Parameters): The conformalizers parameters.
             conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.
-            confidence_set_sizes (torch.Tensor): The confidence set sizes.
-            confidence_coverages (torch.Tensor): The confidence coverages.
-            localization_set_sizes (torch.Tensor): The localization set sizes.
-            localization_coverages (torch.Tensor): The localization coverages.
-            classification_set_sizes (torch.Tensor): The classification set sizes.
-            classification_coverages (torch.Tensor): The classification coverages.
-            global_coverage (torch.Tensor | float): The global coverage.
+            confidence_set_sizes (torch.Tensor | list[float], optional): The confidence set sizes. Defaults to None.
+            confidence_coverages (torch.Tensor | list[float], optional): The confidence coverages. Defaults to None.
+            localization_set_sizes (torch.Tensor | list[float], optional): The localization set sizes. Defaults to None.
+            localization_coverages (torch.Tensor | list[float], optional): The localization coverages. Defaults to None.
+            classification_set_sizes (torch.Tensor | list[float], optional): The classification set sizes. Defaults to None.
+            classification_coverages (torch.Tensor | list[float], optional): The classification coverages. Defaults to None.
+            global_coverage (torch.Tensor | float, optional): The global coverage. Defaults to None.
 
         """
         super().__init__(

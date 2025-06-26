@@ -1,3 +1,5 @@
+"""Optimizers for conformal prediction and related search procedures."""
+
 import logging
 from typing import Callable, List, Tuple, Union
 
@@ -7,21 +9,42 @@ from tqdm import tqdm
 
 
 class Optimizer:
+    """Abstract base class for optimizers used in conformal prediction calibration."""
+
     def optimize(
         self,
         objective_function: Callable,
         alpha: float,
         **kwargs,
     ) -> float:
+        """Optimize the objective function to satisfy the risk constraint.
+
+        Args:
+        ----
+            objective_function (Callable): The function to optimize.
+            alpha (float): The risk threshold.
+            **kwargs: Additional arguments for the optimizer.
+
+        Returns:
+        -------
+            float: The optimal parameter value.
+
+        Raises:
+        ------
+            NotImplementedError: If not implemented in subclass.
+
+        """
         raise NotImplementedError("Optimizer is an abstract class")
 
 
-# Binary search in 1D only
 class BinarySearchOptimizer(Optimizer):
+    """Optimizer using binary search in 1D (or multi-D) for risk calibration."""
+
     def __init__(self):
+        """Initialize the BinarySearchOptimizer."""
         pass
 
-    def optimize(
+    def optimize(  # noqa: C901
         self,
         objective_function: Callable,
         alpha: float,
@@ -30,9 +53,21 @@ class BinarySearchOptimizer(Optimizer):
         epsilon=1e-5,
         verbose=True,
     ) -> float:
-        """params:
-        epsilon:
-        objective_function: function of one parameter lbd (use partials), which includes the correction part
+        """Perform binary search to find the optimal parameter.
+
+        Args:
+        ----
+            objective_function (Callable): Function of one parameter lbd (use partials), which includes the correction part.
+            alpha (float): Risk threshold.
+            bounds (Union[Tuple, List, List[Tuple]]): Search bounds.
+            steps (int): Number of search steps.
+            epsilon (float): Precision threshold.
+            verbose (bool): Whether to print progress.
+
+        Returns:
+        -------
+            float: The optimal parameter value.
+
         """
         if not isinstance(bounds[0], list) and not isinstance(
             bounds[0],
@@ -46,10 +81,10 @@ class BinarySearchOptimizer(Optimizer):
             lower, upper = bound
             lowers.append(lower)
             uppers.append(upper)
-        good_lbds = list([])
-        current_lbds = list(
-            [(upper - lower) / 2 for lower, upper in zip(lowers, uppers)],
-        )
+        good_lbds = []
+        current_lbds = [
+            (upper - lower) / 2 for lower, upper in zip(lowers, uppers)
+        ]
 
         pbar = tqdm(range(steps), disable=not verbose)
 
@@ -88,7 +123,10 @@ class BinarySearchOptimizer(Optimizer):
 
 
 class GaussianProcessOptimizer(Optimizer):
+    """Optimizer using Gaussian Process Regression (Bayesian optimization) for risk calibration."""
+
     def __init__(self):
+        """Initialize the GaussianProcessOptimizer."""
         pass
 
     def optimize(
@@ -99,8 +137,24 @@ class GaussianProcessOptimizer(Optimizer):
         steps: int,
         epsilon=1e-5,
         verbose=True,
-    ) -> float:
-        # TODO: experimental
+    ) -> Union[float, np.ndarray, None]:
+        """Optimize using Gaussian Process Regression (Bayesian optimization).
+
+        Args:
+        ----
+            objective_function (Callable): The function to optimize.
+            alpha (float): The risk threshold.
+            bounds (Union[Tuple, List, List[Tuple]]): Search bounds.
+            steps (int): Number of optimization steps.
+            epsilon (float): Precision threshold.
+            verbose (bool): Whether to print progress.
+
+        Returns:
+        -------
+            float or np.ndarray or None: The optimal parameter value, or None if not found.
+
+        """
+
         def fun_opti(params):
             corr_risk = objective_function(*params)
             return (
@@ -109,7 +163,6 @@ class GaussianProcessOptimizer(Optimizer):
                 else alpha - corr_risk
             )
 
-        # TODO: put hyperparameters in kwargs
         res = gp_minimize(
             fun_opti,
             (
@@ -131,7 +184,10 @@ class GaussianProcessOptimizer(Optimizer):
 
 
 class MonteCarloOptimizer(Optimizer):
+    """Optimizer using Monte Carlo random search for risk calibration."""
+
     def __init__(self):
+        """Initialize the MonteCarloOptimizer."""
         pass
 
     def optimize(
@@ -142,12 +198,28 @@ class MonteCarloOptimizer(Optimizer):
         steps: int,
         epsilon=1e-4,
         verbose=True,
-    ) -> float:
+    ) -> Union[float, np.ndarray, None]:
+        """Optimize using Monte Carlo random search.
+
+        Args:
+        ----
+            objective_function (Callable): The function to optimize.
+            alpha (float): The risk threshold.
+            bounds (Union[Tuple, List[Tuple]]): Search bounds.
+            steps (int): Number of optimization steps.
+            epsilon (float): Precision threshold.
+            verbose (bool): Whether to print progress.
+
+        Returns:
+        -------
+            float or np.ndarray or None: The optimal parameter value, or None if not found.
+
+        """
         good_lbds = []
         lbds_risks = []
 
         pbar = tqdm(range(steps), disable=not verbose)
-        for i in pbar:
+        for _it in pbar:
             lbd = np.random.uniform(size=len(bounds))
             for i, bound in enumerate(bounds):
                 lower, upper = bound

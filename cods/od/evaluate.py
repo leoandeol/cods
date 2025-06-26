@@ -1,3 +1,10 @@
+"""Evaluation functionality for object detection models with conformal prediction.
+
+This module provides comprehensive evaluation capabilities for object detection
+models using conformal prediction, including hyperparameter tuning, model
+comparison, and performance metric computation across different evaluation modes.
+"""
+
 import argparse
 import json
 import pickle
@@ -7,9 +14,9 @@ from time import time
 
 import numpy as np
 import torch
+import wandb
 from tqdm import tqdm
 
-import wandb
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
 from cods.od.metrics import get_recall_precision
@@ -21,6 +28,13 @@ MODES = ["classification", "localization", "detection"]
 
 
 class Benchmark:
+    """Benchmark class for evaluating object detection models with conformal prediction.
+
+    Provides comprehensive benchmarking capabilities including hyperparameter
+    sweeps, model comparison, and performance evaluation across different
+    conformal prediction configurations.
+    """
+
     DATASETS = {
         "mscoco": MSCOCODataset,
     }
@@ -28,6 +42,13 @@ class Benchmark:
     MODELS = {"detr": DETRModel, "yolo": YOLOModel}
 
     def __init__(self, config, device):
+        """Initialize the benchmark with configuration and device.
+
+        Args:
+            config (dict): Configuration dictionary containing benchmark parameters.
+            device (str): Device to use for computation ('cpu' or 'cuda').
+
+        """
         self.config = config
         self.device = device
         logger.info("Loaded config")
@@ -35,6 +56,16 @@ class Benchmark:
         self.run_id = "experiment-" + wandb.util.generate_id()
 
     def run(self, threads=1):
+        """Run the benchmark experiments.
+
+        Args:
+            threads (int, optional): Number of threads to use. Defaults to 1.
+                Multithreading is not yet implemented.
+
+        Raises:
+            NotImplementedError: If threads > 1 as multithreading is not implemented.
+
+        """
         torch.set_grad_enabled(False)
         if threads > 1:
             raise NotImplementedError("Multithreading not implemented yet")
@@ -118,6 +149,19 @@ class Benchmark:
             # logger.error(f"Experiment failed: {e}")
 
     def run_experiment(self, experiment, verbose=False):
+        """Run a single experiment with the given configuration.
+
+        Args:
+            experiment (dict): Experiment configuration containing all parameters.
+            verbose (bool, optional): Whether to log detailed information. Defaults to False.
+
+        Returns:
+            dict: Experiment results including metrics and configuration.
+
+        Raises:
+            NotImplementedError: If dataset or model is not implemented.
+
+        """
         if verbose:
             # print config
             logger.info("Running experiment with config:")
@@ -148,7 +192,7 @@ class Benchmark:
         # Load model
         if experiment["model"] not in self.MODELS:
             raise NotImplementedError(
-                f"Model { experiment['model']} not implemented yet.",
+                f"Model {experiment['model']} not implemented yet.",
             )
         model = self.MODELS[experiment["model"]](
             pretrained=True,
@@ -292,6 +336,12 @@ class Benchmark:
 
 
 def parse_args():
+    """Parse command line arguments for the benchmark.
+
+    Returns:
+        argparse.Namespace: Parsed command line arguments.
+
+    """
     parser = argparse.ArgumentParser(description="Run benchmark with config")
     parser.add_argument(
         "--config",

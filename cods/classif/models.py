@@ -1,3 +1,5 @@
+"""Model wrapper for conformal classification tasks."""
+
 import torch
 from tqdm import tqdm
 
@@ -6,6 +8,8 @@ from cods.classif.data import ClassificationPredictions
 
 
 class ClassificationModel(Model):
+    """Model wrapper for classification tasks with prediction saving/loading."""
+
     def __init__(
         self,
         model,
@@ -16,6 +20,19 @@ class ClassificationModel(Model):
         save=True,
         save_dir_path=None,
     ):
+        """Initialize the ClassificationModel.
+
+        Args:
+        ----
+            model: The underlying PyTorch model.
+            model_name (str): Name of the model.
+            pretrained (bool, optional): Whether to use pretrained weights. Defaults to True.
+            weights (optional): Model weights. Defaults to None.
+            device (str, optional): Device to use. Defaults to 'cpu'.
+            save (bool, optional): Whether to save predictions. Defaults to True.
+            save_dir_path (str, optional): Directory to save predictions. Defaults to None.
+
+        """
         super().__init__(
             model_name=model_name,
             save_dir_path=save_dir_path,
@@ -35,7 +52,24 @@ class ClassificationModel(Model):
         shuffle: bool = False,
         verbose: bool = True,
         **kwargs,
-    ):
+    ) -> ClassificationPredictions:
+        """Build predictions for the given dataset and save/load as needed.
+
+        Args:
+        ----
+            dataset: Dataset to build predictions for.
+            dataset_name (str): Name of the dataset.
+            split_name (str): Name of the data split.
+            batch_size (int): Batch size for prediction.
+            shuffle (bool, optional): Whether to shuffle the data. Defaults to False.
+            verbose (bool, optional): Whether to print progress. Defaults to True.
+            **kwargs: Additional arguments for DataLoader.
+
+        Returns:
+        -------
+            ClassificationPredictions: Predictions object for the dataset.
+
+        """
         preds = self._load_preds_if_exists(
             dataset_name=dataset_name,
             split_name=split_name,
@@ -54,20 +88,21 @@ class ClassificationModel(Model):
             shuffle=shuffle,
             **kwargs,
         )
-        predictions = {"true_cls": [], "pred_cls": []}
+        true_cls = []
+        pred_cls = []
         if verbose:
             print("Building predictions...")
         ids = []
         with torch.no_grad():
-            for i, data in enumerate(tqdm(dataloader, disable=not verbose)):
+            for _i, data in enumerate(tqdm(dataloader, disable=not verbose)):
                 id, images, labels = data
                 images = images.to(self.device)
                 labels = labels.to(self.device)
                 ids.extend(id)
                 preds = self.model(images)
-                # _, preds = torch.max(outputs, 1)
-                predictions["true_cls"].extend(labels)  # .cpu().numpy())
-                predictions["pred_cls"].extend(preds)  # .cpu().numpy())
+                true_cls.extend(labels)
+                pred_cls.extend(preds)
+        predictions = {}
         predictions["dataset_name"] = dataset_name
         predictions["split_name"] = split_name
         paths = ids  # dataset.get_paths(ids)

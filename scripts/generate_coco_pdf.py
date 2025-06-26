@@ -1,3 +1,5 @@
+"""Script to generate PDF visualization of COCO dataset."""
+
 import io
 import logging
 import math
@@ -28,6 +30,7 @@ len(data)
 
 
 def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
+    """Create PDF visualization of dataset samples."""
     # Set up the PDF canvas
     c = canvas.Canvas(output_filename, pagesize=letter)
     width, height = letter
