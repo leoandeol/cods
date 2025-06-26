@@ -72,13 +72,13 @@
 - [`cp.LocalizationConformalizer`](./od.cp.md#class-localizationconformalizer): A class for performing localization conformalization. Should be used within an ODConformalizer.
 - [`cp.ODClassificationConformalizer`](./od.cp.md#class-odclassificationconformalizer): Conformalizer for classification in object detection tasks.
 - [`cp.ODConformalizer`](./od.cp.md#class-odconformalizer): Class representing conformalizers for object detection tasks.
-- [`datasets.MSCOCODataset`](./od.data.datasets.md#class-mscocodataset)
-- [`datasets.VOCDataset`](./od.data.datasets.md#class-vocdataset)
+- [`datasets.MSCOCODataset`](./od.data.datasets.md#class-mscocodataset): MS-COCO dataset implementation for object detection.
+- [`datasets.VOCDataset`](./od.data.datasets.md#class-vocdataset): PASCAL VOC dataset implementation for object detection.
 - [`predictions.ODConformalizedPredictions`](./od.data.predictions.md#class-odconformalizedpredictions): Class representing conformalized predictions for object detection tasks.
 - [`predictions.ODParameters`](./od.data.predictions.md#class-odparameters): Class representing parameters for object detection tasks.
 - [`predictions.ODPredictions`](./od.data.predictions.md#class-odpredictions): Class representing predictions for object detection tasks.
 - [`predictions.ODResults`](./od.data.predictions.md#class-odresults): Class representing results for object detection tasks.
-- [`evaluate.Benchmark`](./od.evaluate.md#class-benchmark)
+- [`evaluate.Benchmark`](./od.evaluate.md#class-benchmark): Benchmark class for evaluating object detection models with conformal prediction.
 - [`loss.BoxCountRecallConfidenceLoss`](./od.loss.md#class-boxcountrecallconfidenceloss): Confidence loss based on the recall of box counts.
 - [`loss.BoxCountThresholdConfidenceLoss`](./od.loss.md#class-boxcountthresholdconfidenceloss): Confidence loss based on whether the count of conformalized boxes meets or exceeds the count of true boxes.
 - [`loss.BoxCountTwosidedConfidenceLoss`](./od.loss.md#class-boxcounttwosidedconfidenceloss): Confidence loss based on whether the absolute difference between true and predicted box counts exceeds a threshold.
@@ -94,9 +94,9 @@
 - [`loss.ThresholdedBoxDistanceConfidenceLoss`](./od.loss.md#class-thresholdedboxdistanceconfidenceloss): Confidence loss based on a thresholded distance between true and predicted boxes.
 - [`loss.ThresholdedRecallLoss`](./od.loss.md#class-thresholdedrecallloss): A recall loss that is 1 if the miscoverage (1 - recall) exceeds a threshold `beta`, and 0 otherwise.
 - [`metrics.ODEvaluator`](./od.metrics.md#class-odevaluator): Evaluator for object detection predictions using specified loss functions.
-- [`detr.DETRModel`](./od.models.detr.md#class-detrmodel)
-- [`model.ODModel`](./od.models.model.md#class-odmodel)
-- [`utils.ResizeChannels`](./od.models.utils.md#class-resizechannels)
+- [`detr.DETRModel`](./od.models.detr.md#class-detrmodel): DETR (DEtection TRansformer) model wrapper for object detection.
+- [`model.ODModel`](./od.models.model.md#class-odmodel): Abstract base class for object detection models.
+- [`utils.ResizeChannels`](./od.models.utils.md#class-resizechannels): Module to resize image channels.
 - [`yolo.AlteredYOLO`](./od.models.yolo.md#class-alteredyolo): YOLO model wrapper with hooks to capture raw outputs and input shapes during prediction.
 - [`yolo.YOLOModel`](./od.models.yolo.md#class-yolomodel): Object Detection model wrapper for YOLO with custom preprocessing and postprocessing.
 - [`optim.FirstStepMonotonizingOptimizer`](./od.optim.md#class-firststepmonotonizingoptimizer): Optimizer for the first step of monotonic risk control in object detection.
@@ -120,18 +120,18 @@
 - [`metrics.get_empirical_risk`](./classif.metrics.md#function-get_empirical_risk): Compute the empirical risk of the conformal prediction set.
 - [`metrics.get_empirical_safety`](./classif.metrics.md#function-get_empirical_safety): Compute the empirical safety of the conformal prediction set.
 - [`visualization.plot_predictions`](./classif.visualization.md#function-plot_predictions): Plot classification predictions and optionally conformalized sets for given indices.
-- [`evaluate.parse_args`](./od.evaluate.md#function-parse_args)
+- [`evaluate.parse_args`](./od.evaluate.md#function-parse_args): Parse command line arguments for the benchmark.
 - [`metrics.compute_global_coverage`](./od.metrics.md#function-compute_global_coverage): Compute the global coverage for object detection predictions.
 - [`metrics.getAveragePrecision`](./od.metrics.md#function-getaverageprecision): Get the average precision for object detection predictions.
 - [`metrics.getStretch`](./od.metrics.md#function-getstretch): Get the stretch of object detection predictions.
 - [`metrics.get_recall_precision`](./od.metrics.md#function-get_recall_precision): Get the recall and precision for object detection predictions.
 - [`metrics.plot_recall_precision`](./od.metrics.md#function-plot_recall_precision): Plot the recall and precision given objectness threshold or IoU threshold.
 - [`metrics.unroll_metrics`](./od.metrics.md#function-unroll_metrics): Compute and return various metrics for object detection predictions and conformalized predictions.
-- [`detr.box_cxcywh_to_xyxy`](./od.models.detr.md#function-box_cxcywh_to_xyxy)
-- [`detr.box_xyxy_to_cxcywh`](./od.models.detr.md#function-box_xyxy_to_cxcywh)
-- [`detr.rescale_bboxes`](./od.models.detr.md#function-rescale_bboxes)
+- [`detr.box_cxcywh_to_xyxy`](./od.models.detr.md#function-box_cxcywh_to_xyxy): Convert bounding boxes from (cx, cy, w, h) to (x1, y1, x2, y2) format.
+- [`detr.box_xyxy_to_cxcywh`](./od.models.detr.md#function-box_xyxy_to_cxcywh): Convert bounding boxes from (x1, y1, x2, y2) to (cx, cy, w, h) format.
+- [`detr.rescale_bboxes`](./od.models.detr.md#function-rescale_bboxes): Rescale bounding boxes to image size.
 - [`utils.bayesod`](./od.models.utils.md#function-bayesod): _summary_.
-- [`utils.filter_preds`](./od.models.utils.md#function-filter_preds)
+- [`utils.filter_preds`](./od.models.utils.md#function-filter_preds): Filter predictions based on confidence threshold.
 - [`yolo.xywh2xyxy_scaled`](./od.models.yolo.md#function-xywh2xyxy_scaled): Convert bounding boxes from center (x, y, w, h) format to (x0, y0, x1, y1) format and scale.
 - [`utils.apply_margins`](./od.utils.md#function-apply_margins): Apply margins to predicted bounding boxes for conformal prediction.
 - [`utils.assymetric_hausdorff_distance`](./od.utils.md#function-assymetric_hausdorff_distance): Calculate asymmetric Hausdorff distance between sets of boxes.
@@ -143,13 +143,13 @@
 - [`utils.contained_old`](./od.utils.md#function-contained_old): Compute the intersection over union (IoU) between two bounding boxes.
 - [`utils.f_iou`](./od.utils.md#function-f_iou): Compute the intersection over union (IoU) between two bounding boxes.
 - [`utils.f_lac`](./od.utils.md#function-f_lac): Calculate LAC (Loss Adaptive Conformal) score for classification.
-- [`utils.fast_covered_areas_of_gt`](./od.utils.md#function-fast_covered_areas_of_gt)
+- [`utils.fast_covered_areas_of_gt`](./od.utils.md#function-fast_covered_areas_of_gt): Fast calculation of covered areas of ground truth.
 - [`utils.generalized_iou`](./od.utils.md#function-generalized_iou): Compute the Generalized Intersection over Union (GIoU) between two bounding boxes.
-- [`utils.get_covered_areas_of_gt_union`](./od.utils.md#function-get_covered_areas_of_gt_union)
+- [`utils.get_covered_areas_of_gt_union`](./od.utils.md#function-get_covered_areas_of_gt_union): Calculate covered areas of ground truth union.
 - [`utils.match_predictions_to_true_boxes`](./od.utils.md#function-match_predictions_to_true_boxes): Match predictions to true boxes. Done in place, modifies the preds object.
 - [`utils.mesh_func`](./od.utils.md#function-mesh_func): Compute mesh function.
 - [`utils.rank_distance`](./od.utils.md#function-rank_distance): Calculate rank distance between true and predicted classes.
-- [`utils.vectorized_generalized_iou`](./od.utils.md#function-vectorized_generalized_iou): Compute the Generalized Intersection over Union (GIoU) between two sets of
+- [`utils.vectorized_generalized_iou`](./od.utils.md#function-vectorized_generalized_iou): Compute the Generalized Intersection over Union (GIoU) between two sets of bounding boxes.
 - [`visualization.create_pdf_with_plots`](./od.visualization.md#function-create_pdf_with_plots): Create a PDF with plots for each image in the predictions.
 - [`visualization.plot_histograms_predictions`](./od.visualization.md#function-plot_histograms_predictions): Plot histograms of true boxes, predicted boxes, and thresholded predictions.
 - [`visualization.plot_preds`](./od.visualization.md#function-plot_preds): Plot the predictions of an object detection model for a given image index.

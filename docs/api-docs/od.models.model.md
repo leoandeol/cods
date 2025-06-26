@@ -14,11 +14,11 @@ This module provides the abstract base class for object detection models, defini
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L20"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODModel`
+Abstract base class for object detection models. 
 
+Provides the interface and common functionality for object detection models used in conformal prediction workflows, including prediction building, caching, and post-processing capabilities. 
 
-
-
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L21"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L28"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -32,7 +32,7 @@ __init__(
 )
 ```
 
-Initializes an instance of the ODModel class. 
+Initialize an instance of the ODModel class. 
 
 
 
@@ -50,7 +50,7 @@ Initializes an instance of the ODModel class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L48"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L55"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `build_predictions`
 
@@ -70,7 +70,7 @@ build_predictions(
 ) → ODPredictions
 ```
 
-Builds predictions for the given dataset. 
+Build predictions for the given dataset. 
 
 
 
@@ -83,8 +83,11 @@ Builds predictions for the given dataset.
  - <b>`batch_size`</b> (int):  The batch size for prediction. 
  - <b>`shuffle`</b> (bool, optional):  Whether to shuffle the dataset. Defaults to False. 
  - <b>`verbose`</b> (bool, optional):  Prints progress. Defaults to True. 
+ - <b>`force_recompute`</b> (bool, optional):  Whether to force recomputation of predictions. Defaults to False. 
+ - <b>`deletion_method`</b> (str, optional):  Method for deleting redundant boxes. Defaults to "nms". 
+ - <b>`iou_threshold`</b> (float, optional):  IoU threshold for filtering. Defaults to 0.5. 
+ - <b>`filter_preds_by_confidence`</b> (float, optional):  Confidence threshold for filtering predictions. Defaults to None. 
  - <b>`**kwargs`</b>:  Additional keyword arguments for the DataLoader. 
- - <b>`#TODO(leo)`</b>:  not up to date 
 
 
 
@@ -95,7 +98,7 @@ Builds predictions for the given dataset.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L283"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/models/model.py#L293"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `predict_batch`
 
@@ -111,6 +114,7 @@ Predicts the output given a batch of input tensors.
  
 ---- 
  - <b>`batch`</b> (list):  The input batch. 
+ - <b>`**kwargs`</b>:  Additional keyword arguments passed to the prediction method. 
 
 
 

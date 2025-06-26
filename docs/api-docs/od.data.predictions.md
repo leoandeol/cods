@@ -73,16 +73,31 @@ __init__(
 )
 ```
 
+Initialize object detection predictions. 
 
 
 
+**Args:**
+ 
+ - <b>`dataset_name`</b> (str):  Name of the dataset. 
+ - <b>`split_name`</b> (str):  Name of the dataset split. 
+ - <b>`image_paths`</b> (list[str]):  List of image file paths. 
+ - <b>`image_shapes`</b> (list[torch.Tensor]):  List of image shapes. 
+ - <b>`true_boxes`</b> (list[torch.Tensor]):  List of ground truth bounding boxes. 
+ - <b>`pred_boxes`</b> (list[torch.Tensor]):  List of predicted bounding boxes. 
+ - <b>`confidences`</b> (list[torch.Tensor]):  List of confidence scores. 
+ - <b>`true_cls`</b> (list[torch.Tensor]):  List of ground truth class labels. 
+ - <b>`pred_cls`</b> (list[torch.Tensor]):  List of predicted class probabilities. 
+ - <b>`names`</b> (list[str]):  List of class names. 
+ - <b>`pred_boxes_uncertainty`</b> (list[torch.Tensor], optional):  List of prediction uncertainties. 
+ - <b>`unique_id`</b> (int, optional):  Unique identifier for the predictions. 
 
 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L103"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L132"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `to`
 
@@ -92,18 +107,21 @@ to(device: 'str')
 
 Move the data to the specified device. 
 
-Parameters 
-----------  device (str): The device to move the data to. 
+
+
+**Args:**
+ 
+ - <b>`device`</b> (str):  The device to move the data to. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L123"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L151"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODParameters`
 Class representing parameters for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L126"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L154"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -123,10 +141,23 @@ __init__(
 )
 ```
 
-Initializes a new instance of the ODParameters class. 
+Initialize a new instance of the ODParameters class. 
 
-Parameters 
-----------  global_alpha (float): The global alpha (the sum of the non-None alphas).  alpha_confidence (float): The alpha for confidence.  alpha_localization (float): The alpha for localization.  alpha_classification (float): The alpha for classification  lambda_confidence_plus (float): The lambda for confidence (conservative).  lambda_confidence_minus (float): The lambda for confidence (optimistic).  lambda_localization (float): The lambda for localization.  lambda_classification (float): The lambda for classification.  confidence_threshold (float): The confidence threshold.  predictions_id (int): The unique ID of the predictions.  unique_id (int): The unique ID of the parameters. 
+
+
+**Args:**
+ 
+ - <b>`global_alpha`</b> (float):  The global alpha (the sum of the non-None alphas). 
+ - <b>`confidence_threshold`</b> (float):  The confidence threshold. 
+ - <b>`predictions_id`</b> (int):  The unique ID of the predictions. 
+ - <b>`alpha_confidence`</b> (float, optional):  The alpha for confidence. Defaults to None. 
+ - <b>`alpha_localization`</b> (float, optional):  The alpha for localization. Defaults to None. 
+ - <b>`alpha_classification`</b> (float, optional):  The alpha for classification. Defaults to None. 
+ - <b>`lambda_confidence_plus`</b> (float, optional):  The lambda for confidence (conservative). Defaults to None. 
+ - <b>`lambda_confidence_minus`</b> (float, optional):  The lambda for confidence (optimistic). Defaults to None. 
+ - <b>`lambda_localization`</b> (float, optional):  The lambda for localization. Defaults to None. 
+ - <b>`lambda_classification`</b> (float, optional):  The lambda for classification. Defaults to None. 
+ - <b>`unique_id`</b> (int, optional):  The unique ID of the parameters. Defaults to None. 
 
 
 
@@ -134,12 +165,12 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L169"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L196"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODConformalizedPredictions`
 Class representing conformalized predictions for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L172"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L199"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -152,10 +183,16 @@ __init__(
 )
 ```
 
-Initializes a new instance of the ODResults class. 
+Initialize a new instance of the ODConformalizedPredictions class. 
 
-Parameters 
-----------  predictions (ODPredictions): The object detection predictions.  parameters (ODParameters): The conformalizers parameters.  conf_boxes (torch.Tensor): The conformal boxes, after filtering.  conf_cls (torch.Tensor): The conformal prediction sets for class labels of each box. 
+
+
+**Args:**
+ 
+ - <b>`predictions`</b> (ODPredictions):  The object detection predictions. 
+ - <b>`parameters`</b> (ODParameters):  The conformalizers parameters. 
+ - <b>`conf_boxes`</b> (torch.Tensor, optional):  The conformal boxes, after filtering. Defaults to None. 
+ - <b>`conf_cls`</b> (torch.Tensor, optional):  The conformal prediction sets for class labels of each box. Defaults to None. 
 
 
 
@@ -163,12 +200,12 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L198"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L224"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODResults`
 Class representing results for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L201"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L227"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -187,10 +224,22 @@ __init__(
 )
 ```
 
-Initializes a new instance of the ODResults class. 
+Initialize a new instance of the ODResults class. 
 
-Parameters 
-----------  predictions (ODPredictions): The object detection predictions.  parameters (ODParameters): The conformalizers parameters.  conformalized_predictions (ODConformalizedPredictions): The conformalized predictions.  confidence_set_sizes (torch.Tensor): The confidence set sizes.  confidence_coverages (torch.Tensor): The confidence coverages.  localization_set_sizes (torch.Tensor): The localization set sizes.  localization_coverages (torch.Tensor): The localization coverages.  classification_set_sizes (torch.Tensor): The classification set sizes.  classification_coverages (torch.Tensor): The classification coverages.  global_coverage (torch.Tensor | float): The global coverage. 
+
+
+**Args:**
+ 
+ - <b>`predictions`</b> (ODPredictions):  The object detection predictions. 
+ - <b>`parameters`</b> (Parameters):  The conformalizers parameters. 
+ - <b>`conformalized_predictions`</b> (ODConformalizedPredictions):  The conformalized predictions. 
+ - <b>`confidence_set_sizes`</b> (torch.Tensor | list[float], optional):  The confidence set sizes. Defaults to None. 
+ - <b>`confidence_coverages`</b> (torch.Tensor | list[float], optional):  The confidence coverages. Defaults to None. 
+ - <b>`localization_set_sizes`</b> (torch.Tensor | list[float], optional):  The localization set sizes. Defaults to None. 
+ - <b>`localization_coverages`</b> (torch.Tensor | list[float], optional):  The localization coverages. Defaults to None. 
+ - <b>`classification_set_sizes`</b> (torch.Tensor | list[float], optional):  The classification set sizes. Defaults to None. 
+ - <b>`classification_coverages`</b> (torch.Tensor | list[float], optional):  The classification coverages. Defaults to None. 
+ - <b>`global_coverage`</b> (torch.Tensor | float, optional):  The global coverage. Defaults to None. 
 
 
 

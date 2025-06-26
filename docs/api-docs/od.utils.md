@@ -49,9 +49,7 @@ Compute mesh function.
 get_covered_areas_of_gt_union(pred_boxes, true_boxes)
 ```
 
-
-
-
+Calculate covered areas of ground truth union. 
 
 
 ---
@@ -64,14 +62,12 @@ get_covered_areas_of_gt_union(pred_boxes, true_boxes)
 fast_covered_areas_of_gt(pred_boxes, true_boxes)
 ```
 
-
-
-
+Fast calculation of covered areas of ground truth. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L96"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L97"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `contained`
 
@@ -99,7 +95,7 @@ Compute the intersection over union (IoU) between two bounding boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L125"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L126"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `contained_old`
 
@@ -127,7 +123,7 @@ Compute the intersection over union (IoU) between two bounding boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L150"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L151"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `f_iou`
 
@@ -155,7 +151,7 @@ Compute the intersection over union (IoU) between two bounding boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L177"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L186"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `generalized_iou`
 
@@ -183,7 +179,7 @@ Compute the Generalized Intersection over Union (GIoU) between two bounding boxe
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L220"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L229"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `vectorized_generalized_iou`
 
@@ -220,7 +216,7 @@ Calculates the GIoU for every pair of boxes between boxesA and boxesB.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L334"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L342"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `assymetric_hausdorff_distance_old`
 
@@ -233,7 +229,7 @@ Calculate asymmetric Hausdorff distance between true and predicted box (legacy v
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L350"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L358"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `assymetric_hausdorff_distance`
 
@@ -246,7 +242,7 @@ Calculate asymmetric Hausdorff distance between sets of boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L361"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L369"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `f_lac`
 
@@ -259,7 +255,7 @@ Calculate LAC (Loss Adaptive Conformal) score for classification.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L370"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L387"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `rank_distance`
 
@@ -272,7 +268,7 @@ Calculate rank distance between true and predicted classes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L379"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L400"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `match_predictions_to_true_boxes`
 
@@ -293,7 +289,7 @@ Match predictions to true boxes. Done in place, modifies the preds object.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L512"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L531"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `apply_margins`
 
@@ -306,7 +302,7 @@ Apply margins to predicted bounding boxes for conformal prediction.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L547"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L584"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_object_level`
 
@@ -324,7 +320,7 @@ Input : conformal and true boxes of a all images.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L609"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L646"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_image_level`
 
@@ -342,7 +338,7 @@ Compute image-level risk for conformal prediction.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L691"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L728"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_image_level_confidence`
 
