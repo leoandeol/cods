@@ -91,7 +91,9 @@ def test_apply_margins_additive():
     result = apply_margins(pred_boxes, margins, mode="additive")
 
     assert len(result) == 1
-    expected = torch.tensor([[8, 8, 22, 22]], dtype=torch.float32)  # [10-2, 10-2, 20+2, 20+2]
+    expected = torch.tensor(
+        [[8, 8, 22, 22]], dtype=torch.float32
+    )  # [10-2, 10-2, 20+2, 20+2]
     assert torch.allclose(result[0], expected)
 
 

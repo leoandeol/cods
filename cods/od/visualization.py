@@ -238,7 +238,15 @@ def create_pdf_with_plots(  # noqa: C901
             plt.figure(figsize=(14, 14))
             plt.imshow(image)
 
-            def draw_rect(ax, box, color, proba, conformal=False, img_width=image_width, img_height=image_height):
+            def draw_rect(
+                ax,
+                box,
+                color,
+                proba,
+                conformal=False,
+                img_width=image_width,
+                img_height=image_height,
+            ):
                 x1, y1, x2, y2 = box
                 x1 = max(0, x1)
                 y1 = max(0, y1)

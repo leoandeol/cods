@@ -162,9 +162,9 @@ def f_iou(boxA, boxB):
 
     """
     # Handle tensor inputs by flattening them
-    if hasattr(boxA, 'flatten'):
+    if hasattr(boxA, "flatten"):
         boxA = boxA.flatten()
-    if hasattr(boxB, 'flatten'):
+    if hasattr(boxB, "flatten"):
         boxB = boxB.flatten()
 
     xA = torch.max(boxA[0], boxB[0])
@@ -172,7 +172,9 @@ def f_iou(boxA, boxB):
     xB = torch.min(boxA[2], boxB[2])
     yB = torch.min(boxA[3], boxB[3])
 
-    interArea = torch.max(torch.tensor(0), xB - xA + 1) * torch.max(torch.tensor(0), yB - yA + 1)
+    interArea = torch.max(torch.tensor(0), xB - xA + 1) * torch.max(
+        torch.tensor(0), yB - yA + 1
+    )
     boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
     boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
 
@@ -442,7 +444,6 @@ def match_predictions_to_true_boxes(  # noqa: C901
     if not isinstance(conf_thr, torch.Tensor):
         conf_thr = torch.tensor(conf_thr)
 
-
     # To only update it on a single image
     if idx is not None:
         # filter pred_boxes with low objectness
@@ -556,7 +557,12 @@ def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
             h = pred_boxes[i][:, 3] - pred_boxes[i][:, 1]
             if len(Qst) == 4:  # Individual scaling factors
                 margin = torch.stack(
-                    (-w * (Qst[0] - 1), -h * (Qst[1] - 1), w * (Qst[2] - 1), h * (Qst[3] - 1)),
+                    (
+                        -w * (Qst[0] - 1),
+                        -h * (Qst[1] - 1),
+                        w * (Qst[2] - 1),
+                        h * (Qst[3] - 1),
+                    ),
                     dim=-1,
                 )
             else:  # Single scaling factor
