@@ -29,7 +29,7 @@ MODES = ["classification", "localization", "detection"]
 
 class Benchmark:
     """Benchmark class for evaluating object detection models with conformal prediction.
-    
+
     Provides comprehensive benchmarking capabilities including hyperparameter
     sweeps, model comparison, and performance evaluation across different
     conformal prediction configurations.
@@ -43,7 +43,7 @@ class Benchmark:
 
     def __init__(self, config, device):
         """Initialize the benchmark with configuration and device.
-        
+
         Args:
             config (dict): Configuration dictionary containing benchmark parameters.
             device (str): Device to use for computation ('cpu' or 'cuda').
@@ -57,11 +57,11 @@ class Benchmark:
 
     def run(self, threads=1):
         """Run the benchmark experiments.
-        
+
         Args:
             threads (int, optional): Number of threads to use. Defaults to 1.
                 Multithreading is not yet implemented.
-                
+
         Raises:
             NotImplementedError: If threads > 1 as multithreading is not implemented.
 
@@ -150,14 +150,14 @@ class Benchmark:
 
     def run_experiment(self, experiment, verbose=False):
         """Run a single experiment with the given configuration.
-        
+
         Args:
             experiment (dict): Experiment configuration containing all parameters.
             verbose (bool, optional): Whether to log detailed information. Defaults to False.
-            
+
         Returns:
             dict: Experiment results including metrics and configuration.
-            
+
         Raises:
             NotImplementedError: If dataset or model is not implemented.
 
@@ -337,7 +337,7 @@ class Benchmark:
 
 def parse_args():
     """Parse command line arguments for the benchmark.
-    
+
     Returns:
         argparse.Namespace: Parsed command line arguments.
 

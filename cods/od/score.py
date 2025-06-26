@@ -30,7 +30,7 @@ class ObjectnessNCScore(NCScore):
 
     def __init__(self, **kwargs):
         """Initialize the NCScore.
-        
+
         Args:
             **kwargs: Additional keyword arguments.
 
@@ -75,7 +75,7 @@ class ODNCScore(NCScore):
 
     def __init__(self, **kwargs):
         """Initialize the ODNCScore.
-        
+
         Args:
             **kwargs: Additional keyword arguments.
 
@@ -94,6 +94,7 @@ class ODNCScore(NCScore):
         ----
             pred_boxes (torch.Tensor): Predicted boxes.
             true_box (torch.Tensor): True box.
+            **kwargs: Additional keyword arguments passed to the scoring method.
 
         Returns:
         -------
@@ -157,7 +158,7 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
 
     def __init__(self, image_shape: torch.Tensor):
         """Initialize the IoUNCScore with image shape.
-        
+
         Args:
             image_shape (torch.Tensor): The shape of the image.
 

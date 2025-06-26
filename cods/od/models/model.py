@@ -19,7 +19,7 @@ from cods.od.models.utils import bayesod, filter_preds
 
 class ODModel(Model):
     """Abstract base class for object detection models.
-    
+
     Provides the interface and common functionality for object detection models
     used in conformal prediction workflows, including prediction building,
     caching, and post-processing capabilities.
@@ -76,8 +76,11 @@ class ODModel(Model):
             batch_size (int): The batch size for prediction.
             shuffle (bool, optional): Whether to shuffle the dataset. Defaults to False.
             verbose (bool, optional): Prints progress. Defaults to True.
+            force_recompute (bool, optional): Whether to force recomputation of predictions. Defaults to False.
+            deletion_method (str, optional): Method for deleting redundant boxes. Defaults to "nms".
+            iou_threshold (float, optional): IoU threshold for filtering. Defaults to 0.5.
+            filter_preds_by_confidence (float, optional): Confidence threshold for filtering predictions. Defaults to None.
             **kwargs: Additional keyword arguments for the DataLoader.
-            #TODO(leo): not up to date
 
         Returns:
         -------
@@ -293,6 +296,7 @@ class ODModel(Model):
         Args:
         ----
             batch (list): The input batch.
+            **kwargs: Additional keyword arguments passed to the prediction method.
 
         Returns:
         -------

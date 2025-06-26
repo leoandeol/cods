@@ -21,10 +21,10 @@ from cods.od.models.utils import ResizeChannels
 # for output bounding box post-processing
 def box_cxcywh_to_xyxy(x):
     """Convert bounding boxes from (cx, cy, w, h) to (x1, y1, x2, y2) format.
-    
+
     Args:
         x (torch.Tensor): Bounding boxes in (cx, cy, w, h) format.
-        
+
     Returns:
         torch.Tensor: Bounding boxes in (x1, y1, x2, y2) format.
 
@@ -36,10 +36,10 @@ def box_cxcywh_to_xyxy(x):
 
 def box_xyxy_to_cxcywh(x):
     """Convert bounding boxes from (x1, y1, x2, y2) to (cx, cy, w, h) format.
-    
+
     Args:
         x (torch.Tensor): Bounding boxes in (x1, y1, x2, y2) format.
-        
+
     Returns:
         torch.Tensor: Bounding boxes in (cx, cy, w, h) format.
 
@@ -51,11 +51,11 @@ def box_xyxy_to_cxcywh(x):
 
 def rescale_bboxes(out_bbox, size):
     """Rescale bounding boxes to image size.
-    
+
     Args:
         out_bbox (torch.Tensor): Normalized bounding boxes.
         size (tuple): Image size (width, height).
-        
+
     Returns:
         torch.Tensor: Rescaled bounding boxes in absolute coordinates.
 
@@ -68,10 +68,10 @@ def rescale_bboxes(out_bbox, size):
 
 class DETRModel(ODModel):
     """DETR (DEtection TRansformer) model wrapper for object detection.
-    
+
     Provides a wrapper around the DETR model with preprocessing, postprocessing,
     and prediction generation capabilities for conformal prediction workflows.
-    
+
     Attributes:
         MODEL_NAMES (list): List of supported DETR model variants.
 
@@ -92,7 +92,7 @@ class DETRModel(ODModel):
         save_dir_path=None,
     ):
         """Initialize the DETR model.
-        
+
         Args:
             model_name (str, optional): Name of the DETR model variant. Defaults to 'detr_resnet50'.
             pretrained (bool, optional): Whether to use pretrained weights. Defaults to True.
@@ -100,7 +100,7 @@ class DETRModel(ODModel):
             device (str, optional): Device to run the model on. Defaults to 'cpu'.
             save (bool, optional): Whether to save predictions. Defaults to True.
             save_dir_path (str, optional): Directory to save predictions. Defaults to None.
-            
+
         Raises:
             ValueError: If model_name is not in MODEL_NAMES.
             NotImplementedError: If pretrained is False (only pretrained models supported).
@@ -146,11 +146,11 @@ class DETRModel(ODModel):
     # Unsure if this is the right way to do it, there is different ways to define the softmax
     def postprocess(self, outputs, image_sizes):
         """Post-process model outputs to extract predictions.
-        
+
         Args:
             outputs (dict): Raw model outputs containing 'pred_logits' and 'pred_boxes'.
             image_sizes (torch.Tensor): Image sizes for rescaling bounding boxes.
-            
+
         Returns:
             tuple: (scaled_pred_boxes, confidences, pred_cls) where:
                 - scaled_pred_boxes: Rescaled bounding boxes
@@ -185,6 +185,7 @@ class DETRModel(ODModel):
         Args:
         ----
             batch (list): The input batch
+            **kwargs: Additional keyword arguments passed to the prediction method
 
         Returns:
         -------

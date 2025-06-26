@@ -228,8 +228,7 @@ def vectorized_generalized_iou(
     boxesA: np.ndarray,
     boxesB: np.ndarray,
 ) -> np.ndarray:
-    """Compute the Generalized Intersection over Union (GIoU) between two sets of
-    bounding boxes.
+    """Compute the Generalized Intersection over Union (GIoU) between two sets of bounding boxes.
 
     Calculates the GIoU for every pair of boxes between boxesA and boxesB.
 

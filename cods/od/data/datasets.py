@@ -29,10 +29,10 @@ logger = getLogger("cods")
 
 class MSCOCODataset(Dataset):
     """MS-COCO dataset implementation for object detection.
-    
+
     Provides access to the MS-COCO dataset with support for train/val/test splits,
     image loading, annotation handling, and dataset splitting for conformal prediction.
-    
+
     Attributes:
         NAMES (dict): Mapping from class IDs to class names for MS-COCO dataset.
 
@@ -134,13 +134,13 @@ class MSCOCODataset(Dataset):
 
     def __init__(self, root, split, transforms=None, image_ids=None):  # noqa: C901
         """Initialize the MS-COCO dataset.
-        
+
         Args:
             root (str): Root directory path to the MS-COCO dataset.
             split (str): Dataset split ('train', 'val', or 'test').
             transforms (callable, optional): Transformations to apply to images.
             image_ids (list, optional): Specific image IDs to use. If None, uses all images.
-            
+
         Raises:
             ValueError: If split is not one of ['train', 'val', 'test'].
 
@@ -246,10 +246,10 @@ class MSCOCODataset(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[Any, Any, Any, Any]:
         """Get item from dataset by index.
-        
+
         Args:
             idx (int): Index of the item to retrieve.
-            
+
         Returns:
             tuple: (image_path, image_size, image, target) where:
                 - image_path (str): Path to the image file
@@ -270,7 +270,7 @@ class MSCOCODataset(Dataset):
 
     def __iter__(self):
         """Iterate over image paths in the dataset.
-        
+
         Returns:
             iterator: Iterator over image paths.
 
@@ -279,10 +279,10 @@ class MSCOCODataset(Dataset):
 
     def __contains__(self, item):
         """Check if item is in the dataset.
-        
+
         Args:
             item: Item to search for in image paths.
-            
+
         Returns:
             bool: True if item is found in image paths, False otherwise.
 
@@ -300,13 +300,13 @@ class MSCOCODataset(Dataset):
         n_calib_test: Optional[int] = None,
     ):
         """Split the dataset into two parts.
-        
+
         Args:
             proportion (float): Proportion of data for the first split (0-1).
             shuffle (bool, optional): Whether to shuffle before splitting. Defaults to False.
             n_calib_test (int, optional): Maximum number of samples to use for splitting.
                 If None, uses all samples.
-                
+
         Returns:
             tuple: (dataset1, dataset2) where dataset1 contains the first `proportion`
                 of the data and dataset2 contains the remaining data.
@@ -346,10 +346,10 @@ class MSCOCODataset(Dataset):
 
 class VOCDataset(VOCDetection):
     """PASCAL VOC dataset implementation for object detection.
-    
+
     Extends torchvision's VOCDetection to provide consistent interface
     with other dataset classes in the CODS framework.
-    
+
     Attributes:
         VOC_CLASSES (list): List of class names in PASCAL VOC dataset.
 
@@ -380,7 +380,7 @@ class VOCDataset(VOCDetection):
 
     def __getitem__(self, index: int) -> Tuple[Any, Any, Any, Any]:
         """Get item from dataset by index.
-        
+
         Args:
             index (int): Index.
 
