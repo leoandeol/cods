@@ -102,7 +102,7 @@ class LocalizationConformalizer(Conformalizer):
     }
     GUARANTEE_LEVELS = ["image", "object"]
 
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         loss: str | ODLoss,
         prediction_set: str,
@@ -192,7 +192,7 @@ class LocalizationConformalizer(Conformalizer):
 
         self.lambda_localization = None
 
-    def calibrate(
+    def calibrate(  # noqa: C901
         self,
         predictions: ODPredictions,
         alpha: float,
@@ -281,7 +281,7 @@ class LocalizationConformalizer(Conformalizer):
         self.lambda_localization = lambda_localization
         return lambda_localization
 
-    def conformalize(
+    def conformalize(  # noqa: C901
         self,
         predictions: ODPredictions,
         parameters: ODParameters | None = None,
@@ -348,7 +348,7 @@ class ConfidenceConformalizer(Conformalizer):
         "box_count_twosided_recall": BoxCountTwosidedConfidenceLoss,
     }
 
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         guarantee_level: str,
         matching_function: str,
@@ -401,7 +401,7 @@ class ConfidenceConformalizer(Conformalizer):
         self.lambda_minus = None
         self.lambda_plus = None
 
-    def calibrate(
+    def calibrate(  # noqa: C901
         self,
         predictions: ODPredictions,
         alpha: float = 0.1,
@@ -461,7 +461,7 @@ class ConfidenceConformalizer(Conformalizer):
         self.lambda_minus = lambda_minus
         return lambda_minus, lambda_plus
 
-    def conformalize(
+    def conformalize(  # noqa: C901
         self,
         predictions: ODPredictions,
         verbose: bool = True,
@@ -500,7 +500,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         "binary": ODBinaryClassificationLoss,
     }
 
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         matching_function: str,
         loss="binary",
@@ -573,7 +573,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             )
         self.optimizer = self.OPTIMIZERS[optimizer]()
 
-    def calibrate(
+    def calibrate(  # noqa: C901
         self,
         predictions: ODPredictions,
         alpha: float,
@@ -669,7 +669,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         self.lambda_classification = lambda_classification
         return lambda_classification
 
-    def conformalize(
+    def conformalize(  # noqa: C901
         self,
         predictions: ODPredictions,
         verbose: bool = True,
@@ -714,7 +714,7 @@ class ODConformalizer(Conformalizer):
     GUARANTEE_LEVELS = ["image", "object"]
     MATCHINGS = ["hausdorff", "iou", "giou", "lac", "mix"]
 
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         backend: str = "auto",
         guarantee_level: str = "image",
@@ -885,7 +885,7 @@ class ODConformalizer(Conformalizer):
             else None,
         )
 
-    def calibrate(
+    def calibrate(  # noqa: C901
         self,
         predictions: ODPredictions,
         global_alpha: float | None = None,
@@ -1097,7 +1097,7 @@ class ODConformalizer(Conformalizer):
 
         return result
 
-    def conformalize(
+    def conformalize(  # noqa: C901
         self,
         predictions: ODPredictions,
         parameters: ODParameters | None = None,
@@ -1284,7 +1284,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         "boxwise": BoxWiseRecallLoss,
     }
 
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         prediction_set: str = "additive",
         localization_loss: str = "boxwise",
@@ -1383,7 +1383,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         """
         return (n / (n + 1)) * torch.mean(risk) + B / (n + 1)
 
-    def calibrate(
+    def calibrate(  # noqa: C901
         self,
         predictions: ODPredictions,
         alpha: float = 0.1,
@@ -1425,7 +1425,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         self.lbd = lbd
         return lbd
 
-    def conformalize(self, predictions: ODPredictions, verbose: bool = True):
+    def conformalize(self, predictions: ODPredictions, verbose: bool = True):  # noqa: C901
         """Conformalize predictions using the calibrated lambda values.
 
         Args:

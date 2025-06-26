@@ -5,6 +5,9 @@ notebook
 ipykernel
 wandb
 lazydocs
+mkdocs
+mkdocstrings
+mkdocs-awesome-pages-plugin
 line_profiler
 pre-commit
 pytest

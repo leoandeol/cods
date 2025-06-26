@@ -21,6 +21,13 @@ class MockModel(Model):
     """Mock implementation of Model for testing."""
 
     def __init__(self, model_name="test_model", save_dir_path="/tmp"):
+        """Initialize the mock model for testing.
+        
+        Args:
+            model_name (str, optional): Name of the model. Defaults to 'test_model'.
+            save_dir_path (str, optional): Directory path for saving. Defaults to '/tmp'.
+
+        """
         super().__init__(model_name, save_dir_path)
 
     def build_predictions(self, dataset, device="cpu", **kwargs):

@@ -44,7 +44,7 @@ class BinarySearchOptimizer(Optimizer):
         """Initialize the BinarySearchOptimizer."""
         pass
 
-    def optimize(
+    def optimize(  # noqa: C901
         self,
         objective_function: Callable,
         alpha: float,

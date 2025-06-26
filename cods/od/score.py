@@ -29,10 +29,16 @@ class ObjectnessNCScore(NCScore):
     """
 
     def __init__(self, **kwargs):
+        """Initialize the NCScore.
+        
+        Args:
+            **kwargs: Additional keyword arguments.
+
+        """
         super().__init__()
 
     def __call__(self, n_gt: int, confidence: torch.Tensor) -> torch.Tensor:
-        """Calculates the score based on the number of ground truth objects and confidence values.
+        """Calculate the score based on the number of ground truth objects and confidence values.
 
         Args:
         ----
@@ -68,6 +74,12 @@ class ODNCScore(NCScore):
     """
 
     def __init__(self, **kwargs):
+        """Initialize the ODNCScore.
+        
+        Args:
+            **kwargs: Additional keyword arguments.
+
+        """
         super().__init__()
 
     def __call__(
@@ -76,7 +88,7 @@ class ODNCScore(NCScore):
         true_box: torch.Tensor,
         **kwargs,
     ) -> torch.Tensor:
-        """Calculates the score based on predicted boxes and true box.
+        """Calculate the score based on predicted boxes and true box.
 
         Args:
         ----
@@ -95,7 +107,7 @@ class ODNCScore(NCScore):
         pred_boxes: torch.Tensor,
         quantile: float,
     ) -> torch.Tensor:
-        """Returns the set of boxes based on predicted boxes and quantile.
+        """Return the set of boxes based on predicted boxes and quantile.
 
         Args:
         ----
@@ -110,7 +122,7 @@ class ODNCScore(NCScore):
         return self.apply_margins(pred_boxes, quantile)
 
     def apply_margins(self, pred_boxes: torch.Tensor) -> torch.Tensor:
-        """Applies margins to the predicted boxes.
+        """Apply margins to the predicted boxes.
 
         Args:
         ----
@@ -144,6 +156,12 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
     """
 
     def __init__(self, image_shape: torch.Tensor):
+        """Initialize the IoUNCScore with image shape.
+        
+        Args:
+            image_shape (torch.Tensor): The shape of the image.
+
+        """
         super().__init__()
         self.image_shape = image_shape
 
@@ -152,7 +170,7 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         pred_boxes: torch.Tensor,
         true_box: torch.Tensor,
     ) -> torch.Tensor:
-        """Calculates the score based on predicted boxes and true box.
+        """Calculate the score based on predicted boxes and true box.
 
         Args:
         ----
@@ -196,7 +214,7 @@ class MinAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         pred_boxes: torch.Tensor,
         quantile: float,
     ) -> torch.Tensor:
-        """Applies margins to the predicted boxes based on quantile.
+        """Apply margins to the predicted boxes based on quantile.
 
         Args:
         ----
@@ -239,10 +257,11 @@ class UnionAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
     """
 
     def __init__(self):
+        """Initialize the GIoUNCScore."""
         super().__init__()
 
     def __call__(self, pred_boxes: torch.Tensor, true_box: torch.Tensor):
-        """Calculates the score based on predicted boxes and true box.
+        """Calculate the score based on predicted boxes and true box.
 
         Args:
         ----
@@ -261,7 +280,7 @@ class UnionAdditiveSignedAssymetricHausdorffNCScore(ODNCScore):
         pred_boxes: torch.Tensor,
         quantile: float,
     ) -> torch.Tensor:
-        """Applies margins to the predicted boxes based on quantile.
+        """Apply margins to the predicted boxes based on quantile.
 
         Args:
         ----
@@ -305,6 +324,7 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
     """
 
     def __init__(self):
+        """Initialize the GIoUNCScore."""
         super().__init__()
 
     def __call__(
@@ -312,7 +332,7 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         pred_boxes: torch.Tensor,
         true_box: torch.Tensor,
     ) -> torch.Tensor:
-        """Calculates the score based on predicted boxes and true box.
+        """Calculate the score based on predicted boxes and true box.
 
         Args:
         ----
@@ -347,7 +367,7 @@ class MinMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         pred_boxes: torch.Tensor,
         quantile: float,
     ) -> torch.Tensor:
-        """Applies margins to the predicted boxes based on quantile.
+        """Apply margins to the predicted boxes based on quantile.
 
         Args:
         ----
@@ -392,10 +412,11 @@ class UnionMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
     """
 
     def __init__(self):
+        """Initialize the GIoUNCScore."""
         super().__init__()
 
     def __call__(self, pred_boxes: torch.Tensor, true_box: torch.Tensor):
-        """Calculates the score based on predicted boxes and true box.
+        """Calculate the score based on predicted boxes and true box.
 
         Args:
         ----
@@ -414,7 +435,7 @@ class UnionMultiplicativeSignedAssymetricHausdorffNCScore(ODNCScore):
         pred_boxes: torch.Tensor,
         quantile: float,
     ) -> torch.Tensor:
-        """Applies margins to the predicted boxes based on quantile.
+        """Apply margins to the predicted boxes based on quantile.
 
         Args:
         ----

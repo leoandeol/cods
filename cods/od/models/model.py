@@ -18,6 +18,13 @@ from cods.od.models.utils import bayesod, filter_preds
 
 
 class ODModel(Model):
+    """Abstract base class for object detection models.
+    
+    Provides the interface and common functionality for object detection models
+    used in conformal prediction workflows, including prediction building,
+    caching, and post-processing capabilities.
+    """
+
     def __init__(
         self,
         model_name: str,
@@ -26,7 +33,7 @@ class ODModel(Model):
         weights: Optional[str] = None,
         device: str = "cpu",
     ):
-        """Initializes an instance of the ODModel class.
+        """Initialize an instance of the ODModel class.
 
         Args:
         ----
@@ -45,7 +52,7 @@ class ODModel(Model):
             device=device,
         )
 
-    def build_predictions(
+    def build_predictions(  # noqa: C901
         self,
         dataset,
         dataset_name: str,
@@ -59,7 +66,7 @@ class ODModel(Model):
         filter_preds_by_confidence: Optional[float] = None,
         **kwargs,
     ) -> ODPredictions:
-        """Builds predictions for the given dataset.
+        """Build predictions for the given dataset.
 
         Args:
         ----
@@ -226,7 +233,7 @@ class ODModel(Model):
         iou_threshold=0.5,
         method: str = "nms",
     ):
-        """Filters the predicted bounding boxes based on the confidence scores and IoU threshold.
+        """Filter the predicted bounding boxes based on the confidence scores and IoU threshold.
 
         Args:
         ----

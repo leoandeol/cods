@@ -24,7 +24,7 @@ from cods.od.utils import f_iou
 logger = getLogger("cods")
 
 
-def compute_global_coverage(
+def compute_global_coverage(  # noqa: C901
     predictions: ODPredictions,
     parameters: ODParameters,
     conformalized_predictions: ODConformalizedPredictions,
@@ -137,7 +137,7 @@ def compute_global_coverage(
                             conf_box_i,
                             None,
                         ).item()
-                except:
+                except Exception as e:
                     print(
                         f"Number of ground truth boxes: {len(predictions.true_boxes[i])}",
                     )
@@ -152,7 +152,7 @@ def compute_global_coverage(
                     print(conf_boxes_i.shape)
                     print(predictions.matching[i][j][0])
                     print(predictions.matching[i])
-                    raise AssertionError()
+                    raise AssertionError() from e
 
             else:
                 loc_loss = 0
@@ -426,7 +426,7 @@ class ODEvaluator:
         self.localization_loss = localization_loss
         self.classification_loss = classification_loss
 
-    def evaluate(
+    def evaluate(  # noqa: C901
         self,
         predictions: ODPredictions,
         parameters: ODParameters,

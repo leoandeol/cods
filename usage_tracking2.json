@@ -1,0 +1,17 @@
+{
+  "user_id": "fa28459c-121a-4878-a275-8d3cb6fd630f",
+  "first_run": "2025-06-25T21:20:46.226306",
+  "runs": [
+    {
+      "timestamp": "2025-06-25T21:20:47.125532",
+      "plan": "pro",
+      "timezone": "Europe_Warsaw",
+      "filename": "XXXNEW_pro_Europe_Warsaw_fa28459c-121a-4878-a275-8d3cb6fd630f_20250625_212046.json"
+    }
+  ],
+  "last_upload_config": {
+    "plan": "pro",
+    "timezone": "Europe_Warsaw",
+    "timestamp": "2025-06-25T21:20:47.126563"
+  }
+}

@@ -91,7 +91,7 @@ def test_apply_margins_additive():
     result = apply_margins(pred_boxes, margins, mode="additive")
 
     assert len(result) == 1
-    expected = torch.tensor([[8, 8, 22, 22]])  # [10-2, 10-2, 20+2, 20+2]
+    expected = torch.tensor([[8, 8, 22, 22]], dtype=torch.float32)  # [10-2, 10-2, 20+2, 20+2]
     assert torch.allclose(result[0], expected)
 
 
@@ -104,10 +104,10 @@ def test_apply_margins_multiplicative():
 
     assert len(result) == 1
     # For multiplicative, the box should expand proportionally
-    assert result[0][0] < 10  # x1 should decrease
-    assert result[0][1] < 10  # y1 should decrease
-    assert result[0][2] > 20  # x2 should increase
-    assert result[0][3] > 20  # y2 should increase
+    assert result[0][0, 0] < 10  # x1 should decrease
+    assert result[0][0, 1] < 10  # y1 should decrease
+    assert result[0][0, 2] > 20  # x2 should increase
+    assert result[0][0, 3] > 20  # y2 should increase
 
 
 def test_apply_margins_empty_boxes():

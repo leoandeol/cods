@@ -9,7 +9,7 @@ from PIL import Image
 from cods.od.data import ODConformalizedPredictions, ODPredictions
 
 
-def plot_preds(
+def plot_preds(  # noqa: C901
     idx,
     predictions: ODPredictions,
     conformalized_predictions: ODConformalizedPredictions = None,
@@ -76,6 +76,7 @@ def plot_preds(
             box (list): List of coordinates [x1, y1, x2, y2] of the rectangle.
             color (str): Color of the rectangle.
             proba (int or numpy.ndarray): Probability or probability distribution of the class.
+            conformal (bool, optional): Whether this is a conformal prediction. Defaults to False.
 
         """
         x1, y1, x2, y2 = box
@@ -180,7 +181,7 @@ def plot_preds(
     plt.show()
 
 
-def create_pdf_with_plots(
+def create_pdf_with_plots(  # noqa: C901
     predictions: ODPredictions,
     conformalized_predictions: ODConformalizedPredictions = None,
     confidence_threshold=None,
@@ -237,12 +238,12 @@ def create_pdf_with_plots(
             plt.figure(figsize=(14, 14))
             plt.imshow(image)
 
-            def draw_rect(ax, box, color, proba, conformal=False):
+            def draw_rect(ax, box, color, proba, conformal=False, img_width=image_width, img_height=image_height):
                 x1, y1, x2, y2 = box
                 x1 = max(0, x1)
                 y1 = max(0, y1)
-                x2 = min(image_width, x2)
-                y2 = min(image_height, y2)
+                x2 = min(img_width, x2)
+                y2 = min(img_height, y2)
 
                 ax.add_patch(
                     plt.Rectangle(

@@ -69,6 +69,23 @@ class ODPredictions(Predictions):
         pred_boxes_uncertainty: list[torch.Tensor] = None,
         unique_id: int | None = None,
     ):
+        """Initialize object detection predictions.
+        
+        Args:
+            dataset_name (str): Name of the dataset.
+            split_name (str): Name of the dataset split.
+            image_paths (list[str]): List of image file paths.
+            image_shapes (list[torch.Tensor]): List of image shapes.
+            true_boxes (list[torch.Tensor]): List of ground truth bounding boxes.
+            pred_boxes (list[torch.Tensor]): List of predicted bounding boxes.
+            confidences (list[torch.Tensor]): List of confidence scores.
+            true_cls (list[torch.Tensor]): List of ground truth class labels.
+            pred_cls (list[torch.Tensor]): List of predicted class probabilities.
+            names (list[str]): List of class names.
+            pred_boxes_uncertainty (list[torch.Tensor], optional): List of prediction uncertainties.
+            unique_id (int, optional): Unique identifier for the predictions.
+
+        """
         super().__init__(
             unique_id=unique_id,
             dataset_name=dataset_name,
@@ -95,16 +112,27 @@ class ODPredictions(Predictions):
         # TODO: if change matching, then must reset the mathcing
 
     def __len__(self):
+        """Return the number of images in the predictions.
+        
+        Returns:
+            int: Number of images.
+
+        """
         return len(self.image_paths)
 
     def __str__(self):
+        """Return string representation of the predictions.
+        
+        Returns:
+            str: String representation.
+
+        """
         return f"ODPredictions_len={len(self)}"
 
     def to(self, device: str):
         """Move the data to the specified device.
 
-        Parameters
-        ----------
+        Args:
             device (str): The device to move the data to.
 
         """
@@ -137,7 +165,7 @@ class ODParameters(Parameters):
         lambda_classification: float | None = None,
         unique_id: int | None = None,
     ):
-        """Initializes a new instance of the ODParameters class.
+        """Initialize a new instance of the ODParameters class.
 
         Parameters
         ----------
@@ -176,7 +204,7 @@ class ODConformalizedPredictions(ConformalizedPredictions):
         conf_boxes: torch.Tensor | None = None,
         conf_cls: torch.Tensor | None = None,
     ):
-        """Initializes a new instance of the ODResults class.
+        """Initialize a new instance of the ODResults class.
 
         Parameters
         ----------
@@ -211,7 +239,7 @@ class ODResults(Results):
         classification_coverages: torch.Tensor | list[float] | None = None,
         global_coverage: torch.Tensor | float | None = None,
     ):
-        """Initializes a new instance of the ODResults class.
+        """Initialize a new instance of the ODResults class.
 
         Parameters
         ----------
