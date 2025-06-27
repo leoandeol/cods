@@ -208,12 +208,8 @@ class LocalizationConformalizer(Conformalizer):
         predictions: ODPredictions,
         alpha: float,
         steps: int = 13,
-        bounds: List[float] = [
-            0,
-            1000,
-        ],  # TODO: currently ignored by new optimizer
+        overload_confidence_threshold: float | None = None,
         verbose: bool = True,
-        overload_confidence_threshold: Optional[float] = None,
     ) -> float:
         """Calibrate the conformalizer.
 
@@ -222,7 +218,6 @@ class LocalizationConformalizer(Conformalizer):
         - predictions (ODPredictions): The object detection predictions.
         - alpha (float): The significance level.
         - steps (int): The number of steps for optimization.
-        - bounds (List[float]): The bounds for optimization.
         - verbose (bool): Whether to print the optimization progress.
         - confidence_threshold (float): The threshold for objectness confidence.
 
@@ -277,10 +272,9 @@ class LocalizationConformalizer(Conformalizer):
             alpha=alpha,
             device=self.device,
             B=1,
-            bounds=[0, 1000]
-            if self.prediction_set == "additive"
-            else [0, 100],
-            steps=13,
+            lower_bound=0,
+            upper_bound=1000 if self.prediction_set == "additive" else 100,
+            steps=steps,
             epsilon=1e-9,
             verbose=verbose,
         )
@@ -429,7 +423,6 @@ class ConfidenceConformalizer(Conformalizer):
             alpha,
             self.device,
             B=1,
-            bounds=[0, 1],
             verbose=False,
         )
         logger.debug("Optimizing for lambda_minus")
@@ -443,7 +436,6 @@ class ConfidenceConformalizer(Conformalizer):
             alpha,
             self.device,
             B=0,
-            bounds=[0, 1],
             verbose=False,
         )
         self.lambda_plus = lambda_plus
@@ -620,7 +612,8 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             alpha=alpha,
             device=self.device,
             B=1,
-            bounds=[0, 1],
+            lower_bound=0,
+            upper_bound=1,
             steps=25,
             epsilon=1e-10,
             verbose=verbose,
