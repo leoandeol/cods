@@ -5,8 +5,7 @@ import pytest
 import torch
 
 from cods.od.data import ODPredictions
-
-from cods.od.optimizers import (
+from cods.od.optim import (
     FirstStepMonotonizingOptimizer,
     SecondStepMonotonizingOptimizer,
 )
@@ -23,6 +22,16 @@ def device():
 def mock_predictions(device):
     """Provides a consistent set of mock predictions for testing."""
     return ODPredictions(
+        dataset_name="mock_dataset",
+        split_name="mock_split",
+        image_paths=[
+            "image1.jpg",
+            "image2.jpg",
+        ],
+        names=[
+            "cls1",
+            "cls2",
+        ],
         true_boxes=[
             torch.tensor(
                 [[10, 10, 50, 50]], dtype=torch.float32, device=device
@@ -48,8 +57,8 @@ def mock_predictions(device):
             torch.tensor([0.8, 0.7], dtype=torch.float32, device=device),
         ],
         true_cls=[
-            torch.tensor([[1.0, 0.0]], dtype=torch.float32, device=device),
-            torch.tensor([[0.0, 1.0]], dtype=torch.float32, device=device),
+            torch.tensor([0], dtype=torch.int64, device=device),
+            torch.tensor([1], dtype=torch.int64, device=device),
         ],
         pred_cls=[
             torch.tensor(
@@ -80,12 +89,6 @@ def mock_od_loss():
     return MockODLoss()
 
 
-# Fixture for a mock matching function (the name is what's important)
-@pytest.fixture
-def mock_matching_func():
-    return lambda box1, box2: 0.0
-
-
 # Fixture for a mock build predictions function
 @pytest.fixture
 def mock_build_predictions():
@@ -111,7 +114,6 @@ def B():
 def test_first_step_optimizer(
     mock_predictions,
     mock_od_loss,
-    mock_matching_func,
     alpha,
     device,
     B,
@@ -125,7 +127,7 @@ def test_first_step_optimizer(
         confidence_loss=mock_od_loss,
         localization_loss=mock_od_loss,
         classification_loss=mock_od_loss,
-        matching_function=mock_matching_func,
+        matching_function="lac",
         alpha=alpha,
         device=device,
         B=B,
@@ -136,17 +138,24 @@ def test_first_step_optimizer(
     print("FirstStepMonotonizingOptimizer finished.")
     print(f"Final Lambda (Confidence Threshold): {result_lambda}")
 
-    assert isinstance(result_lambda, float)
-    assert 0.0 <= result_lambda <= 1.0
+    assert isinstance(result_lambda, float), "Result should be a float."
+    assert (
+        0.0 <= result_lambda <= 1.0
+    ), "Lambda should be in the range [0.0, 1.0]."
     # The result should not be the default initial value if the loop runs
-    assert result_lambda != 1.0
+    assert (
+        result_lambda != 1.0
+    ), "Lambda should not be equal to the initial value if optimization occurs."
+
+    assert (
+        abs(result_lambda - 0.2) < 1e-5
+    ), f"Lambda should converge to a value close to 0.2 based on the mock data. Observed: {result_lambda}"
 
 
 def test_second_step_optimizer(
     mock_predictions,
     mock_build_predictions,
     mock_od_loss,
-    mock_matching_func,
     alpha,
     device,
     B,
@@ -162,11 +171,12 @@ def test_second_step_optimizer(
         predictions=mock_predictions,
         build_predictions=mock_build_predictions,
         loss=mock_od_loss,
-        matching_function=mock_matching_func,
+        matching_function="lac",
         alpha=alpha,
         device=device,
         B=B,
-        bounds=[0.0, 1.0],
+        lower_bound=0.0,
+        upper_bound=1.0,
         steps=10,
         verbose=False,
     )
