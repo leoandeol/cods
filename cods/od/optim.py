@@ -619,7 +619,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
             losses.append(loss_i)
 
-        risk = torch.mean(torch.stack(losses))
+        _log_risk = torch.mean(torch.stack(losses))
 
         n_losses = len(losses)
 
@@ -685,7 +685,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             loss_i = max(old_loss_i, loss_i)
             losses[i] = loss_i
 
-            risk = risk + (loss_i - old_loss_i) / n_losses
+            # risk = risk + (loss_i - old_loss_i) / n_losses
 
             # risk = max(risk, previous_risk)
 
@@ -698,7 +698,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
             # Stopping condition: when we reached desired lbd_conf
             if final_lbd_conf >= lambda_conf:
-                return risk
+                return np.mean(losses)
         return None
 
     def optimize(
@@ -758,10 +758,10 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 f"[{left:.2f}, {right:.2f}] -> λ={lbd}. Corrected Risk = {corrected_risk:.3f}",
             )
 
-            if risk <= alpha:
+            if corrected_risk <= alpha:
                 right = lbd
                 good_lbds.append(lbd)
-                if risk >= alpha - epsilon:
+                if corrected_risk >= alpha - epsilon:
                     break
             else:  # corrected_risk > alpha
                 left = lbd
