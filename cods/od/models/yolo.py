@@ -222,7 +222,7 @@ class YOLOModel(ODModel):
                 cls_probs_new = cls_probs
 
             final_confidence, predicted_class = torch.max(
-                box_output[:, 4:],
+                cls_probs,
                 dim=-1,
             )
             # print(cls_probs_new.sum(dim=-1)[torch.abs(cls_probs_new.sum(dim=-1)-1)>1e-9])

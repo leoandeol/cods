@@ -207,7 +207,7 @@ class LocalizationConformalizer(Conformalizer):
         self,
         predictions: ODPredictions,
         alpha: float,
-        steps: int = 13,
+        steps: int = 15,
         bounds: List[float] = [
             0,
             1000,
@@ -277,10 +277,10 @@ class LocalizationConformalizer(Conformalizer):
             alpha=alpha,
             device=self.device,
             B=1,
-            bounds=[0, 1000]
+            bounds=[0, 2000]
             if self.prediction_set == "additive"
             else [0, 100],
-            steps=13,
+            steps=steps,
             epsilon=1e-9,
             verbose=verbose,
         )
@@ -555,7 +555,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         predictions: ODPredictions,
         alpha: float,
         bounds: List[float] = [0, 1],
-        steps: int = 40,
+        steps: int = 30,
         verbose: bool = True,
         overload_confidence_threshold: Optional[float] = None,
     ) -> torch.Tensor:
@@ -621,7 +621,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             device=self.device,
             B=1,
             bounds=[0, 1],
-            steps=25,
+            steps=steps,
             epsilon=1e-10,
             verbose=verbose,
         )
