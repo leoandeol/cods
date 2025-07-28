@@ -11,7 +11,9 @@ from cods.od.data import MSCOCODataset
 from cods.od.models import DETRModel
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # chose the GPU. If only one, then "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = (
+    "0"  # chose the GPU. If only one, then "0"
+)
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -20,12 +22,16 @@ COCO_PATH = "/datasets/shared_datasets/coco/"
 
 data = MSCOCODataset(root=COCO_PATH, split="val")
 
-calibration_ratio = 0.5  # set 0.5 to use 50% for calibration and 50% for testing
+calibration_ratio = (
+    0.5  # set 0.5 to use 50% for calibration and 50% for testing
+)
 
 use_smaller_subset = True  # TODO: Temp
 
 if use_smaller_subset:
-    data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False, n_calib_test=800)
+    data_cal, data_val = data.split_dataset(
+        calibration_ratio, shuffle=False, n_calib_test=800
+    )
 else:
     data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)
 
@@ -92,10 +98,14 @@ for split in ["cal", "val"]:
     )
     plt.xlabel("Number of Objects per Image")
     plt.ylabel("Density")
-    plt.title(f"Histogram of Object Counts ({'Calibration' if split == 'cal' else 'Validation'})")
+    plt.title(
+        f"Histogram of Object Counts ({'Calibration' if split == 'cal' else 'Validation'})"
+    )
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f"histogram_objects_{'calibration' if split == 'cal' else 'validation'}.png")
+    plt.savefig(
+        f"histogram_objects_{'calibration' if split == 'cal' else 'validation'}.png"
+    )
     plt.close()
     print(f"Saved histogram for {split} split.")
 
@@ -103,7 +113,8 @@ for split in ["cal", "val"]:
 
     # Filter predictions by confidence threshold
     n_objects_pred_thresh = [
-        np.sum(np.array(conf) >= CONFIDENCE_THRESHOLD) for conf in preds_cal.confidences
+        np.sum(np.array(conf) >= CONFIDENCE_THRESHOLD)
+        for conf in preds_cal.confidences
     ]
 
     plt.figure(figsize=(8, 5))
@@ -142,4 +153,6 @@ for split in ["cal", "val"]:
         f"histogram_objects_{'calibration' if split == 'cal' else 'validation'}_conf_{CONFIDENCE_THRESHOLD:.3f}.png"
     )
     plt.close()
-    print(f"Saved filtered histogram for {split} split (conf >= {CONFIDENCE_THRESHOLD:.3f}).")
+    print(
+        f"Saved filtered histogram for {split} split (conf >= {CONFIDENCE_THRESHOLD:.3f})."
+    )
