@@ -691,7 +691,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
             # self.all_risks_raw.append(risk.detach().cpu().numpy())
 
-            self.all_risks_mon.append(risk.detach().cpu().numpy())
+            # self.all_risks_mon.append(risk.detach().cpu().numpy())
 
             self.all_lbds_cnf.append(lambda_conf)
             self.all_lbds_loc.append(lbd)
