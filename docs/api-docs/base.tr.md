@@ -90,7 +90,7 @@ bernstein_uni_lim(Rhat, n, delta)
 ## <kbd>function</kbd> `binom_inv_cdf`
 
 ```python
-binom_inv_cdf(Rhat, n, delta)
+binom_inv_cdf(Rhat, n, delta, device='cpu')
 ```
 
 

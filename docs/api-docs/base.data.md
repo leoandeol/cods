@@ -16,7 +16,7 @@
 ## <kbd>class</kbd> `Predictions`
 Abstract class for predictions 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L10"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L8"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -31,8 +31,11 @@ __init__(
 
 Initializes a new instance of the Predictions class. 
 
+
+
 **Args:**
  
+---- 
  - <b>`unique_id`</b> (int):  The unique ID of the predictions. 
  - <b>`dataset_name`</b> (str):  The name of the dataset. 
  - <b>`split_name`</b> (str):  The name of the split. 
@@ -59,10 +62,8 @@ __init__(predictions_id: int, unique_id: Optional[int] = None)
 
 Initializes a new instance of the Parameters class. 
 
-
-
-**Parameters:**
- predictions_id (int): The unique ID of the predictions. unique_id (int): The unique ID of the parameters. 
+Parameters 
+---------- predictions_id (int): The unique ID of the predictions. unique_id (int): The unique ID of the parameters. 
 
 
 
@@ -70,12 +71,12 @@ Initializes a new instance of the Parameters class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L50"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L51"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ConformalizedPredictions`
 Abstract class for results 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L53"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L54"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -89,10 +90,8 @@ __init__(
 
 Initializes a new instance of the Data class. 
 
-
-
-**Parameters:**
- predictions_id (int): The unique ID of the predictions. parameters_id (int): The unique ID of the parameters. 
+Parameters 
+---------- predictions_id (int): The unique ID of the predictions. parameters_id (int): The unique ID of the parameters. 
 
 
 
@@ -100,12 +99,12 @@ Initializes a new instance of the Data class.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L73"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L75"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `Results`
 Abstract class for results 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L76"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/data.py#L78"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -115,10 +114,8 @@ __init__(predictions_id: int, parameters_id: int, conformalized_id: int)
 
 Initializes a new instance of the Data class. 
 
-
-
-**Parameters:**
- predictions_id (int): The unique ID of the predictions. parameters_id (int): The unique ID of the parameters. conformalized_id (int): The unique ID of the conformalized predictions. 
+Parameters 
+---------- predictions_id (int): The unique ID of the predictions. parameters_id (int): The unique ID of the parameters. conformalized_id (int): The unique ID of the conformalized predictions. 
 
 
 

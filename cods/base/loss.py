@@ -9,7 +9,7 @@ class NCScore:
         pass
 
 
-# todo: perhaps rename to something better than loss, to avoid confusion with usual losses
+# TODO: perhaps rename to something better than loss, to avoid confusion with usual losses
 class Loss:
     def __init__(self):
         pass
@@ -20,4 +20,4 @@ class Loss:
         conformalized_predictions: ConformalizedPredictions,
         **kwargs,
     ) -> torch.Tensor:
-        raise NotImplementedError()
+        raise NotImplementedError

@@ -38,14 +38,14 @@ optimize(objective_function: Callable, alpha: float, **kwargs) → float
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L17"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L20"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `BinarySearchOptimizer`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L18"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L21"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -62,7 +62,7 @@ __init__()
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L21"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L24"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `optimize`
 
@@ -82,14 +82,14 @@ params: epsilon: objective_function: function of one parameter lbd (use partials
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L88"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L90"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `GaussianProcessOptimizer`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L89"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L91"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -106,7 +106,7 @@ __init__()
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L92"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L94"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `optimize`
 
@@ -128,14 +128,14 @@ optimize(
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L131"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L133"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `MonteCarloOptimizer`
 
 
 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L132"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L134"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -152,7 +152,7 @@ __init__()
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L135"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/base/optim.py#L137"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `optimize`
 

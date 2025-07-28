@@ -10,7 +10,7 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L19"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L20"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_global_coverage`
 
@@ -33,6 +33,7 @@ Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE 
 
 **Args:**
  
+---- 
  - <b>`predictions`</b> (ODPredictions):  Object detection predictions. 
  - <b>`conformalized_predictiond`</b> (ODConformalizedPredictions):  Conformalized object detection predictions. 
  - <b>`confidence`</b> (bool, optional):  Whether to consider confidence coverage. Defaults to True. 
@@ -44,12 +45,13 @@ Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE 
 
 **Returns:**
  
+------- 
  - <b>`torch.Tensor`</b>:  Global coverage tensor. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L127"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L161"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `getStretch`
 
@@ -63,6 +65,7 @@ Get the stretch of object detection predictions.
 
 **Args:**
  
+---- 
  - <b>`od_predictions`</b> (ODPredictions):  Object detection predictions. 
  - <b>`conf_boxes`</b> (list):  List of confidence boxes. 
 
@@ -70,12 +73,13 @@ Get the stretch of object detection predictions.
 
 **Returns:**
  
+------- 
  - <b>`torch.Tensor`</b>:  Stretch tensor. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L148"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L185"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `get_recall_precision`
 
@@ -95,6 +99,7 @@ Get the recall and precision for object detection predictions.
 
 **Args:**
  
+---- 
  - <b>`od_predictions`</b> (ODPredictions):  Object detection predictions. 
  - <b>`pred_boxes`</b> (list):  List of predicted boxes. Defaults to None. 
  - <b>`IOU_THRESHOLD`</b> (float, optional):  IoU threshold. Defaults to 0.5. 
@@ -106,12 +111,13 @@ Get the recall and precision for object detection predictions.
 
 **Returns:**
  
+------- 
  - <b>`tuple`</b>:  Tuple containing the recall, precision, and scores. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L219"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L258"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `getAveragePrecision`
 
@@ -129,6 +135,7 @@ Get the average precision for object detection predictions.
 
 **Args:**
  
+---- 
  - <b>`od_predictions`</b> (ODPredictions):  Object detection predictions. 
  - <b>`pred_boxes`</b> (list):  List of predicted boxes. 
  - <b>`verbose`</b> (bool, optional):  Whether to display progress. Defaults to True. 
@@ -138,12 +145,13 @@ Get the average precision for object detection predictions.
 
 **Returns:**
  
+------- 
  - <b>`tuple`</b>:  Tuple containing the average precision, total recalls, total precisions, and objectness thresholds. 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L259"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L301"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `plot_recall_precision`
 
@@ -161,6 +169,7 @@ Plot the recall and precision given objectness threshold or IoU threshold.
 
 **Args:**
  
+---- 
  - <b>`total_recalls`</b> (list):  List of total recalls. 
  - <b>`total_precisions`</b> (list):  List of total precisions. 
  - <b>`threshes_objectness`</b> (np.ndarray):  Array of objectness thresholds. 
@@ -168,7 +177,7 @@ Plot the recall and precision given objectness threshold or IoU threshold.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L283"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L326"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `unroll_metrics`
 
@@ -180,6 +189,49 @@ unroll_metrics(
     iou_threshold: float = 0.5,
     verbose: bool = True
 ) → dict
+```
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L382"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>class</kbd> `ODEvaluator`
+
+
+
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L383"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `__init__`
+
+```python
+__init__(confidence_loss, localization_loss, classification_loss)
+```
+
+
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/metrics.py#L393"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+### <kbd>method</kbd> `evaluate`
+
+```python
+evaluate(
+    predictions: ODPredictions,
+    parameters: ODParameters,
+    conformalized_predictions: ODConformalizedPredictions
+)
 ```
 
 

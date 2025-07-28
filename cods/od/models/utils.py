@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+from torch import nn
 from torchvision.ops import box_iou
 
 
@@ -12,8 +12,7 @@ class ResizeChannels(nn.Module):
     def forward(self, image):
         if image.shape[0] == 1:
             return image.repeat(3, 1, 1)
-        else:
-            return image
+        return image
 
 
 def bayesod(
@@ -25,12 +24,13 @@ def bayesod(
     """_summary_
 
     Args:
+    ----
         pred_boxes (torch.Tensor): _description_
         confidences (torch.Tensor): _description_
         pred_cls (torch.Tensor): _description_
         iou_threshold (float): _description_
-    """
 
+    """
     # TODO
     raise NotImplementedError("BayesOD is not implemented yet")
 
@@ -57,7 +57,11 @@ def bayesod(
 
         # TODO(leo) @luca : there's absolutely a better way to do that
         cluster = list(
-            [element for element in tmp_cluster if element not in already_used]
+            [
+                element
+                for element in tmp_cluster
+                if element not in already_used
+            ],
         )
 
         if len(cluster) > 0:
@@ -76,7 +80,7 @@ def bayesod(
         curr_boxes = torch.stack([pred_boxes[i] for i in cluster])
         # weighted mean
         new_box = (curr_boxes * confidences[cluster].reshape(-1, 1)).sum(
-            0
+            0,
         ) / confidences[cluster].sum()
         # variance (?)
         new_box_unc = (curr_boxes - new_box).pow(2).sum(0)

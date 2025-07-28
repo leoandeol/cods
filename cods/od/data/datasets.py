@@ -2,11 +2,12 @@ import json
 import os
 import random
 from logging import getLogger
-from typing import Optional, Tuple, Any
+from typing import Any, Optional, Tuple
 
 from PIL import Image
 from torch.utils.data import Dataset
-from  torchvision.datasets import VOCDetection
+from torchvision.datasets import VOCDetection
+
 try:
     from defusedxml.ElementTree import parse as ET_parse
 except ImportError:
@@ -134,11 +135,13 @@ class MSCOCODataset(Dataset):
         self._split = split
         if split == "train":
             self.annotations_path = os.path.join(
-                self.annotations_path, "instances_train2017.json"
+                self.annotations_path,
+                "instances_train2017.json",
             )
         elif split == "val":
             self.annotations_path = os.path.join(
-                self.annotations_path, "instances_val2017.json"
+                self.annotations_path,
+                "instances_val2017.json",
             )
         elif split == "test":
             raise ValueError("No annotations exists for the test set")
@@ -166,18 +169,39 @@ class MSCOCODataset(Dataset):
         for annotation in self.annotations:
             if annotation["image_id"] in self.image_ids:
                 self.reindexed_annotations[annotation["image_id"]].append(
-                    annotation
+                    annotation,
                 )
 
         self.transforms = transforms
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """String representation of the dataset.
+
+        Returns:
+            str: String representation of the dataset.
+
+        """
         return f"MSCOCODataset(\n\t{self.name = },\n\t{self.split = },\n\t{self.root = }\n)"
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Return the number of images in the dataset.
+
+        Returns:
+            int: Number of images in the dataset.
+
+        """
         return len(self.image_ids)
 
-    def _load_image(self, idx: int):
+    def _load_image(self, idx: int) -> Image.Image:
+        """Load an image from the dataset.
+
+        Args:
+            idx (int): Index of the image to load.
+
+        Returns:
+            Image.Image: The loaded image.
+
+        """
         new_idx = self.image_ids[idx]
         image_path = os.path.join(self.images_path, self.image_files[new_idx])
 
@@ -192,7 +216,7 @@ class MSCOCODataset(Dataset):
         new_idx = self.image_ids[idx]
         return self.reindexed_annotations[new_idx]
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> Tuple[Any, Any, Any, Any]:
         img, img_path = self._load_image_with_path(idx)
         target = self._load_target(idx)
 
@@ -249,26 +273,45 @@ class MSCOCODataset(Dataset):
         return list([list(x) for x in zip(*batch)])
         # didn't check the above
 
+
 class VOCDataset(VOCDetection):
-    
     VOC_CLASSES = [
-        'aeroplane', 'bicycle', 'bird', 'boat', 'bottle',
-        'bus', 'car', 'cat', 'chair', 'cow',
-        'diningtable', 'dog', 'horse', 'motorbike', 'person',
-        'pottedplant', 'sheep', 'sofa', 'train', 'tvmonitor'
+        "aeroplane",
+        "bicycle",
+        "bird",
+        "boat",
+        "bottle",
+        "bus",
+        "car",
+        "cat",
+        "chair",
+        "cow",
+        "diningtable",
+        "dog",
+        "horse",
+        "motorbike",
+        "person",
+        "pottedplant",
+        "sheep",
+        "sofa",
+        "train",
+        "tvmonitor",
     ]
-    
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        """
-        Args:
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any, Any, Any]:
+        """Args:
             index (int): Index
 
-        Returns:
+        Returns
+        -------
             tuple: (image, target) where target is a dictionary of the XML tree.
+
         """
         img_path = self.images[index]
         img = Image.open(img_path).convert("RGB")
-        target = self.parse_voc_xml(ET_parse(self.annotations[index]).getroot())
+        target = self.parse_voc_xml(
+            ET_parse(self.annotations[index]).getroot(),
+        )
 
         if self.transforms is not None:
             img, target = self.transforms(img, target)

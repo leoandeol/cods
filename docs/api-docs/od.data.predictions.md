@@ -60,19 +60,18 @@ Methods:
 __init__(
     dataset_name: str,
     split_name: str,
-    image_paths,
-    image_shapes,
-    true_boxes,
-    pred_boxes,
-    confidences,
-    true_cls,
-    pred_cls,
-    names,
-    pred_boxes_uncertainty=None,
+    image_paths: List[str],
+    image_shapes: List[Tensor],
+    true_boxes: List[Tensor],
+    pred_boxes: List[Tensor],
+    confidences: List[Tensor],
+    true_cls: List[Tensor],
+    pred_cls: List[Tensor],
+    names: List[str],
+    pred_boxes_uncertainty: List[Tensor] = None,
     unique_id: Optional[int] = None
 )
 ```
-
 
 
 
@@ -85,10 +84,26 @@ __init__(
 
 <a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L94"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
+### <kbd>method</kbd> `to`
+
+```python
+to(device: str)
+```
+
+Move the data to the specified device. 
+
+Parameters 
+----------  device (str): The device to move the data to. 
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L114"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
 ## <kbd>class</kbd> `ODParameters`
 Class representing parameters for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L97"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L117"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -119,12 +134,12 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L140"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L160"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODConformalizedPredictions`
 Class representing conformalized predictions for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L143"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L163"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 
@@ -148,12 +163,12 @@ Parameters
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L169"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L189"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>class</kbd> `ODResults`
 Class representing results for object detection tasks. 
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L172"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/data/predictions.py#L192"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>method</kbd> `__init__`
 

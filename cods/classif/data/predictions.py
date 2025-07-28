@@ -35,8 +35,10 @@ class ClassificationPredictions(Predictions):
         """Split predictions into multiple splits
 
         Args:
+        ----
             splits_names (list): list of names for each split
             splits_ratios (list): list of ratios for each split
+
         """
         assert sum(splits_ratios) == 1
         assert len(splits_names) == len(splits_ratios)
@@ -53,6 +55,6 @@ class ClassificationPredictions(Predictions):
                     true_cls=self.true_cls[start:end],
                     pred_cls=self.pred_cls[start:end],
                     idx_to_cls=self.idx_to_cls,
-                )
+                ),
             )
         return splits

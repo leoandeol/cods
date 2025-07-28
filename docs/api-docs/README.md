@@ -24,6 +24,7 @@
 - [`od.models.model`](./od.models.model.md#module-odmodelsmodel)
 - [`od.models.utils`](./od.models.utils.md#module-odmodelsutils)
 - [`od.models.yolo`](./od.models.yolo.md#module-odmodelsyolo)
+- [`od.optim`](./od.optim.md#module-odoptim)
 - [`od.score`](./od.score.md#module-odscore)
 - [`od.utils`](./od.utils.md#module-odutils)
 - [`od.visualization`](./od.visualization.md#module-odvisualization)
@@ -50,6 +51,7 @@
 - [`cp.ODClassificationConformalizer`](./od.cp.md#class-odclassificationconformalizer)
 - [`cp.ODConformalizer`](./od.cp.md#class-odconformalizer): Class representing conformalizers for object detection tasks.
 - [`datasets.MSCOCODataset`](./od.data.datasets.md#class-mscocodataset)
+- [`datasets.VOCDataset`](./od.data.datasets.md#class-vocdataset)
 - [`predictions.ODConformalizedPredictions`](./od.data.predictions.md#class-odconformalizedpredictions): Class representing conformalized predictions for object detection tasks.
 - [`predictions.ODParameters`](./od.data.predictions.md#class-odparameters): Class representing parameters for object detection tasks.
 - [`predictions.ODPredictions`](./od.data.predictions.md#class-odpredictions): Class representing predictions for object detection tasks.
@@ -57,6 +59,9 @@
 - [`evaluate.Benchmark`](./od.evaluate.md#class-benchmark)
 - [`loss.BoxCountRecallConfidenceLoss`](./od.loss.md#class-boxcountrecallconfidenceloss)
 - [`loss.BoxCountThresholdConfidenceLoss`](./od.loss.md#class-boxcountthresholdconfidenceloss)
+- [`loss.BoxCountTwosidedConfidenceLoss`](./od.loss.md#class-boxcounttwosidedconfidenceloss)
+- [`loss.BoxWiseIoULoss`](./od.loss.md#class-boxwiseiouloss): Box-wise PRECISION loss: 1 - mean(areas of the union of the boxes),
+- [`loss.BoxWisePrecisionLoss`](./od.loss.md#class-boxwiseprecisionloss): Box-wise PRECISION loss: 1 - mean(areas of the union of the boxes),
 - [`loss.BoxWiseRecallLoss`](./od.loss.md#class-boxwiserecallloss): Box-wise recall loss: 1 - mean(areas of the union of the boxes),
 - [`loss.ClassBoxWiseRecallLoss`](./od.loss.md#class-classboxwiserecallloss)
 - [`loss.ClassificationLossWrapper`](./od.loss.md#class-classificationlosswrapper)
@@ -64,12 +69,16 @@
 - [`loss.ODBinaryClassificationLoss`](./od.loss.md#class-odbinaryclassificationloss)
 - [`loss.ODLoss`](./od.loss.md#class-odloss)
 - [`loss.PixelWiseRecallLoss`](./od.loss.md#class-pixelwiserecallloss)
+- [`loss.ThresholdedBoxDistanceConfidenceLoss`](./od.loss.md#class-thresholdedboxdistanceconfidenceloss)
 - [`loss.ThresholdedRecallLoss`](./od.loss.md#class-thresholdedrecallloss)
+- [`metrics.ODEvaluator`](./od.metrics.md#class-odevaluator)
 - [`detr.DETRModel`](./od.models.detr.md#class-detrmodel)
 - [`model.ODModel`](./od.models.model.md#class-odmodel)
 - [`utils.ResizeChannels`](./od.models.utils.md#class-resizechannels)
 - [`yolo.AlteredYOLO`](./od.models.yolo.md#class-alteredyolo)
 - [`yolo.YOLOModel`](./od.models.yolo.md#class-yolomodel)
+- [`optim.FirstStepMonotonizingOptimizer`](./od.optim.md#class-firststepmonotonizingoptimizer)
+- [`optim.SecondStepMonotonizingOptimizer`](./od.optim.md#class-secondstepmonotonizingoptimizer)
 - [`score.MinAdditiveSignedAssymetricHausdorffNCScore`](./od.score.md#class-minadditivesignedassymetrichausdorffncscore): MinAdditiveSignedAssymetricHausdorffNCScore is a class that calculates the score using the minimum additive signed asymmetric Hausdorff distance.
 - [`score.MinMultiplicativeSignedAssymetricHausdorffNCScore`](./od.score.md#class-minmultiplicativesignedassymetrichausdorffncscore): MinMultiplicativeSignedAssymetricHausdorffNCScore is a class that calculates the score using the minimum multiplicative signed asymmetric Hausdorff distance.
 - [`score.ODNCScore`](./od.score.md#class-odncscore): ODNCScore is an abstract class for calculating the score in object detection tasks.
@@ -96,16 +105,27 @@
 - [`detr.box_xyxy_to_cxcywh`](./od.models.detr.md#function-box_xyxy_to_cxcywh)
 - [`detr.rescale_bboxes`](./od.models.detr.md#function-rescale_bboxes)
 - [`utils.bayesod`](./od.models.utils.md#function-bayesod): _summary_
+- [`utils.filter_preds`](./od.models.utils.md#function-filter_preds)
 - [`yolo.xywh2xyxy_scaled`](./od.models.yolo.md#function-xywh2xyxy_scaled)
 - [`utils.apply_margins`](./od.utils.md#function-apply_margins)
 - [`utils.assymetric_hausdorff_distance`](./od.utils.md#function-assymetric_hausdorff_distance)
+- [`utils.assymetric_hausdorff_distance_old`](./od.utils.md#function-assymetric_hausdorff_distance_old)
 - [`utils.compute_risk_image_level`](./od.utils.md#function-compute_risk_image_level)
+- [`utils.compute_risk_image_level_confidence`](./od.utils.md#function-compute_risk_image_level_confidence)
 - [`utils.compute_risk_object_level`](./od.utils.md#function-compute_risk_object_level): Input : conformal and true boxes of a all images
 - [`utils.contained`](./od.utils.md#function-contained): Compute the intersection over union (IoU) between two bounding boxes.
+- [`utils.contained_old`](./od.utils.md#function-contained_old): Compute the intersection over union (IoU) between two bounding boxes.
 - [`utils.f_iou`](./od.utils.md#function-f_iou): Compute the intersection over union (IoU) between two bounding boxes.
-- [`utils.get_covered_areas_of_gt_union`](./od.utils.md#function-get_covered_areas_of_gt_union): Compute the covered areas of ground truth bounding boxes using union.
+- [`utils.f_lac`](./od.utils.md#function-f_lac)
+- [`utils.fast_covered_areas_of_gt`](./od.utils.md#function-fast_covered_areas_of_gt)
+- [`utils.generalized_iou`](./od.utils.md#function-generalized_iou): Compute the Generalized Intersection over Union (GIoU) between two bounding boxes.
+- [`utils.get_covered_areas_of_gt_union`](./od.utils.md#function-get_covered_areas_of_gt_union)
 - [`utils.match_predictions_to_true_boxes`](./od.utils.md#function-match_predictions_to_true_boxes): Matching predictions to true boxes. Done in place, modifies the preds object.
 - [`utils.mesh_func`](./od.utils.md#function-mesh_func): Compute mesh function.
+- [`utils.rank_distance`](./od.utils.md#function-rank_distance)
+- [`utils.vectorized_generalized_iou`](./od.utils.md#function-vectorized_generalized_iou): Compute the Generalized Intersection over Union (GIoU) between two sets of
+- [`visualization.create_pdf_with_plots`](./od.visualization.md#function-create_pdf_with_plots): Create a PDF with plots for each image in the predictions.
+- [`visualization.plot_histograms_predictions`](./od.visualization.md#function-plot_histograms_predictions)
 - [`visualization.plot_preds`](./od.visualization.md#function-plot_preds): Plot the predictions of an object detection model.
 
 

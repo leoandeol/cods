@@ -10,7 +10,7 @@
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L12"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L13"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `mesh_func`
 
@@ -41,7 +41,7 @@ Compute mesh function.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L51"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L52"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `get_covered_areas_of_gt_union`
 
@@ -49,32 +49,62 @@ Compute mesh function.
 get_covered_areas_of_gt_union(pred_boxes, true_boxes)
 ```
 
-Compute the covered areas of ground truth bounding boxes using union. 
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L72"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `fast_covered_areas_of_gt`
+
+```python
+fast_covered_areas_of_gt(pred_boxes, true_boxes)
+```
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L90"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `contained`
+
+```python
+contained(tb: Tensor, pb: Tensor) → Tensor
+```
+
+Compute the intersection over union (IoU) between two bounding boxes. 
 
 
 
 **Args:**
  
 ---- 
- - <b>`pred_boxes`</b> (List[List[int]]):  List of predicted bounding boxes. 
- - <b>`true_boxes`</b> (List[List[int]]):  List of ground truth bounding boxes. 
+ - <b>`tb`</b> (torch.Tensor):  Ground truth bounding boxes (N, 4). 
+ - <b>`pb`</b> (torch.Tensor):  Predicted bounding boxes (N, 4). 
 
 
 
 **Returns:**
  
 ------- 
- - <b>`torch.Tensor`</b>:  Covered areas of ground truth bounding boxes. 
+ - <b>`torch.Tensor`</b>:  IoU values (N,). 
 
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L81"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L119"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>function</kbd> `contained`
+## <kbd>function</kbd> `contained_old`
 
 ```python
-contained(tb, pb)
+contained_old(tb, pb)
 ```
 
 Compute the intersection over union (IoU) between two bounding boxes. 
@@ -97,7 +127,7 @@ Compute the intersection over union (IoU) between two bounding boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L144"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `f_iou`
 
@@ -125,12 +155,77 @@ Compute the intersection over union (IoU) between two bounding boxes.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L133"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L171"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
-## <kbd>function</kbd> `assymetric_hausdorff_distance`
+## <kbd>function</kbd> `generalized_iou`
 
 ```python
-assymetric_hausdorff_distance(true_box, pred_box)
+generalized_iou(boxA, boxB)
+```
+
+Compute the Generalized Intersection over Union (GIoU) between two bounding boxes. 
+
+
+
+**Args:**
+ 
+---- 
+ - <b>`boxA`</b> (List[int]):  First bounding box. 
+ - <b>`boxB`</b> (List[int]):  Second bounding box. 
+
+
+
+**Returns:**
+ 
+------- 
+ - <b>`float`</b>:  Generalized Intersection over Union (GIoU) value. 
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L214"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `vectorized_generalized_iou`
+
+```python
+vectorized_generalized_iou(boxesA: ndarray, boxesB: ndarray) → ndarray
+```
+
+Compute the Generalized Intersection over Union (GIoU) between two sets of bounding boxes. 
+
+Calculates the GIoU for every pair of boxes between boxesA and boxesB. 
+
+
+
+**Args:**
+ 
+---- 
+ - <b>`boxesA`</b> (np.ndarray):  A NumPy array of shape (N, 4) representing N bounding boxes.  Each row is [x1, y1, x2, y2]. 
+ - <b>`boxesB`</b> (np.ndarray):  A NumPy array of shape (M, 4) representing M bounding boxes.  Each row is [x1, y1, x2, y2]. 
+
+
+
+**Returns:**
+ 
+------- 
+ - <b>`np.ndarray`</b>:  A NumPy array of shape (N, M) containing the GIoU values for  each pair of boxes (boxesA[i], boxesB[j]). 
+
+
+
+**Raises:**
+ 
+------ 
+ - <b>`ValueError`</b>:  If input arrays do not have shape (N, 4) or (M, 4). 
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L328"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `assymetric_hausdorff_distance_old`
+
+```python
+assymetric_hausdorff_distance_old(true_box, pred_box)
 ```
 
 
@@ -140,7 +235,52 @@ assymetric_hausdorff_distance(true_box, pred_box)
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L148"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L343"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `assymetric_hausdorff_distance`
+
+```python
+assymetric_hausdorff_distance(true_boxes, pred_boxes)
+```
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L353"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `f_lac`
+
+```python
+f_lac(true_cls, pred_cls)
+```
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L361"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `rank_distance`
+
+```python
+rank_distance(true_cls, pred_cls)
+```
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L369"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `match_predictions_to_true_boxes`
 
@@ -149,7 +289,10 @@ match_predictions_to_true_boxes(
     preds,
     distance_function,
     overload_confidence_threshold=None,
-    verbose=False
+    verbose=False,
+    hungarian=False,
+    idx=None,
+    class_factor: float = 0.25
 ) → None
 ```
 
@@ -158,7 +301,7 @@ Matching predictions to true boxes. Done in place, modifies the preds object.
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L222"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L497"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `apply_margins`
 
@@ -173,7 +316,7 @@ apply_margins(pred_boxes: List[Tensor], Qs, mode='additive')
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L256"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L531"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_object_level`
 
@@ -191,7 +334,7 @@ Input : conformal and true boxes of a all images
 
 ---
 
-<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L318"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L593"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `compute_risk_image_level`
 
@@ -200,6 +343,27 @@ compute_risk_image_level(
     conformalized_predictions,
     predictions,
     loss,
+    return_list: bool = False
+) → Tensor
+```
+
+
+
+
+
+
+---
+
+<a href="https://github.com/leoandeol/cods/blob/main/cods/od/utils.py#L676"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+
+## <kbd>function</kbd> `compute_risk_image_level_confidence`
+
+```python
+compute_risk_image_level_confidence(
+    conformalized_predictions,
+    predictions,
+    confidence_loss,
+    other_losses=None,
     return_list: bool = False
 ) → Tensor
 ```
