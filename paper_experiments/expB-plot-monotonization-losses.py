@@ -40,12 +40,12 @@ def setup_experiment(
     # Check if file exists:
     if (
         os.path.exists(
-            f"./final_experiments/figs/monotization_conf_{name_of_experiment}.png"
+            f"./final_experiments/figs/monotization_conf_{name_of_experiment}.png",
         )
         and not override
     ):
         logger.info(
-            f"File {name_of_experiment} already exists. Set override=True to overwrite."
+            f"File {name_of_experiment} already exists. Set override=True to overwrite.",
         )
         return
 
@@ -129,7 +129,7 @@ def setup_experiment(
     plt.yscale("log")
     plt.legend()
     plt.savefig(
-        f"./final_experiments/figs/monotization_conf_{name_of_experiment}.png"
+        f"./final_experiments/figs/monotization_conf_{name_of_experiment}.png",
     )
 
     # Second step: localization
@@ -142,8 +142,8 @@ def setup_experiment(
                 reversed(
                     conf.localization_conformalizer.optimizer2.all_risks_raw[
                         i * n : (i + 1) * n
-                    ]
-                )
+                    ],
+                ),
             ),
             c="b",
             alpha=1 - 0.5 * i / 13,
@@ -154,8 +154,8 @@ def setup_experiment(
                 reversed(
                     conf.localization_conformalizer.optimizer2.all_risks_mon[
                         i * n : (i + 1) * n
-                    ]
-                )
+                    ],
+                ),
             ),
             c="r",
             alpha=1 - 0.5 * i / 13,
@@ -163,7 +163,7 @@ def setup_experiment(
         )
     plt.legend()
     plt.savefig(
-        f"./final_experiments/figs/monotization_loc_{name_of_experiment}.png"
+        f"./final_experiments/figs/monotization_loc_{name_of_experiment}.png",
     )
     plt.close()
 
@@ -176,8 +176,8 @@ def setup_experiment(
                 reversed(
                     conf.classification_conformalizer.optimizer2.all_risks_raw[
                         i * n : (i + 1) * n
-                    ]
-                )
+                    ],
+                ),
             ),
             c="b",
             alpha=1 - 0.5 * i / 25,
@@ -188,8 +188,8 @@ def setup_experiment(
                 reversed(
                     conf.classification_conformalizer.optimizer2.all_risks_mon[
                         i * n : (i + 1) * n
-                    ]
-                )
+                    ],
+                ),
             ),
             c="r",
             alpha=1 - 0.5 * i / 25,
@@ -197,7 +197,7 @@ def setup_experiment(
         )
     plt.legend()
     plt.savefig(
-        f"./final_experiments/figs/monotization_cls_{name_of_experiment}.png"
+        f"./final_experiments/figs/monotization_cls_{name_of_experiment}.png",
     )
     plt.close()
 
@@ -310,7 +310,7 @@ def experiment_alphas():
         }
         setup_experiment(
             model_name="detr_resnet50",
-            filter_by_confidence=None,  # 1e-3,
+            filter_by_confidence=1e-3,
             config=config,
             name_of_experiment=f"comparing_alphas_{alphas[0]}_{alphas[1]}_{alphas[2]}",
         )

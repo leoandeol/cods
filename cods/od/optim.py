@@ -1,4 +1,5 @@
 from logging import getLogger
+from typing import Callable
 
 import numpy as np
 import torch
@@ -59,7 +60,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         confidences = predictions.confidences
 
         stacked_confidences = torch.concatenate(
-            [x for x in confidences],  # .squeeze()
+            confidences,
         )
         confidence_image_idx = torch.concatenate(
             [
@@ -92,7 +93,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
 
         # TODO(leo):parallelize?
         # Step 1: Compute the risk
-        for i in tqdm(range(len(predictions))):
+        for i in tqdm(range(len(predictions)), disable=not verbose):
             true_boxes_i = true_boxes[i]
             pred_boxes_i = pred_boxes[i]
             confidences_i = confidences[i]
@@ -135,19 +136,16 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            # print(matched_pred_boxes_i.shape)
-            matched_pred_cls_i = list(
-                [
-                    (
-                        torch.stack([pred_cls_i[m] for m in matching_i[j]])[
-                            0
-                        ]  # TODO zero here ?
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ],
-            )
+            matched_pred_cls_i = [
+                (
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[
+                        0
+                    ]  # TODO zero here ?
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
             margin = np.concatenate((image_shape, image_shape))
             matched_conf_boxes_i = apply_margins(
                 [matched_pred_boxes_i],
@@ -160,9 +158,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 torch.arange(n_classes)[None, ...].to(device)
                 for _ in range(len(matched_pred_cls_i))
             ]
-
-            # if matched_conf_boxes_i.size() == 0:
-            #     matched_conf_boxes_i = torch.tensor([]).float().to(device)
 
             localization_loss_i = localization_loss(
                 true_boxes_i,
@@ -181,10 +176,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             localization_losses.append(localization_loss_i)
             classification_losses.append(classification_loss_i)
 
-        # confidence_risk = torch.mean(torch.stack(confidence_losses))
-        # localization_risk = torch.mean(torch.stack(localization_losses))
-        # classification_risk = torch.mean(torch.stack(classification_losses))
-
         # TODO(leo): image level
         confidence_risk = self._correct_risk(
             confidence_losses,
@@ -202,21 +193,27 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             B,
         )
 
+        # ------- LOGGING -------
+        _log_raw_confidence_losses = confidence_losses.copy()
+        _log_raw_localization_losses = localization_losses.copy()
+        _log_raw_classification_losses = classification_losses.copy()
+
         max_risk = torch.max(
             torch.stack(
                 [confidence_risk, localization_risk, classification_risk],
             ),
         )
-        print(f"First risk: {max_risk.detach().cpu().numpy()}")
+        logger.info(f"First risk: {max_risk.detach().cpu().numpy()}")
         if max_risk.detach().cpu().numpy() > alpha:
             # Debug: all three risks to see why there isn't any solution
             logger.debug(f"Confidence risk: {confidence_risk}")
             logger.debug(f"Localization risk: {localization_risk}")
             logger.debug(f"Classification risk: {classification_risk}")
             logger.debug(f"Max risk: {max_risk} > {alpha}. No solution found.")
-            raise ValueError(
+            logger.warning(
                 "There does not exist any solution satisfying the constraints.",
             )
+            return 1.0
         logger.debug(
             f"Risk after 1st epoch is {max_risk.detach().cpu().numpy()} < {alpha}",
         )
@@ -231,6 +228,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                     sorted_stacked_confidences,
                 ),
             ),
+            disable=not verbose,
         )
 
         self.all_risks_raw = [max_risk.detach().cpu().numpy()]
@@ -247,7 +245,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         for image_id, conf_score in pbar:
             previous_lbd = lambda_conf
             previous_risk = max_risk
-            lambda_conf = 1 - conf_score.cpu().numpy().item()  # - 1e-7  # Test
+            lambda_conf = 1 - conf_score.cpu().numpy().item()
             if lambda_conf > init_lambda:
                 continue
 
@@ -336,9 +334,26 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 matched_conf_cls_i,
             )
 
-            confidence_losses[i] = confidence_loss_i.detach().clone()
-            localization_losses[i] = localization_loss_i.detach().clone()
-            classification_losses[i] = classification_loss_i.detach().clone()
+            _log_raw_confidence_losses[i] = confidence_loss_i.detach().clone()
+            _log_raw_localization_losses[i] = (
+                localization_loss_i.detach().clone()
+            )
+            _log_raw_classification_losses[i] = (
+                classification_loss_i.detach().clone()
+            )
+
+            confidence_losses[i] = max(
+                confidence_loss_i.detach().clone(),
+                confidence_losses[i].clone(),
+            )
+            localization_losses[i] = max(
+                localization_loss_i.detach().clone(),
+                localization_losses[i].clone(),
+            )
+            classification_losses[i] = max(
+                classification_loss_i.detach().clone(),
+                classification_losses[i].clone(),
+            )
 
             confidence_risk = self._correct_risk(
                 confidence_losses,
@@ -361,40 +376,41 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                     [confidence_risk, localization_risk, classification_risk],
                 ),
             )
+            _log_raw_confidence_risk = self._correct_risk(
+                _log_raw_confidence_losses,
+                len(predictions),
+                B,
+            )
+            _log_raw_localization_risk = self._correct_risk(
+                _log_raw_localization_losses,
+                len(predictions),
+                B,
+            )
+            _log_raw_classification_risk = self._correct_risk(
+                _log_raw_classification_losses,
+                len(predictions),
+                B,
+            )
+            _log_raw_max_risk = torch.max(
+                torch.stack(
+                    [
+                        _log_raw_confidence_risk,
+                        _log_raw_localization_risk,
+                        _log_raw_classification_risk,
+                    ],
+                ),
+            )
             self.all_lbds.append(lambda_conf)
-            # _tmp_max_risk =
-            self.all_risks_raw.append(max_risk.detach().cpu().numpy())
+            self.all_risks_raw.append(_log_raw_max_risk.detach().cpu().numpy())
             self.all_risks_raw_conf.append(
-                confidence_risk.detach().cpu().numpy(),
+                _log_raw_confidence_risk.detach().cpu().numpy(),
             )
             self.all_risks_raw_loc.append(
-                localization_risk.detach().cpu().numpy(),
+                _log_raw_localization_risk.detach().cpu().numpy(),
             )
             self.all_risks_raw_cls.append(
-                classification_risk.detach().cpu().numpy(),
+                _log_raw_classification_risk.detach().cpu().numpy(),
             )
-
-            # Monotonization
-            if max_risk < previous_risk:
-                max_risk = previous_risk
-                confidence_risk = np.max(
-                    [
-                        self.all_risks_mon_conf[-1],
-                        confidence_risk.detach().cpu().numpy(),
-                    ],
-                )
-                localization_risk = np.max(
-                    [
-                        self.all_risks_mon_loc[-1],
-                        localization_risk.detach().cpu().numpy(),
-                    ],
-                )
-                classification_risk = np.max(
-                    [
-                        self.all_risks_mon_cls[-1],
-                        classification_risk.detach().cpu().numpy(),
-                    ],
-                )
 
             self.all_risks_mon.append(max_risk.detach().cpu().numpy())
             self.all_risks_mon_conf.append(
@@ -540,6 +556,11 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         build_predictions,
         matching_function,
     ):
+        all_risks_raw = []
+        all_risks_mon = []
+        all_lbds_cnf = []
+        all_lbds_loc = []
+
         true_boxes = predictions.true_boxes
         pred_boxes = predictions.pred_boxes
         true_cls = predictions.true_cls
@@ -580,7 +601,20 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             pred_boxes_i = pred_boxes[i]
             true_cls_i = true_cls[i]
             pred_cls_i = pred_cls[i]
+            confidences_i = confidences[i]
             matching_i = predictions.matching[i]
+
+            pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
+            pred_cls_i = [
+                x
+                for x, c in zip(pred_cls_i, confidences_i)
+                if c >= 1 - lambda_conf
+            ]
+            pred_cls_i = (
+                torch.stack(pred_cls_i)
+                if len(pred_cls_i) > 0
+                else torch.tensor([]).float().to(device)
+            )
 
             tmp_matched_boxes_i = [
                 (
@@ -619,9 +653,14 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
             losses.append(loss_i)
 
+        # ------- Start Logging -------
         _log_risk = torch.mean(torch.stack(losses))
-
-        n_losses = len(losses)
+        _log_losses = losses.copy()
+        all_risks_raw.append(_log_risk.detach().cpu().numpy())
+        all_risks_mon.append(_log_risk.detach().cpu().numpy())
+        all_lbds_cnf.append(lambda_conf)
+        all_lbds_loc.append(lbd)
+        # ------- End Logging -------
 
         # Step 2: Update one loss at a time
         for image_id, conf_score in zip(
@@ -635,6 +674,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             pred_boxes_i = pred_boxes[i]
             true_cls_i = true_cls[i]
             pred_cls_i = pred_cls[i]
+            confidences_i = confidences[i]
 
             matching_i = match_predictions_to_true_boxes(
                 predictions,
@@ -645,6 +685,18 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             )
 
             predictions.matching[i] = matching_i
+
+            pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
+            pred_cls_i = [
+                x
+                for x, c in zip(pred_cls_i, confidences_i)
+                if c >= 1 - lambda_conf
+            ]
+            pred_cls_i = (
+                torch.stack(pred_cls_i)
+                if len(pred_cls_i) > 0
+                else torch.tensor([]).float().to(device)
+            )
 
             # TODO: currently only support matching to a single box
             tmp_matched_boxes_i = [
@@ -681,56 +733,75 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 matched_conf_cls_i,
             )
 
+            _log_losses[i] = loss_i.clone()
             old_loss_i = losses[i].clone()
             loss_i = max(old_loss_i, loss_i)
             losses[i] = loss_i
 
-            # risk = risk + (loss_i - old_loss_i) / n_losses
-
-            # risk = max(risk, previous_risk)
-
-            # self.all_risks_raw.append(risk.detach().cpu().numpy())
-
-            # self.all_risks_mon.append(risk.detach().cpu().numpy())
-
-            self.all_lbds_cnf.append(lambda_conf)
-            self.all_lbds_loc.append(lbd)
+            # ------- Start Logging -------
+            _log_mon_risk = torch.mean(torch.stack(losses))
+            _log_raw_risk = torch.mean(torch.stack(_log_losses))
+            all_risks_raw.append(_log_raw_risk.detach().cpu().numpy())
+            all_risks_mon.append(_log_mon_risk.detach().cpu().numpy())
+            all_lbds_cnf.append(lambda_conf)
+            all_lbds_loc.append(lbd)
+            # ------- End Logging -------
 
             # Stopping condition: when we reached desired lbd_conf
             if final_lbd_conf >= lambda_conf:
-                return np.mean(losses)
-        return None
+                return (
+                    np.mean(losses),
+                    all_risks_raw,
+                    all_risks_mon,
+                    all_lbds_cnf,
+                    all_lbds_loc,
+                )
+        return None, all_risks_raw, all_risks_mon, all_lbds_cnf, all_lbds_loc
 
     def optimize(
         self,
         predictions: ODPredictions,
-        build_predictions,
+        build_predictions: Callable,
         loss: ODLoss,
-        matching_function,
+        matching_function: str,
         alpha: float,
         device: str,
+        overload_confidence_threshold: float | None = None,
         B: float = 1,
         lower_bound: float = 0,
         upper_bound: float = 1,
-        steps=13,
-        epsilon=1e-10,
+        steps: int = 13,
+        epsilon: float = 1e-10,
+        *,
         verbose: bool = False,
     ):
+        if overload_confidence_threshold is None:
+            if predictions.confidence_threshold is None:
+                raise ValueError(
+                    "confidence_threshold must be set in the predictions or in the conformalizer",
+                )
+            confidence_threshold = predictions.confidence_threshold
+            if isinstance(confidence_threshold, torch.Tensor):
+                confidence_threshold = confidence_threshold.item()
+            logger.info(
+                f"Using predictions' confidence threshold: {confidence_threshold:.4f}",
+            )
+        else:
+            logger.info(
+                f"Using overload confidence threshold: {overload_confidence_threshold:.4f}",
+            )
+            confidence_threshold = overload_confidence_threshold
+
+        ##### FINISH MODIFYING THE LOGGING OUTPUT AND COLLECTION
+
         self.all_risks_raw = []
         self.all_risks_mon = []
         self.all_lbds_cnf = []
         self.all_lbds_loc = []
 
-        lambda_conf = 1 - predictions.confidence_threshold
+        lambda_conf = 1 - confidence_threshold
 
         # Step 0: Initialize the risk
-
-        match_predictions_to_true_boxes(
-            predictions,
-            distance_function=matching_function,
-            verbose=False,
-            overload_confidence_threshold=1 - lambda_conf,
-        )
 
         left, right = lower_bound, upper_bound
 
@@ -741,18 +812,24 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         for _ in pbar:
             lbd = (left + right) / 2
             # Evaluating the risk in this lbd, requires to remonotonize the loss in this lbd_loc/cls wrt the lbd_cnf
-            risk = self.evaluate_risk(
-                lbd,
-                loss,
-                lambda_conf,
-                predictions,
-                build_predictions,
-                matching_function,
+            risk, all_risks_raw, all_risks_mon, all_lbds_cnf, all_lbds_loc = (
+                self.evaluate_risk(
+                    lbd,
+                    loss,
+                    lambda_conf,
+                    predictions,
+                    build_predictions,
+                    matching_function,
+                )
             )
+            self.all_risks_raw.append(all_risks_raw)
+            self.all_risks_mon.append(all_risks_mon)
+            self.all_lbds_cnf.append(all_lbds_cnf)
+            self.all_lbds_loc.append(all_lbds_loc)
 
             corrected_risk = self._correct_risk(risk, len(predictions), B)
 
-            corrected_risk = corrected_risk.detach().cpu().numpy().item()
+            corrected_risk = corrected_risk.item()  # detach().cpu().item()
 
             pbar.set_description(
                 f"[{left:.2f}, {right:.2f}] -> λ={lbd}. Corrected Risk = {corrected_risk:.3f}",
