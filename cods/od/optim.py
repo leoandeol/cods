@@ -750,7 +750,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             # Stopping condition: when we reached desired lbd_conf
             if final_lbd_conf >= lambda_conf:
                 return (
-                    np.mean(losses),
+                    torch.mean(torch.stack(losses)).detach().cpu().numpy(),
                     all_risks_raw,
                     all_risks_mon,
                     all_lbds_cnf,
