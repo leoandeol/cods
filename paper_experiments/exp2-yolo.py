@@ -2,7 +2,6 @@ import logging
 import os
 import pickle
 import traceback
-from itertools import product
 
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
@@ -28,7 +27,9 @@ use_smaller_subset = False  # TODO: Temp
 
 if use_smaller_subset:
     data_cal, data_val = data.split_dataset(
-        calibration_ratio, shuffle=False, n_calib_test=800
+        calibration_ratio,
+        shuffle=False,
+        n_calib_test=800,
     )
 else:
     data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)
@@ -49,7 +50,7 @@ preds_cal = model.build_predictions(
     shuffle=False,
     force_recompute=False,  # False,
     deletion_method="nms",
-    filter_preds_by_confidence=1e-3,
+    filter_preds_by_confidence=3e-3,
 )
 preds_val = model.build_predictions(
     data_val,
@@ -60,7 +61,7 @@ preds_val = model.build_predictions(
     shuffle=False,
     force_recompute=False,  # False,
     deletion_method="nms",
-    filter_preds_by_confidence=1e-3,
+    filter_preds_by_confidence=3e-3,
 )
 
 results = {}
@@ -95,7 +96,7 @@ for alpha in alphas:
                                 "localization_method": localization_method,
                                 "classification_prediction_set": classification_prediction_set,
                                 "localization_prediction_set": localization_prediction_set,
-                            }
+                            },
                         )
 for config in configs:
     try:
@@ -122,7 +123,8 @@ for config in configs:
         )
 
         conformal_preds_cal = conf.conformalize(
-            preds_cal, parameters=parameters
+            preds_cal,
+            parameters=parameters,
         )
 
         results_cal = conf.evaluate(
@@ -149,7 +151,7 @@ for config in configs:
         print(f"  {results_val}")
         # Save results to a pickle file
 
-        output_path = "./final_experiments/results-exp1-yolo.pkl"
+        output_path = "./paper_experiments/results-exp1-yolo.pkl"
         with open(output_path, "wb") as f:
             pickle.dump(results, f)
 

@@ -51,7 +51,7 @@ preds_cal = model.build_predictions(
     shuffle=False,
     force_recompute=False,  # False,
     deletion_method="nms",
-    filter_preds_by_confidence=1e-3,
+    filter_preds_by_confidence=3e-3,
 )
 preds_val = model.build_predictions(
     data_val,
@@ -62,7 +62,7 @@ preds_val = model.build_predictions(
     shuffle=False,
     force_recompute=False,  # False,
     deletion_method="nms",
-    filter_preds_by_confidence=1e-3,
+    filter_preds_by_confidence=3e-3,
 )
 
 results = {}
@@ -72,7 +72,7 @@ matching_functions = ["mix", "hausdorff", "lac", "giou"]
 confidence_methods = [
     "box_count_threshold",
     "box_count_recall",
-    "box_thresholded_distance",
+    # "box_thresholded_distance",
 ]
 localization_methods = ["thresholded", "pixelwise", "boxwise"]
 classification_prediction_sets = ["lac", "aps"]
@@ -102,7 +102,7 @@ for alpha in alphas:
                             },
                         )
 
-output_path = "./final_experiments/results-exp3-detr101.pkl"
+output_path = "./paper_experiments/results-exp3-detr101.pkl"
 for config in configs:
     try:
         config_str = f"alpha-{config['alpha']}-{config['matching_function']}_{config['confidence_method']}_{config['localization_method']}_{config['classification_prediction_set']}_{config['localization_prediction_set']}"
