@@ -4,7 +4,7 @@ import setuptools
 
 setuptools.setup(
     name="cods",
-    version="0.2",
+    version="0.3",
     description="Conformal Object Detection & Segmentation",
     author="Léo Andéol, Luca Mossina",
     author_email="leo@andeol.eu",
