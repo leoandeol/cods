@@ -133,13 +133,13 @@ def test_first_step_optimizer(
     assert isinstance(result_lambda, float), "Result should be a float."
     assert 0.0 <= result_lambda <= 1.0, "Lambda should be in the range [0.0, 1.0]."
     # The result should not be the default initial value if the loop runs
-    assert (
-        result_lambda != 1.0
-    ), "Lambda should not be equal to the initial value if optimization occurs."
+    assert result_lambda != 1.0, (
+        "Lambda should not be equal to the initial value if optimization occurs."
+    )
 
-    assert (
-        abs(result_lambda - 0.2) < 1e-5
-    ), f"Lambda should converge to a value close to 0.2 based on the mock data. Observed: {result_lambda}"
+    assert abs(result_lambda - 0.2) < 1e-5, (
+        f"Lambda should converge to a value close to 0.2 based on the mock data. Observed: {result_lambda}"
+    )
 
 
 def test_second_step_optimizer(
