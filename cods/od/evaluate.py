@@ -4,12 +4,13 @@ import pickle
 from itertools import product
 from logging import getLogger
 from time import time
+from types import MappingProxyType
 
 import numpy as np
 import torch
+import wandb
 from tqdm import tqdm
 
-import wandb
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
 from cods.od.metrics import get_recall_precision
@@ -21,11 +22,13 @@ MODES = ["classification", "localization", "detection"]
 
 
 class Benchmark:
-    DATASETS = {
-        "mscoco": MSCOCODataset,
-    }
+    DATASETS = MappingProxyType(
+        {
+            "mscoco": MSCOCODataset,
+        }
+    )
 
-    MODELS = {"detr": DETRModel, "yolo": YOLOModel}
+    MODELS = MappingProxyType({"detr": DETRModel, "yolo": YOLOModel})
 
     def __init__(self, config, device):
         self.config = config
