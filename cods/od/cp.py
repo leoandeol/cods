@@ -84,7 +84,7 @@ class LocalizationConformalizer(Conformalizer):
 
     """
 
-    BACKENDS = MappingProxyType(["auto", "cp", "crc"])
+    BACKENDS = ("auto", "cp", "crc")
 
     accepted_methods = MappingProxyType(
         {
@@ -95,7 +95,7 @@ class LocalizationConformalizer(Conformalizer):
         }
     )
 
-    PREDICTION_SETS = MappingProxyType(["additive", "multiplicative", "adaptive"])
+    PREDICTION_SETS = ("additive", "multiplicative", "adaptive")
     LOSSES = MappingProxyType(
         {
             "pixelwise": PixelWiseRecallLoss,
@@ -111,7 +111,7 @@ class LocalizationConformalizer(Conformalizer):
             "gaussian_process": GaussianProcessOptimizer,
         }
     )
-    GUARANTEE_LEVELS = MappingProxyType(["image", "object"])
+    GUARANTEE_LEVELS = ("image", "object")
 
     def __init__(
         self,
@@ -464,8 +464,8 @@ class ConfidenceConformalizer(Conformalizer):
 class ODClassificationConformalizer(ClassificationConformalizer):
     """ """
 
-    BACKENDS = MappingProxyType(["auto", "cp", "crc"])
-    GUARANTEE_LEVELS = MappingProxyType(["image", "object"])
+    BACKENDS = ("auto", "cp", "crc")
+    GUARANTEE_LEVELS = ("image", "object")
     OPTIMIZERS = MappingProxyType(
         {
             "binary_search": BinarySearchOptimizer,
@@ -696,10 +696,10 @@ class ODConformalizer(Conformalizer):
 
     """
 
-    MULTIPLE_TESTING_CORRECTIONS = MappingProxyType(["bonferroni"])
-    BACKENDS = MappingProxyType(["auto"])
-    GUARANTEE_LEVELS = MappingProxyType(["image", "object"])
-    MATCHINGS = MappingProxyType(["hausdorff", "iou", "giou", "lac", "mix"])
+    MULTIPLE_TESTING_CORRECTIONS = ("bonferroni",)
+    BACKENDS = ("auto",)
+    GUARANTEE_LEVELS = ("image", "object")
+    MATCHINGS = ("hausdorff", "iou", "giou", "lac", "mix")
 
     def __init__(
         self,

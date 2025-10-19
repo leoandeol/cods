@@ -2,6 +2,7 @@
 
 # Configuration
 CODS_PYTHON ?= python3
+VENV_BIN ?= .venv/bin
 COCO_DIR ?= ./data/coco
 VAL = http://images.cocodataset.org/zips/val2017.zip
 ANNOTATIONS = http://images.cocodataset.org/annotations/annotations_trainval2017.zip
@@ -75,37 +76,37 @@ dotenv:
 
 # Code quality
 format:
-	ruff format .
-	ruff check --fix .
+	$(VENV_BIN)/ruff format .
+	$(VENV_BIN)/ruff check --fix .
 
 lint:
-	ruff check .
+	$(VENV_BIN)/ruff check .
 
 typecheck:
-	mypy cods/ --ignore-missing-imports
+	$(VENV_BIN)/mypy cods/ --ignore-missing-imports
 
 # Testing
 test:
-	pytest tests/ -v
+	$(VENV_BIN)/pytest tests/ -v
 
 test-fast:
-	pytest tests/ -v -n auto
+	$(VENV_BIN)/pytest tests/ -v -n auto
 
 test-watch:
-	pytest-watch tests/
+	$(VENV_BIN)/pytest-watch tests/
 
 coverage:
-	pytest tests/ --cov=cods --cov-report=html --cov-report=term-missing
+	$(VENV_BIN)/pytest tests/ --cov=cods --cov-report=html --cov-report=term-missing
 	@echo ""
 	@echo "Coverage report generated in htmlcov/index.html"
 
 quick-test:
-	pytest tests/ -v -x --ff
+	$(VENV_BIN)/pytest tests/ -v -x --ff
 
 # Pre-commit
 pre-commit:
-	pre-commit install
-	pre-commit run --all-files
+	$(VENV_BIN)/pre-commit install
+	$(VENV_BIN)/pre-commit run --all-files
 
 # Cleaning
 clean:
@@ -122,8 +123,8 @@ clean:
 
 # Building
 build: clean
-	python -m build
-	twine check dist/*
+	$(VENV_BIN)/python -m build
+	$(VENV_BIN)/twine check dist/*
 
 # Run all CI checks locally
 ci: format lint test coverage
@@ -132,8 +133,8 @@ ci: format lint test coverage
 
 # Notebook support
 notebook:
-	jupyter notebook
+	$(VENV_BIN)/jupyter notebook
 
 # Profile code
 profile:
-	python -m line_profiler -v
+	$(VENV_BIN)/python -m line_profiler -v

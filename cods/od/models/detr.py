@@ -1,5 +1,3 @@
-from types import MappingProxyType
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -34,11 +32,9 @@ def rescale_bboxes(out_bbox, size):
 
 
 class DETRModel(ODModel):
-    MODEL_NAMES = MappingProxyType(
-        [
-            "detr_resnet50",
-            "detr_resnet101",
-        ]
+    MODEL_NAMES = (
+        "detr_resnet50",
+        "detr_resnet101",
     )
 
     def __init__(
