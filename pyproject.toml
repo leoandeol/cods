@@ -90,6 +90,7 @@ exclude = [
     ".mypy_cache",
     ".nox",
     ".pants.d",
+    "*.ipynb",
     ".pyenv",
     ".pytest_cache",
     ".pytype",
@@ -108,8 +109,6 @@ exclude = [
     "venv",
     "data",
 ]
-
-extend-include = ["*.ipynb"]
 
 [tool.ruff.lint]
 select = [
