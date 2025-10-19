@@ -334,9 +334,7 @@ class ODBinaryClassificationLoss(ClassificationLoss):
         """ """
         # if len(conf_cls) == 0:
         #    logger.warning(f"conf_cls is empty : {conf_cls}")
-        loss = (
-            torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
-        )
+        loss = torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
         # if loss == 0:
         #    logger.info(f"true_cls: {true_cls}, conf_cls: {conf_cls}")
         return loss
@@ -580,9 +578,7 @@ class BoxWiseRecallLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",
@@ -646,9 +642,7 @@ class PixelWiseRecallLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Pixel-wise Recall Loss only supports union of boxes.",
@@ -708,9 +702,7 @@ class BoxWisePrecisionLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",
@@ -779,9 +771,7 @@ class BoxWiseIoULoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",

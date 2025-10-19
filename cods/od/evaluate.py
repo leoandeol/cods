@@ -148,7 +148,7 @@ class Benchmark:
         # Load model
         if experiment["model"] not in self.MODELS:
             raise NotImplementedError(
-                f"Model { experiment['model']} not implemented yet.",
+                f"Model {experiment['model']} not implemented yet.",
             )
         model = self.MODELS[experiment["model"]](
             pretrained=True,
@@ -188,12 +188,8 @@ class Benchmark:
             confidence_method=experiment["confidence_method"],
             localization_method=experiment["localization_method"],
             classification_method=experiment["classification_method"],
-            localization_prediction_set=experiment[
-                "localization_prediction_set"
-            ],
-            classification_prediction_set=experiment[
-                "classification_prediction_set"
-            ],
+            localization_prediction_set=experiment["localization_prediction_set"],
+            classification_prediction_set=experiment["classification_prediction_set"],
             optimizer=experiment["optimizer"],
             device=self.device,
         )

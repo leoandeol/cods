@@ -57,11 +57,7 @@ def bayesod(
 
         # TODO(leo) @luca : there's absolutely a better way to do that
         cluster = list(
-            [
-                element
-                for element in tmp_cluster
-                if element not in already_used
-            ],
+            [element for element in tmp_cluster if element not in already_used],
         )
 
         if len(cluster) > 0:
@@ -113,14 +109,10 @@ def bayesod(
 
 def filter_preds(preds, confidence_threshold=0.001):
     filters = [
-        conf > confidence_threshold
-        if (conf > confidence_threshold).any()
-        else conf.argmin(0)[None]
+        conf > confidence_threshold if (conf > confidence_threshold).any() else conf.argmin(0)[None]
         for conf in preds.confidences
     ]
     preds.pred_boxes = [pbs[f] for pbs, f in zip(preds.pred_boxes, filters)]
     preds.pred_cls = [pcs[f] for pcs, f in zip(preds.pred_cls, filters)]
-    preds.confidences = [
-        conf[f] for conf, f in zip(preds.confidences, filters)
-    ]
+    preds.confidences = [conf[f] for conf, f in zip(preds.confidences, filters)]
     return preds

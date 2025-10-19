@@ -135,14 +135,12 @@ class ODModel(Model):
                 true_cls = res["true_cls"]
                 pred_cls = res["pred_cls"]
 
-                pred_boxes, pred_cls, confidences, pred_boxes_unc = (
-                    self._filter_preds(
-                        pred_boxes,
-                        pred_cls,
-                        confidences,
-                        iou_threshold=iou_threshold,
-                        method=deletion_method,
-                    )
+                pred_boxes, pred_cls, confidences, pred_boxes_unc = self._filter_preds(
+                    pred_boxes,
+                    pred_cls,
+                    confidences,
+                    iou_threshold=iou_threshold,
+                    method=deletion_method,
                 )
 
                 all_image_paths.append(image_paths)
@@ -162,38 +160,22 @@ class ODModel(Model):
             [shape for arr_shape in all_image_shapes for shape in arr_shape],
         )
         all_true_boxes = list(
-            [
-                box.to(self.device)
-                for arr_box in all_true_boxes
-                for box in arr_box
-            ],
+            [box.to(self.device) for arr_box in all_true_boxes for box in arr_box],
         )
         all_pred_boxes = list(
             [box for arr_box in all_pred_boxes for box in arr_box],
         )
         if len(all_pred_boxes_unc) > 0:
             all_pred_boxes_unc = list(
-                [
-                    box_unc
-                    for arr_box_unc in all_pred_boxes_unc
-                    for box_unc in arr_box_unc
-                ],
+                [box_unc for arr_box_unc in all_pred_boxes_unc for box_unc in arr_box_unc],
             )
         else:
             all_pred_boxes_unc = None
         all_confidences = list(
-            [
-                confidence
-                for arr_confidence in all_confidences
-                for confidence in arr_confidence
-            ],
+            [confidence for arr_confidence in all_confidences for confidence in arr_confidence],
         )
         all_true_cls = list(
-            [
-                cls.to(self.device)
-                for arr_cls in all_true_cls
-                for cls in arr_cls
-            ],
+            [cls.to(self.device) for arr_cls in all_true_cls for cls in arr_cls],
         )
         all_pred_cls = list(
             [proba for arr_proba in all_pred_cls for proba in arr_proba],

@@ -63,16 +63,11 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             confidences,
         )
         confidence_image_idx = torch.concatenate(
-            [
-                torch.ones_like(x, dtype=int) * i
-                for i, x in enumerate(confidences)
-            ],
+            [torch.ones_like(x, dtype=int) * i for i, x in enumerate(confidences)],
         )
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
-        sorted_stacked_confidences[:-1] = sorted_stacked_confidences[
-            1:
-        ].clone()
+        sorted_stacked_confidences[:-1] = sorted_stacked_confidences[1:].clone()
         sorted_stacked_confidences[-1] = 1.0  # last one is always 1.0
         sorted_confidence_image_indices = confidence_image_idx[indices]
 
@@ -104,11 +99,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             matching_i = predictions.matching[i]
 
             pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [
-                x
-                for x, c in zip(pred_cls_i, confidences_i)
-                if c >= 1 - lambda_conf
-            ]
+            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - lambda_conf]
             pred_cls_i = (
                 torch.stack(pred_cls_i)
                 if len(pred_cls_i) > 0
@@ -138,9 +129,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             )
             matched_pred_cls_i = [
                 (
-                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[
-                        0
-                    ]  # TODO zero here ?
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
                     if len(matching_i[j]) > 0
                     else torch.tensor([]).float().to(device)
                 )
@@ -258,11 +247,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             image_shape = image_shapes[i]
 
             pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [
-                x
-                for x, c in zip(pred_cls_i, confidences_i)
-                if c >= 1 - lambda_conf
-            ]
+            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - lambda_conf]
             pred_cls_i = (
                 torch.stack(pred_cls_i)
                 if len(pred_cls_i) > 0
@@ -335,12 +320,8 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             )
 
             _log_raw_confidence_losses[i] = confidence_loss_i.detach().clone()
-            _log_raw_localization_losses[i] = (
-                localization_loss_i.detach().clone()
-            )
-            _log_raw_classification_losses[i] = (
-                classification_loss_i.detach().clone()
-            )
+            _log_raw_localization_losses[i] = localization_loss_i.detach().clone()
+            _log_raw_classification_losses[i] = classification_loss_i.detach().clone()
 
             confidence_losses[i] = max(
                 confidence_loss_i.detach().clone(),
@@ -473,13 +454,9 @@ class FirstStepMonotonizingOptimizer(Optimizer):
 
                     matching_i = predictions.matching[i]
 
-                    pred_boxes_i = pred_boxes_i[
-                        confidences_i >= 1 - previous_lbd
-                    ]
+                    pred_boxes_i = pred_boxes_i[confidences_i >= 1 - previous_lbd]
                     pred_cls_i = [
-                        x
-                        for x, c in zip(pred_cls_i, confidences_i)
-                        if c >= 1 - previous_lbd
+                        x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - previous_lbd
                     ]
                     confidence_loss_i = confidence_loss(
                         true_boxes_i,
@@ -570,16 +547,11 @@ class SecondStepMonotonizingOptimizer(Optimizer):
 
         stacked_confidences = torch.concatenate(confidences)
         confidence_image_idx = torch.concatenate(
-            [
-                torch.ones_like(x, dtype=torch.int) * i
-                for i, x in enumerate(confidences)
-            ],
+            [torch.ones_like(x, dtype=torch.int) * i for i, x in enumerate(confidences)],
         )
 
         sorted_stacked_confidences, indices = torch.sort(stacked_confidences)
-        sorted_stacked_confidences[:-1] = sorted_stacked_confidences[
-            1:
-        ].clone()
+        sorted_stacked_confidences[:-1] = sorted_stacked_confidences[1:].clone()
         sorted_stacked_confidences[-1] = 1.0  # last one is always 1.0
         sorted_confidence_image_indices = confidence_image_idx[indices]
 
@@ -605,11 +577,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             matching_i = predictions.matching[i]
 
             pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [
-                x
-                for x, c in zip(pred_cls_i, confidences_i)
-                if c >= 1 - lambda_conf
-            ]
+            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - lambda_conf]
             pred_cls_i = (
                 torch.stack(pred_cls_i)
                 if len(pred_cls_i) > 0
@@ -687,11 +655,7 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             predictions.matching[i] = matching_i
 
             pred_boxes_i = pred_boxes_i[confidences_i >= 1 - lambda_conf]
-            pred_cls_i = [
-                x
-                for x, c in zip(pred_cls_i, confidences_i)
-                if c >= 1 - lambda_conf
-            ]
+            pred_cls_i = [x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - lambda_conf]
             pred_cls_i = (
                 torch.stack(pred_cls_i)
                 if len(pred_cls_i) > 0
@@ -812,15 +776,13 @@ class SecondStepMonotonizingOptimizer(Optimizer):
         for _ in pbar:
             lbd = (left + right) / 2
             # Evaluating the risk in this lbd, requires to remonotonize the loss in this lbd_loc/cls wrt the lbd_cnf
-            risk, all_risks_raw, all_risks_mon, all_lbds_cnf, all_lbds_loc = (
-                self.evaluate_risk(
-                    lbd,
-                    loss,
-                    lambda_conf,
-                    predictions,
-                    build_predictions,
-                    matching_function,
-                )
+            risk, all_risks_raw, all_risks_mon, all_lbds_cnf, all_lbds_loc = self.evaluate_risk(
+                lbd,
+                loss,
+                lambda_conf,
+                predictions,
+                build_predictions,
+                matching_function,
             )
             self.all_risks_raw.append(all_risks_raw)
             self.all_risks_mon.append(all_risks_mon)

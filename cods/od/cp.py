@@ -52,7 +52,9 @@ from cods.od.utils import (
 
 logger = logging.getLogger("cods")
 # FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
-FORMAT = "[%(asctime)s:%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
+FORMAT = (
+    "[%(asctime)s:%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
+)
 logging.basicConfig(format=FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
 
 """
@@ -301,10 +303,7 @@ class LocalizationConformalizer(Conformalizer):
             raise ValueError(
                 "Conformalizer must be calibrated, or parameters provided, before conformalizing.",
             )
-        if (
-            parameters is not None
-            and parameters.lambda_localization is not None
-        ):
+        if parameters is not None and parameters.lambda_localization is not None:
             if verbose:
                 logger.info("Using λ for localization from parameters")
             lambda_localization = parameters.lambda_localization
@@ -749,10 +748,7 @@ class ODConformalizer(Conformalizer):
                 "No multiple_testing_correction provided, assuming no correction is needed. The explicit list of alphas is expected for calibration.",
             )
             self.multiple_testing_correction = multiple_testing_correction
-        elif (
-            multiple_testing_correction
-            not in self.MULTIPLE_TESTING_CORRECTIONS
-        ):
+        elif multiple_testing_correction not in self.MULTIPLE_TESTING_CORRECTIONS:
             raise ValueError(
                 f"multiple_testing_correction {multiple_testing_correction} not accepted, must be one of {self.MULTIPLE_TESTING_CORRECTIONS}",
             )
@@ -788,9 +784,7 @@ class ODConformalizer(Conformalizer):
         elif isinstance(localization_method, LocalizationConformalizer):
             self.localization_conformalizer = localization_method
             self.localization_method = localization_method.loss_name
-            self.localization_prediction_set = (
-                localization_method.prediction_set
-            )
+            self.localization_prediction_set = localization_method.prediction_set
         else:
             self.localization_conformalizer = None
             self.localization_method = None
@@ -811,9 +805,7 @@ class ODConformalizer(Conformalizer):
         elif isinstance(classification_method, ODClassificationConformalizer):
             self.classification_conformalizer = classification_method
             self.classification_method = classification_method.method
-            self.classification_prediction_set = (
-                classification_method.prediction_set
-            )
+            self.classification_prediction_set = classification_method.prediction_set
         else:
             self.classification_conformalizer = None
             self.classification_method = None
@@ -914,24 +906,9 @@ class ODConformalizer(Conformalizer):
                     "No multiple_testing_correction provided, expecting an explicit alpha for each conformalizer. 'global_alpha' should be 'None'.",
                 )
             if (
-                (
-                    alpha_confidence
-                    is None
-                    != self.confidence_conformalizer
-                    is None
-                )
-                or (
-                    alpha_localization
-                    is None
-                    != self.localization_conformalizer
-                    is None
-                )
-                or (
-                    alpha_classification
-                    is None
-                    != self.classification_conformalizer
-                    is None
-                )
+                (alpha_confidence is None != self.confidence_conformalizer is None)
+                or (alpha_localization is None != self.localization_conformalizer is None)
+                or (alpha_classification is None != self.classification_conformalizer is None)
             ):
                 raise ValueError(
                     "No multiple_testing_correction provided, expecting an explicit alpha for each conformalizer. Explicity alphas should be set only if there's a corresponding conformalizer.",
@@ -1328,11 +1305,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             lbd_loc, lbd_obj = lbd
             pred_boxes_filtered = list(
                 [
-                    (
-                        x[y >= 1 - lbd_obj]
-                        if len(x[y >= 1 - lbd_obj]) > 0
-                        else x[None, y.argmax()]
-                    )
+                    (x[y >= 1 - lbd_obj] if len(x[y >= 1 - lbd_obj]) > 0 else x[None, y.argmax()])
                     for x, y in zip(
                         predictions.pred_boxes,
                         predictions.confidence,
@@ -1488,8 +1461,7 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
         ):
             cov = (
                 1
-                if len(true_boxes)
-                <= (confidence >= predictions.confidence_threshold).sum()
+                if len(true_boxes) <= (confidence >= predictions.confidence_threshold).sum()
                 else 0
             )
             set_size = (confidence >= predictions.confidence_threshold).sum()

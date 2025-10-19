@@ -137,8 +137,5 @@ class CombiningToleranceRegions(ToleranceRegion):
 
     def evaluate(self, preds, verbose=True):
         return list(
-            [
-                tregion.evaluate(preds, verbose=verbose)
-                for tregion in self.tregions
-            ],
+            [tregion.evaluate(preds, verbose=verbose) for tregion in self.tregions],
         )
