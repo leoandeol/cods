@@ -21,7 +21,7 @@ repos:
 
   # Ruff - format and lint in one tool
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.4
+    rev: v0.13.3
     hooks:
       # Linting - auto-fix safe issues (skip notebooks)
       - id: ruff
