@@ -206,7 +206,7 @@ class YOLOModel(ODModel):
 
             cls_probs_new[:, CONVERT_TO_91] = cls_probs
 
-            final_confidence, predicted_class = torch.max(
+            final_confidence, _ = torch.max(
                 box_output[:, 4:],
                 dim=-1,
             )
@@ -257,28 +257,23 @@ class YOLOModel(ODModel):
             img_shapes,
             model_input_size,
         )
-        true_boxes = list(
-            [
-                torch.LongTensor(
+        true_boxes = [
+            torch.LongTensor(
+                [
                     [
-                        [
-                            box["bbox"][0],
-                            box["bbox"][1],
-                            box["bbox"][0] + box["bbox"][2],
-                            box["bbox"][1] + box["bbox"][3],
-                        ]
-                        for box in true_box
-                    ],
-                )
-                for true_box in ground_truth
-            ],
-        )
-        true_cls = list(
-            [
-                torch.LongTensor([box["category_id"] for box in true_box])
-                for true_box in ground_truth
-            ],
-        )
+                        box["bbox"][0],
+                        box["bbox"][1],
+                        box["bbox"][0] + box["bbox"][2],
+                        box["bbox"][1] + box["bbox"][3],
+                    ]
+                    for box in true_box
+                ],
+            )
+            for true_box in ground_truth
+        ]
+        true_cls = [
+            torch.LongTensor([box["category_id"] for box in true_box]) for true_box in ground_truth
+        ]
         true_boxes = true_boxes
 
         return {

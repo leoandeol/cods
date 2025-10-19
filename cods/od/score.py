@@ -37,7 +37,7 @@ class ObjectnessNCScore(NCScore):
             torch.Tensor: The calculated score.
 
         """
-        sorted_values, indices = torch.sort(confidence)
+        sorted_values, _ = torch.sort(confidence)
         return 1 - sorted_values[-n_gt]
 
 

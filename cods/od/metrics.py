@@ -121,7 +121,7 @@ def compute_global_coverage(
                             conf_box_i,
                             None,
                         ).item()
-                except:
+                except Exception as e:
                     print(
                         f"Number of ground truth boxes: {len(predictions.true_boxes[i])}",
                     )
@@ -135,7 +135,7 @@ def compute_global_coverage(
                     print(conf_boxes_i.shape)
                     print(predictions.matching[i][j][0])
                     print(predictions.matching[i])
-                    assert False
+                    print(e)
 
             else:
                 loc_loss = 0
@@ -167,7 +167,10 @@ def getStretch(
 
     """
     stretches = []
-    area = lambda x: (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
+
+    def area(x):
+        return (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
+
     pred_boxes = od_predictions.pred_boxes
     for i in range(len(pred_boxes)):
         stretches.append(area(conf_boxes[i]) / area(pred_boxes[i]))
@@ -304,7 +307,7 @@ def plot_recall_precision(
         threshes_objectness (np.ndarray): Array of objectness thresholds.
 
     """
-    fig, (ax1, ax2) = plt.subplots(1, 2)
+    _, (ax1, ax2) = plt.subplots(1, 2)
     ax1.plot(threshes_objectness, total_recalls, label="Recall")
     ax1.plot(threshes_objectness, total_precisions, label="Precision")
     ax1.xlabel("Objectness score threshold")
@@ -472,16 +475,14 @@ class ODEvaluator:
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            matched_conf_cls_i = list(
-                [
-                    (
-                        torch.stack([conf_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ],
-            )
+            matched_conf_cls_i = [
+                (
+                    torch.stack([conf_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
 
             # if matched_conf_boxes_i.size() == 0:
             #     matched_conf_boxes_i = torch.tensor([]).float().to(device)

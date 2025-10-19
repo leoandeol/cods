@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from logging import getLogger
 
-logger = getLogger("cods")
-
-
 import numpy as np
 import torch
 from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
+
+logger = getLogger("cods")
 
 
 def mesh_func(
@@ -374,15 +373,16 @@ def match_predictions_to_true_boxes(
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
     # TODO(leo): switch to gpu
-    dist_iou = lambda x, y: -f_iou(x, y)
-    dist_generalized_iou = lambda x, y: -generalized_iou(x, y)
-    DISTANCE_FUNCTIONS = {
-        "iou": dist_iou,
-        "giou": dist_generalized_iou,
-        "hausdorff": assymetric_hausdorff_distance_old,
-        "lac": None,
-        "mix": None,
-    }
+    # dist_iou = lambda x, y: -f_iou(x, y)
+    # dist_generalized_iou = lambda x, y: -generalized_iou(x, y)
+    DISTANCE_FUNCTIONS = ["giou", "lac", "mix", "hausdorff"]
+    # {
+    #     "iou": dist_iou,
+    #     "giou": dist_generalized_iou,
+    #     "hausdorff": assymetric_hausdorff_distance_old,
+    #     "lac": None,
+    #     "mix": None,
+    # }
 
     if verbose and distance_function is None:
         print("Using default:  asymmetric Hausdorff distance")
@@ -392,7 +392,7 @@ def match_predictions_to_true_boxes(
             f"Distance function {distance_function} not supported, must be one of {DISTANCE_FUNCTIONS.keys()}",
         )
 
-    f_dist = DISTANCE_FUNCTIONS[distance_function]
+    # f_dist = DISTANCE_FUNCTIONS[distance_function]
 
     if overload_confidence_threshold is not None:
         conf_thr = overload_confidence_threshold
@@ -401,7 +401,7 @@ def match_predictions_to_true_boxes(
     else:
         conf_thr = 0
 
-    device = preds.pred_boxes[0].device
+    # device = preds.pred_boxes[0].device
     # once, not per-iter
     # preds.pred_boxes = [x.to(device, dtype=torch.float16).contiguous() for x in preds.pred_boxes]
     # preds.true_boxes = [x.to(device, dtype=torch.float16).contiguous() for x in preds.true_boxes]
@@ -636,16 +636,14 @@ def compute_risk_image_level(
             else torch.tensor([]).float().to(device)
         )
         # print(matched_conf_boxes_i.shape)
-        matched_conf_cls_i = list(
-            [
-                (
-                    torch.stack([conf_cls_i[m] for m in matching_i[j]])
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ],
-        )
+        matched_conf_cls_i = [
+            (
+                torch.stack([conf_cls_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
         # print(type(matched_conf_boxes_i), type(true_boxes_i))
         # print("Shape", true_boxes_i.shape, matched_conf_boxes_i.shape)
         loss_value = loss(
@@ -707,16 +705,14 @@ def compute_risk_image_level_confidence(
             if len(tmp_matched_boxes) > 0
             else torch.tensor([]).float().to(device)
         )
-        matched_conf_cls_i = list(
-            [
-                (
-                    torch.stack([conf_cls_i[m] for m in matching_i[j]])
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ],
-        )
+        matched_conf_cls_i = [
+            (
+                torch.stack([conf_cls_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
         conf_loss_value_i = confidence_loss(
             true_boxes_i,
             true_cls_i,
@@ -754,7 +750,7 @@ def compute_risk_image_level_confidence(
             ]
 
             loss_value_i = torch.max(
-                torch.stack([conf_loss_value_i] + other_losses_i),
+                torch.stack([conf_loss_value_i, *other_losses_i]),
             )
 
         # loss_value_i = aggregator_func(losses_i)

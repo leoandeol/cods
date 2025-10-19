@@ -269,7 +269,7 @@ class Benchmark:
         #     verbose=verbose,
         # )
         # Just recall-precision for now
-        recalls, precisions, scores = get_recall_precision(
+        recalls, precisions, _ = get_recall_precision(
             preds_val,
             SCORE_THRESHOLD=preds_val.confidence_threshold,
             IOU_THRESHOLD=experiment["nms_iou_threshold"],
