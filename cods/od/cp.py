@@ -228,22 +228,6 @@ class LocalizationConformalizer(Conformalizer):
         """
         if self.lambda_localization is not None:
             logger.info("Replacing previously computed λ")
-        if overload_confidence_threshold is None:
-            if predictions.confidence_threshold is None:
-                raise ValueError(
-                    "confidence_threshold must be set in the predictions or in the conformalizer",
-                )
-            confidence_threshold = predictions.confidence_threshold
-            if isinstance(confidence_threshold, torch.Tensor):
-                confidence_threshold = confidence_threshold.item()
-            logger.info(
-                f"Using predictions' confidence threshold: {confidence_threshold:.4f}",
-            )
-        else:
-            logger.info(
-                f"Using overload confidence threshold: {overload_confidence_threshold:.4f}",
-            )
-            confidence_threshold = overload_confidence_threshold
 
         def build_predictions(
             matched_pred_boxes_i,
@@ -267,6 +251,7 @@ class LocalizationConformalizer(Conformalizer):
         lambda_localization = self.optimizer2.optimize(
             predictions,
             build_predictions,
+            overload_confidence_threshold=overload_confidence_threshold,
             loss=self.loss,
             matching_function=self.matching_function,
             alpha=alpha,
@@ -551,22 +536,8 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         verbose: bool = True,
         overload_confidence_threshold: Optional[float] = None,
     ) -> torch.Tensor:
-        if overload_confidence_threshold is None:
-            if predictions.confidence_threshold is None:
-                raise ValueError(
-                    "confidence_threshold must be set in the predictions or in the conformalizer",
-                )
-            confidence_threshold = predictions.confidence_threshold
-            if isinstance(confidence_threshold, torch.Tensor):
-                confidence_threshold = confidence_threshold.item()
-            logger.info(
-                f"Using predictions' confidence threshold: {confidence_threshold:.4f}",
-            )
-        else:
-            logger.info(
-                f"Using overload confidence threshold: {overload_confidence_threshold:.4f}",
-            )
-            confidence_threshold = overload_confidence_threshold
+        if self.lambda_classification is not None:
+            logger.info("Replacing previously computed λ")
 
         logger.warning(
             "Currently considering that there is only one matching prediction to each true box for classification pruposes. To add later how to aggregate if multiple preidctions matched.",
@@ -607,6 +578,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         lambda_classification = self.optimizer2.optimize(
             predictions,
             build_predictions,
+            overload_confidence_threshold=overload_confidence_threshold,
             loss=self.loss,
             matching_function=self.matching_function,
             alpha=alpha,
