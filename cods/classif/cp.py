@@ -1,3 +1,4 @@
+from types import MappingProxyType
 from typing import Any, Optional, Tuple
 
 import torch
@@ -8,18 +9,18 @@ from cods.classif.score import APSNCScore, ClassifNCScore, LACNCScore
 
 
 class ClassificationConformalizer(Conformalizer):
-    ACCEPTED_METHODS = {"lac": LACNCScore, "aps": APSNCScore}
-    ACCEPTED_PREPROCESS = {"softmax": torch.softmax}
+    ACCEPTED_METHODS = MappingProxyType({"lac": LACNCScore, "aps": APSNCScore})
+    ACCEPTED_PREPROCESS = MappingProxyType({"softmax": torch.softmax})
 
     def __init__(self, method="lac", preprocess="softmax", device="cpu"):
-        if method not in self.ACCEPTED_METHODS.keys() and not isinstance(
+        if method not in self.ACCEPTED_METHODS and not isinstance(
             method,
             ClassifNCScore,
         ):
             raise ValueError(
                 f"method '{method}' not accepted, must be one of {self.ACCEPTED_METHODS} or a ClassifNCScore",
             )
-        if preprocess not in self.ACCEPTED_PREPROCESS.keys():
+        if preprocess not in self.ACCEPTED_PREPROCESS:
             raise ValueError(
                 f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
             )
@@ -33,7 +34,7 @@ class ClassificationConformalizer(Conformalizer):
         self.method = method
         if isinstance(method, ClassifNCScore):
             self._score_function = method
-        elif method in self.ACCEPTED_METHODS.keys():
+        elif method in self.ACCEPTED_METHODS:
             self._score_function = None
 
     def calibrate(

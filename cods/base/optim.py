@@ -46,10 +46,8 @@ class BinarySearchOptimizer(Optimizer):
             lower, upper = bound
             lowers.append(lower)
             uppers.append(upper)
-        good_lbds = list([])
-        current_lbds = list(
-            [(upper - lower) / 2 for lower, upper in zip(lowers, uppers)],
-        )
+        good_lbds = []
+        current_lbds = [(upper - lower) / 2 for lower, upper in zip(lowers, uppers)]
 
         pbar = tqdm(range(steps), disable=not verbose)
 

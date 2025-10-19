@@ -51,7 +51,7 @@ def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
 
     image_count = 0
     for batch in dataloader:
-        image_paths, image_sizes, images, ground_truth = batch
+        image_paths, _image_sizes, images, _ground_truth = batch
 
         for img, path in zip(images, image_paths):
             # Calculate position for this image
