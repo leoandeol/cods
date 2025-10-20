@@ -26,11 +26,11 @@ repos:
       # Linting - auto-fix safe issues (skip notebooks)
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
-        exclude: '\.ipynb$'
+        exclude: '^docs/|\.ipynb$'
 
       # Formatting (skip notebooks)
       - id: ruff-format
-        exclude: '\.ipynb$'
+        exclude: '^docs/|\.ipynb$'
 
   # MyPy - optional, can be slow, so make it easy to skip
   - repo: https://github.com/pre-commit/mirrors-mypy

@@ -1,7 +1,7 @@
 # 🐟 CODS - Conformal Object Detection and Segmentation 🐟
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![CI/CD](https://github.com/leoandeol/cods/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/leoandeol/cods/actions/workflows/ci-cd.yml)
 [![codecov](https://codecov.io/gh/leoandeol/cods/branch/main/graph/badge.svg)](https://codecov.io/gh/leoandeol/cods)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 

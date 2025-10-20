@@ -1,4 +1,4 @@
-.PHONY: help install dev-install venv coco dotenv format lint test test-fast coverage clean build pre-commit ci
+.PHONY: help install dev-install venv coco dotenv format lint test test-fast coverage clean build pre-commit ci docs docs-clean docs-rebuild docs-serve notebook typecheck quick-test profile
 
 # Configuration
 CODS_PYTHON ?= python3
@@ -135,6 +135,49 @@ ci: format lint test coverage
 # Notebook support
 notebook:
 	$(VENV_BIN)/jupyter notebook
+
+# Documentation
+docs:
+	@echo "Generating documentation..."
+	@if [ ! -f "docs/conf.py" ]; then \
+		echo "Initializing Sphinx..."; \
+		mkdir -p docs; \
+		sphinx-quickstart docs \
+			--quiet \
+			--sep \
+			--project="CODS" \
+			--author="Léo Andéol, Luca Mossina" \
+			-v 0.3 \
+			--ext-autodoc \
+			--ext-viewcode \
+			--makefile \
+			--no-batchfile; \
+		echo "" >> docs/source/conf.py; \
+		echo "# Napoleon for Google/NumPy docstrings" >> docs/source/conf.py; \
+		echo "extensions.append('sphinx.ext.napoleon')" >> docs/source/conf.py; \
+		echo "import os, sys" >> docs/source/conf.py; \
+		echo "sys.path.insert(0, os.path.abspath('../..'))" >> docs/source/conf.py; \
+	fi
+	@echo "Generating API documentation..."
+	@sphinx-apidoc -f -o docs/source cods/
+	@echo "Building HTML..."
+	@cd docs && make html
+	@echo "✓ Documentation built in docs/build/html/index.html"
+
+docs-clean:
+	@rm -rf docs/build
+	@echo "Cleaned documentation build files (source preserved)"
+
+docs-rebuild: docs-clean docs
+	@echo "✓ Documentation rebuilt"
+
+docs-serve:
+	@if [ ! -d "docs/build/html" ]; then \
+		echo "Building docs first..."; \
+		$(MAKE) docs; \
+	fi
+	@echo "Serving documentation at http://localhost:8000"
+	@cd docs/build/html && python -m http.server 8000
 
 # Profile code
 profile:
