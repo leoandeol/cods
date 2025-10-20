@@ -62,10 +62,7 @@ def compute_global_coverage(
         if confidence:
             conf_loss = (
                 0
-                if (
-                    predictions.confidences[i]
-                    >= predictions.confidence_threshold
-                ).sum()
+                if (predictions.confidences[i] >= predictions.confidence_threshold).sum()
                 >= len(predictions.true_boxes[i])
                 else 1
             )
@@ -88,8 +85,7 @@ def compute_global_coverage(
             if localization:
                 try:
                     conf_boxes_i = conf_boxes[i][
-                        predictions.confidences[i]
-                        >= predictions.confidence_threshold
+                        predictions.confidences[i] >= predictions.confidence_threshold
                     ]
                     true_box = predictions.true_boxes[i][j]
 
@@ -100,9 +96,7 @@ def compute_global_coverage(
                     ):
                         conf_box_i = torch.tensor([])
                     else:
-                        conf_box_i = conf_boxes_i[
-                            predictions.matching[i][j][0]
-                        ]
+                        conf_box_i = conf_boxes_i[predictions.matching[i][j][0]]
 
                     if loss is None:
                         if (
@@ -118,8 +112,7 @@ def compute_global_coverage(
                         # TODO: partly redundant, to be improved
                         conf_box_i = (
                             conf_box_i[None, :]
-                            if conf_box_i.shape[0] == 4
-                            and len(conf_box_i.shape) == 1
+                            if conf_box_i.shape[0] == 4 and len(conf_box_i.shape) == 1
                             else torch.tensor([])
                         )
                         loc_loss = loss(
@@ -135,8 +128,7 @@ def compute_global_coverage(
                     print(predictions.pred_boxes[i].shape)
                     print(
                         predictions.pred_boxes[i][
-                            predictions.confidences[i]
-                            >= predictions.confidence_threshold
+                            predictions.confidences[i] >= predictions.confidence_threshold
                         ].shape,
                     )
                     print(conf_boxes[i].shape)
@@ -456,11 +448,7 @@ class ODEvaluator:
             conf_boxes_i = conf_boxes_i[confidences_i >= confidence_threshold]
             pred_boxes_i = pred_boxes_i[confidences_i >= confidence_threshold]
             pred_cls_i = pred_cls_i[confidences_i >= confidence_threshold]
-            conf_cls_i = [
-                x
-                for x, c in zip(conf_cls_i, confidences_i)
-                if c >= confidence_threshold
-            ]
+            conf_cls_i = [x for x, c in zip(conf_cls_i, confidences_i) if c >= confidence_threshold]
 
             if self.confidence_loss is not None:
                 confidence_loss_i = self.confidence_loss(
@@ -489,9 +477,7 @@ class ODEvaluator:
             )
             matched_conf_cls_i = [
                 (
-                    torch.stack([conf_cls_i[m] for m in matching_i[j]])[
-                        0
-                    ]  # TODO zero here ?
+                    torch.stack([conf_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
                     if len(matching_i[j]) > 0
                     else torch.tensor([]).float().to(device)
                 )
@@ -519,12 +505,8 @@ class ODEvaluator:
                     pred_boxes_i,
                 ):
                     set_size = (
-                        (conf_box_i_j[2] - conf_box_i_j[0])
-                        * (conf_box_i_j[3] - conf_box_i_j[1])
-                    ) / (
-                        (pred_box_i_j[2] - pred_box_i_j[0])
-                        * (pred_box_i_j[3] - pred_box_i_j[1])
-                    )
+                        (conf_box_i_j[2] - conf_box_i_j[0]) * (conf_box_i_j[3] - conf_box_i_j[1])
+                    ) / ((pred_box_i_j[2] - pred_box_i_j[0]) * (pred_box_i_j[3] - pred_box_i_j[1]))
                     set_size = torch.sqrt(set_size)
                     localization_set_size_i.append(set_size)
                 if len(localization_set_size_i) == 0:
@@ -601,16 +583,11 @@ class ODEvaluator:
                 localization_losses,
                 classification_losses,
             )
-            if self.localization_loss is not None
-            and self.classification_loss is not None
+            if self.localization_loss is not None and self.classification_loss is not None
             else (
                 localization_losses
                 if self.localization_loss is not None
-                else (
-                    classification_losses
-                    if self.classification_loss is not None
-                    else None
-                )
+                else (classification_losses if self.classification_loss is not None else None)
             ),
         )
         return results

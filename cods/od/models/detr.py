@@ -151,8 +151,7 @@ class DETRModel(ODModel):
         ]
 
         true_cls = [
-            torch.LongTensor([box["category_id"] for box in true_box])
-            for true_box in ground_truth
+            torch.LongTensor([box["category_id"] for box in true_box]) for true_box in ground_truth
         ]
 
         true_boxes = true_boxes

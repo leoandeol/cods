@@ -141,7 +141,4 @@ class CombiningToleranceRegions(ToleranceRegion):
         return [tregion.conformalize(preds) for tregion in self.tregions]
 
     def evaluate(self, preds, verbose=True):
-        return [
-            tregion.evaluate(preds, verbose=verbose)
-            for tregion in self.tregions
-        ]
+        return [tregion.evaluate(preds, verbose=verbose) for tregion in self.tregions]

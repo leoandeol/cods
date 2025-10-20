@@ -33,12 +33,8 @@ def mock_predictions(device):
             "cls2",
         ],
         true_boxes=[
-            torch.tensor(
-                [[10, 10, 50, 50]], dtype=torch.float32, device=device
-            ),
-            torch.tensor(
-                [[20, 20, 60, 60]], dtype=torch.float32, device=device
-            ),
+            torch.tensor([[10, 10, 50, 50]], dtype=torch.float32, device=device),
+            torch.tensor([[20, 20, 60, 60]], dtype=torch.float32, device=device),
         ],
         pred_boxes=[
             torch.tensor(
@@ -61,12 +57,8 @@ def mock_predictions(device):
             torch.tensor([1], dtype=torch.int64, device=device),
         ],
         pred_cls=[
-            torch.tensor(
-                [[0.9, 0.1], [0.3, 0.7]], dtype=torch.float32, device=device
-            ),
-            torch.tensor(
-                [[0.8, 0.2], [0.2, 0.8]], dtype=torch.float32, device=device
-            ),
+            torch.tensor([[0.9, 0.1], [0.3, 0.7]], dtype=torch.float32, device=device),
+            torch.tensor([[0.8, 0.2], [0.2, 0.8]], dtype=torch.float32, device=device),
         ],
         image_shapes=[
             np.array([100, 100]),
@@ -139,17 +131,15 @@ def test_first_step_optimizer(
     print(f"Final Lambda (Confidence Threshold): {result_lambda}")
 
     assert isinstance(result_lambda, float), "Result should be a float."
-    assert (
-        0.0 <= result_lambda <= 1.0
-    ), "Lambda should be in the range [0.0, 1.0]."
+    assert 0.0 <= result_lambda <= 1.0, "Lambda should be in the range [0.0, 1.0]."
     # The result should not be the default initial value if the loop runs
-    assert (
-        result_lambda != 1.0
-    ), "Lambda should not be equal to the initial value if optimization occurs."
+    assert result_lambda != 1.0, (
+        "Lambda should not be equal to the initial value if optimization occurs."
+    )
 
-    assert (
-        abs(result_lambda - 0.2) < 1e-5
-    ), f"Lambda should converge to a value close to 0.2 based on the mock data. Observed: {result_lambda}"
+    assert abs(result_lambda - 0.2) < 1e-5, (
+        f"Lambda should converge to a value close to 0.2 based on the mock data. Observed: {result_lambda}"
+    )
 
 
 def test_second_step_optimizer(

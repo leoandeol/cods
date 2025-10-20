@@ -40,10 +40,7 @@ def plot_preds(
         conf_boxes = conformalized_predictions.conf_boxes[idx]
         conf_cls = conformalized_predictions.conf_cls[idx]
 
-    if (
-        confidence_threshold is None
-        and predictions.confidence_threshold is not None
-    ):
+    if confidence_threshold is None and predictions.confidence_threshold is not None:
         confidence_threshold = predictions.confidence_threshold
         print("Using confidence threshold from preds")
     else:
@@ -194,10 +191,7 @@ def create_pdf_with_plots(
     """
     is_conformal = conformalized_predictions is not None
 
-    if (
-        confidence_threshold is None
-        and predictions.confidence_threshold is not None
-    ):
+    if confidence_threshold is None and predictions.confidence_threshold is not None:
         confidence_threshold = predictions.confidence_threshold
     elif confidence_threshold is None:
         raise ValueError("Confidence Threshold should be provided")
@@ -282,9 +276,7 @@ def create_pdf_with_plots(
                     if isinstance(proba, torch.Tensor):
                         proba = proba.item()
                     if idx_to_label is not None:
-                        text = (
-                            f"{idx_to_label[proba]}" if proba >= 0 else "conf"
-                        )
+                        text = f"{idx_to_label[proba]}" if proba >= 0 else "conf"
                     else:
                         text = f"{proba}" if proba >= 0 else "conf"
                     ax.text(
@@ -332,11 +324,7 @@ def create_pdf_with_plots(
                         "",
                         xy=(true_box[0], true_box[1]),
                         xytext=(matching_pred_box[0], matching_pred_box[1]),
-                        arrowprops={
-                            "arrowstyle": "->",
-                            "lw": 2,
-                            "color": "blue",
-                        },
+                        arrowprops={"arrowstyle": "->", "lw": 2, "color": "blue"},
                     )
                 except Exception as e:
                     print(e)
@@ -354,10 +342,7 @@ def plot_histograms_predictions(predictions: ODPredictions):
 
     list_true = [len(x) for x in predictions.true_boxes]
     list_pred = [len(x) for x in predictions.confidences]
-    list_pred_thresh = [
-        sum(x > predictions.confidence_threshold)
-        for x in predictions.confidence
-    ]
+    list_pred_thresh = [sum(x > predictions.confidence_threshold) for x in predictions.confidence]
 
     _, axs = plt.subplots(1, 3, figsize=(15, 5))
     axs[0].hist(list_true, bins=20)

@@ -191,12 +191,8 @@ class Benchmark:
             confidence_method=experiment["confidence_method"],
             localization_method=experiment["localization_method"],
             classification_method=experiment["classification_method"],
-            localization_prediction_set=experiment[
-                "localization_prediction_set"
-            ],
-            classification_prediction_set=experiment[
-                "classification_prediction_set"
-            ],
+            localization_prediction_set=experiment["localization_prediction_set"],
+            classification_prediction_set=experiment["classification_prediction_set"],
             optimizer=experiment["optimizer"],
             device=self.device,
         )

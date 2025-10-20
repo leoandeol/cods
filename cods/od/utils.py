@@ -38,12 +38,8 @@ def mesh_func(
         torch.linspace(y1, y2, y2 - y1 + 1).to(device),
         indexing="xy",
     )
-    outxx = (xx.reshape((1, -1)) >= pbs[:, 0, None]) & (
-        xx.reshape((1, -1)) <= (pbs[:, 2, None])
-    )
-    outyy = (yy.reshape((1, -1)) >= pbs[:, 1, None]) & (
-        yy.reshape((1, -1)) <= (pbs[:, 3, None])
-    )
+    outxx = (xx.reshape((1, -1)) >= pbs[:, 0, None]) & (xx.reshape((1, -1)) <= (pbs[:, 2, None]))
+    outyy = (yy.reshape((1, -1)) >= pbs[:, 1, None]) & (yy.reshape((1, -1)) <= (pbs[:, 3, None]))
 
     Z = torch.any(outxx & outyy, dim=0).reshape((x2 - x1 + 1, y2 - y1 + 1))
     return Z
@@ -459,9 +455,7 @@ def match_predictions_to_true_boxes(
                 l_ass = assymetric_hausdorff_distance(true_boxes, pred_boxes)
                 scale = torch.clamp(l_ass.max(), min=1e-12)
                 l_ass = l_ass / scale
-                distance_matrix = (
-                    class_factor * l_lac + (1 - class_factor) * l_ass
-                )
+                distance_matrix = class_factor * l_lac + (1 - class_factor) * l_ass
             elif use_giou:
                 distance_matrix = vectorized_generalized_iou(
                     true_boxes,
@@ -484,8 +478,7 @@ def match_predictions_to_true_boxes(
         all_matching_tensors.append(matching)
 
     all_matching = [
-        m.cpu().tolist() if isinstance(m, torch.Tensor) else m
-        for m in all_matching_tensors
+        m.cpu().tolist() if isinstance(m, torch.Tensor) else m for m in all_matching_tensors
     ]
     if idx is not None:
         return all_matching[0]
@@ -493,9 +486,7 @@ def match_predictions_to_true_boxes(
     return all_matching
 
 
-def apply_margins(
-    pred_boxes: list[torch.Tensor], Qs: float, mode: str = "additive"
-):
+def apply_margins(pred_boxes: list[torch.Tensor], Qs: float, mode: str = "additive"):
     n = len(pred_boxes)
     new_boxes = []
     device = pred_boxes[0].device
@@ -581,11 +572,7 @@ def compute_risk_object_level(
                 [matched_conf_cls_i_j],
             )
             # TODO: investigate why we need to do that
-            loss_value = (
-                loss_value
-                if len(loss_value.shape) > 0
-                else loss_value.unsqueeze(0)
-            )
+            loss_value = loss_value if len(loss_value.shape) > 0 else loss_value.unsqueeze(0)
             losses.append(loss_value)
     losses = torch.stack(losses).ravel()
     return losses if return_list else torch.mean(losses)
@@ -645,8 +632,7 @@ def compute_risk_image_level(
         ]
         matched_conf_boxes_i = (
             torch.stack(matched_conf_boxes_i)
-            if len(matched_conf_boxes_i) > 0
-            and matched_conf_boxes_i[0].numel() > 0
+            if len(matched_conf_boxes_i) > 0 and matched_conf_boxes_i[0].numel() > 0
             else torch.tensor([]).float().to(device)
         )
         # print(matched_conf_boxes_i.shape)
