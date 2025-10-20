@@ -1,5 +1,5 @@
 from types import MappingProxyType
-from typing import Any, Optional, Tuple
+from typing import Any
 
 import torch
 
@@ -27,8 +27,8 @@ class ClassificationConformalizer(Conformalizer):
 
         self.preprocess = preprocess
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
-        self._quantile: Optional[Any] = None
-        self._n_classes: Optional[Any] = None
+        self._quantile: Any | None = None
+        self._n_classes: Any | None = None
         self.device = device
 
         self.method = method
@@ -43,7 +43,7 @@ class ClassificationConformalizer(Conformalizer):
         alpha: float = 0.1,
         verbose: bool = True,
         lbd_minus: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         self._n_classes = preds.n_classes
         if self._score_function is None:
             self._score_function = self.ACCEPTED_METHODS[self.method](

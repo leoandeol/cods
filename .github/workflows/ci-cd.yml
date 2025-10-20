@@ -20,7 +20,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           cache: 'pip'
 
       - name: Install ruff
@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -71,11 +71,11 @@ jobs:
             -n auto \
             --timeout=300 \
             -v
-        continue-on-error: ${{ matrix.python-version == '3.11' }}  # Allow 3.11 to fail
+        continue-on-error: ${{ matrix.python-version == '3.13' }}  # Allow 3.13 to fail
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
-        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.10'
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         with:
           files: ./coverage.xml
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -93,7 +93,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest]
-        python-version: ["3.10"]
+        python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -124,7 +124,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           cache: 'pip'
 
       - name: Install dependencies
@@ -148,7 +148,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
           cache: 'pip'
 
       - name: Install dependencies
@@ -179,7 +179,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Install build tools
         run: pip install build twine

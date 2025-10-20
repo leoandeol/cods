@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from types import MappingProxyType
-from typing import Callable
 
 import torch
 

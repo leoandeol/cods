@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from types import MappingProxyType
-from typing import Callable, Optional, Union
 
 import torch
 from scipy.optimize import brentq
@@ -83,9 +83,9 @@ class ToleranceRegion:
 
     def __init__(
         self,
-        inequality: Union[str, Callable] = "binomial_inverse_cdf",
+        inequality: str | Callable = "binomial_inverse_cdf",
         optimizer: str = "binary_search",
-        optimizer_args: Optional[dict] = None,
+        optimizer_args: dict | None = None,
     ):
         if optimizer_args is None:
             optimizer_args = {}

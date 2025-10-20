@@ -1,7 +1,6 @@
 import os
 import pickle
 from logging import getLogger
-from typing import Optional
 
 import torch
 
@@ -63,7 +62,7 @@ class Model:
         self,
         hash: str,
         verbose: bool = True,
-    ) -> Optional[Predictions]:
+    ) -> Predictions | None:
         """Load predictions if they exist, else return None
 
         Args:

@@ -1,5 +1,4 @@
 from hashlib import sha256
-from typing import Optional
 
 import torch
 import torchvision
@@ -16,7 +15,7 @@ class ODModel(Model):
         model_name: str,
         save_dir_path: str,
         pretrained: bool = True,
-        weights: Optional[str] = None,
+        weights: str | None = None,
         device: str = "cpu",
     ):
         """Initializes an instance of the ODModel class.
@@ -49,7 +48,7 @@ class ODModel(Model):
         force_recompute: bool = False,
         deletion_method: str = "nms",
         iou_threshold: float = 0.5,
-        filter_preds_by_confidence: Optional[float] = None,
+        filter_preds_by_confidence: float | None = None,
         **kwargs,
     ) -> ODPredictions:
         """Builds predictions for the given dataset.

@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, List, Tuple, Union
+from collections.abc import Callable
 
 import numpy as np
 from skopt import gp_minimize
@@ -25,7 +25,7 @@ class BinarySearchOptimizer(Optimizer):
         self,
         objective_function: Callable,
         alpha: float,
-        bounds: Union[Tuple, List, List[Tuple]],
+        bounds: tuple | list | list[tuple],
         steps: int,
         epsilon=1e-5,
         verbose=True,
@@ -93,7 +93,7 @@ class GaussianProcessOptimizer(Optimizer):
         self,
         objective_function: Callable,
         alpha: float,
-        bounds: Union[Tuple, List, List[Tuple]],
+        bounds: tuple | list | list[tuple],
         steps: int,
         epsilon=1e-5,
         verbose=True,
@@ -131,7 +131,7 @@ class MonteCarloOptimizer(Optimizer):
         self,
         objective_function: Callable,
         alpha: float,
-        bounds: Union[Tuple, List[Tuple]],
+        bounds: tuple | list[tuple],
         steps: int,
         epsilon=1e-4,
         verbose=True,

@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from logging import getLogger
-from typing import Callable, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,7 +25,7 @@ def compute_global_coverage(
     confidence: bool = True,
     cls: bool = True,
     localization: bool = True,
-    loss: Optional[Callable] = None,
+    loss: Callable | None = None,
 ) -> torch.Tensor:
     """Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE #TODO
 
@@ -321,7 +321,7 @@ def plot_recall_precision(
 def unroll_metrics(
     predictions: ODPredictions,
     conformalized_predictions: ODConformalizedPredictions,
-    confidence_threshold: Optional[Union[float, torch.Tensor]] = None,
+    confidence_threshold: float | torch.Tensor | None = None,
     iou_threshold: float = 0.5,
     verbose: bool = True,
 ) -> dict:
