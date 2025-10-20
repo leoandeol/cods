@@ -14,9 +14,7 @@ from reportlab.pdfgen import canvas
 from cods.od.data import MSCOCODataset
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"] = (
-    "0"  # chose the GPU. If only one, then "0"
-)
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # chose the GPU. If only one, then "0"
 
 logging.getLogger().setLevel(logging.INFO)
 
@@ -39,9 +37,7 @@ def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
 
     # Calculate image size and positions
     image_width = width / 2 - 0.5 * inch
-    image_height = (
-        height / 2 - 0.75 * inch
-    ) * 0.9  # Reduce image height to make room for title
+    image_height = (height / 2 - 0.75 * inch) * 0.9  # Reduce image height to make room for title
     title_height = (height / 2 - 0.75 * inch) * 0.1  # Height for the title
     positions = [
         (0.25 * inch, height - 0.25 * inch - image_height - title_height),
@@ -55,7 +51,7 @@ def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
 
     image_count = 0
     for batch in dataloader:
-        image_paths, image_sizes, images, ground_truth = batch
+        image_paths, _image_sizes, images, _ground_truth = batch
 
         for img, path in zip(images, image_paths):
             # Calculate position for this image
@@ -87,9 +83,7 @@ def create_dataset_pdf(dataloader, output_filename="dataset_images.pdf"):
             if title_width > image_width:
                 # If title is too long, truncate it
                 while title_width > image_width and len(title) > 3:
-                    title = (
-                        title[:-4] + "..."
-                    )  # Remove 3 characters and add ellipsis
+                    title = title[:-4] + "..."  # Remove 3 characters and add ellipsis
                     title_width = c.stringWidth(title, "Monospace", 8)
             c.drawString(
                 pos[0] + (image_width - title_width) / 2,

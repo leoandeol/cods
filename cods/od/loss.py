@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import List
 
 import torch
 
@@ -10,8 +9,10 @@ from cods.classif.loss import ClassificationLoss
 from cods.od.utils import (
     assymetric_hausdorff_distance,
     f_lac,
+    fast_covered_areas_of_gt,
     # get_covered_areas_of_gt_max,
     get_covered_areas_of_gt_union,
+    vectorized_generalized_iou,
 )
 
 logger = getLogger("cods")
@@ -123,10 +124,10 @@ class BoxCountTwosidedConfidenceLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        conf_boxes: torch.Tensor | List[torch.Tensor],
-        conf_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        conf_boxes: torch.Tensor | list[torch.Tensor],
+        conf_cls: list[torch.Tensor],
     ) -> torch.Tensor:
         """Call the Confidence Loss.
 
@@ -174,10 +175,10 @@ class BoxCountRecallConfidenceLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        conf_boxes: torch.Tensor | List[torch.Tensor],
-        conf_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        conf_boxes: torch.Tensor | list[torch.Tensor],
+        conf_cls: list[torch.Tensor],
     ) -> torch.Tensor:
         """Call the Confidence Loss.
 
@@ -286,10 +287,10 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        pred_boxes: torch.Tensor | List[torch.Tensor],
-        pred_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        pred_boxes: torch.Tensor | list[torch.Tensor],
+        pred_cls: list[torch.Tensor],
     ) -> torch.Tensor:
         """Call the Confidence Loss.
 
@@ -334,9 +335,7 @@ class ODBinaryClassificationLoss(ClassificationLoss):
         """ """
         # if len(conf_cls) == 0:
         #    logger.warning(f"conf_cls is empty : {conf_cls}")
-        loss = (
-            torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
-        )
+        loss = torch.logical_not(torch.isin(true_cls, conf_cls)).float().expand(1)
         # if loss == 0:
         #    logger.info(f"true_cls: {true_cls}, conf_cls: {conf_cls}")
         return loss
@@ -552,9 +551,6 @@ class ClassBoxWiseRecallLoss(ODLoss):
         return miscoverage
 
 
-from cods.od.utils import fast_covered_areas_of_gt
-
-
 class BoxWiseRecallLoss(ODLoss):
     """Box-wise recall loss: 1 - mean(areas of the union of the boxes),
 
@@ -580,9 +576,7 @@ class BoxWiseRecallLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",
@@ -646,9 +640,7 @@ class PixelWiseRecallLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Pixel-wise Recall Loss only supports union of boxes.",
@@ -708,9 +700,7 @@ class BoxWisePrecisionLoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",
@@ -751,9 +741,6 @@ class BoxWisePrecisionLoss(ODLoss):
         return miscoverage
 
 
-from cods.od.utils import vectorized_generalized_iou
-
-
 class BoxWiseIoULoss(ODLoss):
     """Box-wise PRECISION loss: 1 - mean(areas of the union of the boxes),
 
@@ -779,9 +766,7 @@ class BoxWiseIoULoss(ODLoss):
         """
         super().__init__(upper_bound=1, device=device)
         self.union_of_boxes = union_of_boxes
-        self.get_covered_areas = (
-            fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
-        )
+        self.get_covered_areas = fast_covered_areas_of_gt  # get_covered_areas_of_gt_union
         if not union_of_boxes:
             raise NotImplementedError(
                 "Box-wise Recall Loss only supports union of boxes.",

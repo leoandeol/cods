@@ -1,5 +1,4 @@
 from time import time_ns
-from typing import Optional
 
 
 class Predictions:
@@ -10,7 +9,7 @@ class Predictions:
         dataset_name: str,
         split_name: str,
         task_name: str,
-        unique_id: Optional[int] = None,
+        unique_id: int | None = None,
     ):
         """Initializes a new instance of the Predictions class.
 
@@ -33,7 +32,7 @@ class Predictions:
 class Parameters:
     """Abstract class for parameters"""
 
-    def __init__(self, predictions_id: int, unique_id: Optional[int] = None):
+    def __init__(self, predictions_id: int, unique_id: int | None = None):
         """Initializes a new instance of the Parameters class.
 
         Parameters
@@ -55,7 +54,7 @@ class ConformalizedPredictions:
         self,
         predictions_id: int,
         parameters_id: int,
-        unique_id: Optional[int] = None,
+        unique_id: int | None = None,
     ):
         """Initializes a new instance of the Data class.
 

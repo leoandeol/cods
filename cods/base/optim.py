@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, List, Tuple, Union
+from collections.abc import Callable
 
 import numpy as np
 from skopt import gp_minimize
@@ -25,7 +25,7 @@ class BinarySearchOptimizer(Optimizer):
         self,
         objective_function: Callable,
         alpha: float,
-        bounds: Union[Tuple, List, List[Tuple]],
+        bounds: tuple | list | list[tuple],
         steps: int,
         epsilon=1e-5,
         verbose=True,
@@ -46,10 +46,8 @@ class BinarySearchOptimizer(Optimizer):
             lower, upper = bound
             lowers.append(lower)
             uppers.append(upper)
-        good_lbds = list([])
-        current_lbds = list(
-            [(upper - lower) / 2 for lower, upper in zip(lowers, uppers)],
-        )
+        good_lbds = []
+        current_lbds = [(upper - lower) / 2 for lower, upper in zip(lowers, uppers)]
 
         pbar = tqdm(range(steps), disable=not verbose)
 
@@ -95,7 +93,7 @@ class GaussianProcessOptimizer(Optimizer):
         self,
         objective_function: Callable,
         alpha: float,
-        bounds: Union[Tuple, List, List[Tuple]],
+        bounds: tuple | list | list[tuple],
         steps: int,
         epsilon=1e-5,
         verbose=True,
@@ -103,19 +101,14 @@ class GaussianProcessOptimizer(Optimizer):
         # TODO: experimental
         def fun_opti(params):
             corr_risk = objective_function(*params)
-            return (
-                5 * (corr_risk - alpha + 1e-3)
-                if alpha < corr_risk
-                else alpha - corr_risk
-            )
+            return 5 * (corr_risk - alpha + 1e-3) if alpha < corr_risk else alpha - corr_risk
 
         # TODO: put hyperparameters in kwargs
         res = gp_minimize(
             fun_opti,
             (
                 [bounds]
-                if not isinstance(bounds[0], list)
-                and not isinstance(bounds[0], tuple)
+                if not isinstance(bounds[0], list) and not isinstance(bounds[0], tuple)
                 else bounds
             ),
             n_calls=steps,
@@ -138,7 +131,7 @@ class MonteCarloOptimizer(Optimizer):
         self,
         objective_function: Callable,
         alpha: float,
-        bounds: Union[Tuple, List[Tuple]],
+        bounds: tuple | list[tuple],
         steps: int,
         epsilon=1e-4,
         verbose=True,
