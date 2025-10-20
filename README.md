@@ -1,5 +1,5 @@
 # 🐟 CODS - Conformal Object Detection and Segmentation 🐟
-[![CI/CD](https://github.com/leoandeol/cods/.github/workflows/ci-cd.yml/badge.svg)](https://github.com/leoandeol/cods/.github/workflows/ci-cd.yml)
+[![CI/CD](https://github.com/leoandeol/cods/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/leoandeol/cods/actions/workflows/ci-cd.yml)
 [![codecov](https://codecov.io/gh/leoandeol/cods/branch/main/graph/badge.svg)](https://codecov.io/gh/leoandeol/cods)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
