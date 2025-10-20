@@ -57,7 +57,7 @@ dev = [
     "notebook>=6.4.0",
     "wandb>=0.15.0",             # Weights & Biases for experiment tracking
     "line-profiler>=4.0.0",      # Performance profiling
-    "sphinx>=8.2.3",
+    "sphinx>=8.1.3",
     "sphinx-rtd-theme>=3.0.2",
     "sphinx-autodoc-typehints>=3.5.2",
 ]
