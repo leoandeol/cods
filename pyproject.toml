@@ -1,6 +1,85 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cods"
+version = "0.3"
+description = "Conformal Object Detection & Segmentation"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "Léo Andéol", email = "leo@andeol.eu"},
+    {name = "Luca Mossina"},
+]
+keywords = ["conformal-prediction", "object-detection", "segmentation", "computer-vision", "pytorch"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+# Core dependencies - pinned for stability
+dependencies = [
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "numpy>=2.2.6",
+    "pillow>=9.0.0",
+    "tqdm>=4.60.0",
+    "numba>=0.56.0",
+    "glob2>=0.7",
+    "matplotlib>=3.5.0",
+    "scikit-learn>=1.0.0",
+    "scikit-optimize>=0.9.0",
+    "timm>=0.9.0",               # PyTorch Image Models
+    "pycocotools>=2.0.6",
+    "python-dotenv>=0.19.0",
+    "ultralytics>=8.0.0",        # YOLO models
+]
+
+[project.optional-dependencies]
+# Development tools
+dev = [
+    "ruff>=0.4.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-xdist>=3.0.0",
+    "pytest-timeout>=2.0.0",
+    "ipykernel>=6.0.0",
+    "jupyter>=1.0.0",
+    "notebook>=6.4.0",
+    "wandb>=0.15.0",             # Weights & Biases for experiment tracking
+    "line-profiler>=4.0.0",      # Performance profiling
+    "sphinx>=8.1.3",
+    "sphinx-rtd-theme>=3.0.2",
+    "sphinx-autodoc-typehints>=3.0.1",
+]
+
+# All dependencies
+all = ["cods[dev]"]
+
+[project.urls]
+Homepage = "https://github.com/leoandeol/cods/"
+Repository = "https://github.com/leoandeol/cods/"
+Issues = "https://github.com/leoandeol/cods/issues"
+
+# Tell setuptools where to find packages
+[tool.setuptools.packages.find]
+include = ["cods*"]
+namespaces = true
+
+# Ruff configuration
 [tool.ruff]
-target-version = "py38"
-# Exclude a variety of commonly ignored directories.
+target-version = "py310"
+line-length = 100
+indent-width = 4
+
 exclude = [
     ".bzr",
     ".direnv",
@@ -12,6 +91,7 @@ exclude = [
     ".mypy_cache",
     ".nox",
     ".pants.d",
+    "*.ipynb",
     ".pyenv",
     ".pytest_cache",
     ".pytype",
@@ -28,31 +108,142 @@ exclude = [
     "node_modules",
     "site-packages",
     "venv",
+    "data",
+    "docs",
 ]
-line-length = 79
-extend-include = ["*.ipynb"]
-indent-width = 4
-fix = true
-
 
 [tool.ruff.lint]
-ignore = []
-# Allow fix for all enabled rules (when `--fix`) is provided.
-#TODO too much currently disabled
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+    "RUF",    # Ruff-specific rules
+]
+
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function calls in argument defaults
+    "B905",   # zip without strict parameter
+    "C901",   # too complex
+    "W191",   # indentation contains tabs
+    "ARG002", # unused method argument
+    "ARG001", # unused function argument
+    "SIM108", # use ternary operator (sometimes less readable)
+]
+
 fixable = ["ALL"]
-select = ["ALL"]
-# select = ["F", "E", "B", "I", "RUF", "TCH"]
-# Disable fix for unused imports (`F401`).
-unfixable = [] # ["F401"]
+unfixable = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*.py" = ["F401", "F811", "ARG", "S101"]
+"scripts/**/*.py" = ["T201"]
+"*.ipynb" = ["E402", "F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["cods"]
+force-single-line = false
+force-sort-within-sections = false
 
 [tool.ruff.format]
+exclude = ["*.ipynb", "docs"]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
+docstring-code-line-length = "dynamic"
 
+# MyPy configuration
 [tool.mypy]
-python_version = "3.8"
-strict = true  # Optional: enables full strict mode
+python_version = "3.10"
+warn_return_any = false
+warn_unused_configs = true
 ignore_missing_imports = true
+
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = false
+disallow_untyped_calls = false
+
+warn_redundant_casts = true
+warn_unused_ignores = false
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = [
+    "cv2.*",
+    "torch.*",
+    "torchvision.*",
+    "PIL.*",
+    "numpy.*",
+    "tqdm.*",
+    "numba.*",
+    "sklearn.*",
+    "skopt.*",
+    "timm.*",
+    "pycocotools.*",
+    "ultralytics.*",
+    "wandb.*",
+]
+ignore_missing_imports = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+addopts = [
+    "--strict-markers",
+    "--color=yes",
+    "-ra",
+]
+
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "gpu: marks tests that require GPU",
+    "integration: marks tests as integration tests",
+]
+
+filterwarnings = [
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["cods"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*_test.py",
+    "setup.py",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "if typing.TYPE_CHECKING:",
+    "@abstractmethod",
+    "@abc.abstractmethod",
+]

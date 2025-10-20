@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from logging import getLogger
-from typing import Callable, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,7 +25,7 @@ def compute_global_coverage(
     confidence: bool = True,
     cls: bool = True,
     localization: bool = True,
-    loss: Optional[Callable] = None,
+    loss: Callable | None = None,
 ) -> torch.Tensor:
     """Compute the global coverage for object detection predictions. BOXWISE/IMAGEWISE #TODO
 
@@ -62,10 +62,7 @@ def compute_global_coverage(
         if confidence:
             conf_loss = (
                 0
-                if (
-                    predictions.confidences[i]
-                    >= predictions.confidence_threshold
-                ).sum()
+                if (predictions.confidences[i] >= predictions.confidence_threshold).sum()
                 >= len(predictions.true_boxes[i])
                 else 1
             )
@@ -88,8 +85,7 @@ def compute_global_coverage(
             if localization:
                 try:
                     conf_boxes_i = conf_boxes[i][
-                        predictions.confidences[i]
-                        >= predictions.confidence_threshold
+                        predictions.confidences[i] >= predictions.confidence_threshold
                     ]
                     true_box = predictions.true_boxes[i][j]
 
@@ -100,9 +96,7 @@ def compute_global_coverage(
                     ):
                         conf_box_i = torch.tensor([])
                     else:
-                        conf_box_i = conf_boxes_i[
-                            predictions.matching[i][j][0]
-                        ]
+                        conf_box_i = conf_boxes_i[predictions.matching[i][j][0]]
 
                     if loss is None:
                         if (
@@ -118,8 +112,7 @@ def compute_global_coverage(
                         # TODO: partly redundant, to be improved
                         conf_box_i = (
                             conf_box_i[None, :]
-                            if conf_box_i.shape[0] == 4
-                            and len(conf_box_i.shape) == 1
+                            if conf_box_i.shape[0] == 4 and len(conf_box_i.shape) == 1
                             else torch.tensor([])
                         )
                         loc_loss = loss(
@@ -128,22 +121,21 @@ def compute_global_coverage(
                             conf_box_i,
                             None,
                         ).item()
-                except:
+                except Exception as e:
                     print(
                         f"Number of ground truth boxes: {len(predictions.true_boxes[i])}",
                     )
                     print(predictions.pred_boxes[i].shape)
                     print(
                         predictions.pred_boxes[i][
-                            predictions.confidences[i]
-                            >= predictions.confidence_threshold
+                            predictions.confidences[i] >= predictions.confidence_threshold
                         ].shape,
                     )
                     print(conf_boxes[i].shape)
                     print(conf_boxes_i.shape)
                     print(predictions.matching[i][j][0])
                     print(predictions.matching[i])
-                    assert False
+                    print(e)
 
             else:
                 loc_loss = 0
@@ -175,7 +167,10 @@ def getStretch(
 
     """
     stretches = []
-    area = lambda x: (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
+
+    def area(x):
+        return (x[:, 2] - x[:, 0] + 1) * (x[:, 3] - x[:, 1] + 1)
+
     pred_boxes = od_predictions.pred_boxes
     for i in range(len(pred_boxes)):
         stretches.append(area(conf_boxes[i]) / area(pred_boxes[i]))
@@ -312,7 +307,7 @@ def plot_recall_precision(
         threshes_objectness (np.ndarray): Array of objectness thresholds.
 
     """
-    fig, (ax1, ax2) = plt.subplots(1, 2)
+    _, (ax1, ax2) = plt.subplots(1, 2)
     ax1.plot(threshes_objectness, total_recalls, label="Recall")
     ax1.plot(threshes_objectness, total_precisions, label="Precision")
     ax1.xlabel("Objectness score threshold")
@@ -326,7 +321,7 @@ def plot_recall_precision(
 def unroll_metrics(
     predictions: ODPredictions,
     conformalized_predictions: ODConformalizedPredictions,
-    confidence_threshold: Optional[Union[float, torch.Tensor]] = None,
+    confidence_threshold: float | torch.Tensor | None = None,
     iou_threshold: float = 0.5,
     verbose: bool = True,
 ) -> dict:
@@ -453,11 +448,7 @@ class ODEvaluator:
             conf_boxes_i = conf_boxes_i[confidences_i >= confidence_threshold]
             pred_boxes_i = pred_boxes_i[confidences_i >= confidence_threshold]
             pred_cls_i = pred_cls_i[confidences_i >= confidence_threshold]
-            conf_cls_i = [
-                x
-                for x, c in zip(conf_cls_i, confidences_i)
-                if c >= confidence_threshold
-            ]
+            conf_cls_i = [x for x, c in zip(conf_cls_i, confidences_i) if c >= confidence_threshold]
 
             if self.confidence_loss is not None:
                 confidence_loss_i = self.confidence_loss(
@@ -484,18 +475,14 @@ class ODEvaluator:
                 if len(tmp_matched_boxes_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-            matched_conf_cls_i = list(
-                [
-                    (
-                        torch.stack([conf_cls_i[m] for m in matching_i[j]])[
-                            0
-                        ]  # TODO zero here ?
-                        if len(matching_i[j]) > 0
-                        else torch.tensor([]).float().to(device)
-                    )
-                    for j in range(len(true_boxes_i))
-                ],
-            )
+            matched_conf_cls_i = [
+                (
+                    torch.stack([conf_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
 
             # if matched_conf_boxes_i.size() == 0:
             #     matched_conf_boxes_i = torch.tensor([]).float().to(device)
@@ -518,12 +505,8 @@ class ODEvaluator:
                     pred_boxes_i,
                 ):
                     set_size = (
-                        (conf_box_i_j[2] - conf_box_i_j[0])
-                        * (conf_box_i_j[3] - conf_box_i_j[1])
-                    ) / (
-                        (pred_box_i_j[2] - pred_box_i_j[0])
-                        * (pred_box_i_j[3] - pred_box_i_j[1])
-                    )
+                        (conf_box_i_j[2] - conf_box_i_j[0]) * (conf_box_i_j[3] - conf_box_i_j[1])
+                    ) / ((pred_box_i_j[2] - pred_box_i_j[0]) * (pred_box_i_j[3] - pred_box_i_j[1]))
                     set_size = torch.sqrt(set_size)
                     localization_set_size_i.append(set_size)
                 if len(localization_set_size_i) == 0:
@@ -600,16 +583,11 @@ class ODEvaluator:
                 localization_losses,
                 classification_losses,
             )
-            if self.localization_loss is not None
-            and self.classification_loss is not None
+            if self.localization_loss is not None and self.classification_loss is not None
             else (
                 localization_losses
                 if self.localization_loss is not None
-                else (
-                    classification_losses
-                    if self.classification_loss is not None
-                    else None
-                )
+                else (classification_losses if self.classification_loss is not None else None)
             ),
         )
         return results

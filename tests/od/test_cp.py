@@ -2,7 +2,7 @@ from cods.od.cp import ODConformalizer
 
 
 def test_conformalizer():
-    conf = ODConformalizer(
+    ODConformalizer(
         backend="auto",
         guarantee_level="image",
         matching_function="mix",

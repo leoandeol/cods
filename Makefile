@@ -1,30 +1,184 @@
-.PHONY: venv
+.PHONY: help install dev-install venv coco dotenv format lint test test-fast coverage clean build pre-commit ci docs docs-clean docs-rebuild docs-serve notebook typecheck quick-test profile
 
-VAL=http://images.cocodataset.org/zips/val2017.zip
-ANNOTATIONS=http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+# Configuration
+CODS_PYTHON ?= python3
+VENV_BIN ?= .venv/bin
+COCO_DIR ?= ./data/coco
+VAL = http://images.cocodataset.org/zips/val2017.zip
+ANNOTATIONS = http://images.cocodataset.org/annotations/annotations_trainval2017.zip
 
+# Default target
+help:
+	@echo "Available commands:"
+	@echo ""
+	@echo "Setup & Installation:"
+	@echo "  make install        - Full setup: venv + dependencies + COCO dataset"
+	@echo "  make dev-install    - Install package with dev dependencies"
+	@echo "  make venv           - Create virtual environment"
+	@echo "  make coco           - Download COCO validation dataset"
+	@echo "  make dotenv         - Create .env file with paths"
+	@echo ""
+	@echo "Development:"
+	@echo "  make format         - Format code with ruff"
+	@echo "  make lint           - Lint code with ruff"
+	@echo "  make typecheck      - Run mypy type checking"
+	@echo "  make pre-commit     - Install and run pre-commit hooks"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test           - Run all tests"
+	@echo "  make test-fast      - Run tests in parallel"
+	@echo "  make coverage       - Run tests with coverage report"
+	@echo "  make quick-test     - Run failed tests first, stop on first failure"
+	@echo ""
+	@echo "Build & Clean:"
+	@echo "  make build          - Build package"
+	@echo "  make clean          - Clean build artifacts"
+	@echo "  make ci             - Run all CI checks locally"
+
+# Virtual environment setup
 venv:
 	$(CODS_PYTHON) -m venv .venv
 	.venv/bin/python -m pip install --upgrade pip
-	.venv/bin/python -m pip install -r requirements.txt
-	.venv/bin/python -m pip install -r requirements-dev.txt
-	.venv/bin/python -m pip install --editable .
-	
+	.venv/bin/python -m pip install -e ".[dev]"
+	@echo ""
+	@echo "Virtual environment created! Activate with:"
+	@echo "  source .venv/bin/activate"
 
+# Installation
+install: dotenv venv coco
+	@echo ""
+	@echo "Installation complete!"
+	@echo "Activate environment: source .venv/bin/activate"
+
+dev-install:
+	pip install -e ".[dev]"
+	pre-commit install
+	@echo "Development environment ready!"
+
+# COCO dataset download
 coco:
-	$(info Downloading COCO dataset to: $(COCO_DIR))
-	wget $(VAL) -P $(COCO_DIR)
-	wget $(ANNOTATIONS) -P $(COCO_DIR)
-	unzip val2017.zip
-	rm val2017.zip
-	unzip annotations_trainval2017.zip
-	rm annotations_trainval2017.zip
+	@echo "Downloading COCO dataset to: $(COCO_DIR)"
+	@mkdir -p $(COCO_DIR)
+	@cd $(COCO_DIR) && \
+		wget -nc $(VAL) && \
+		wget -nc $(ANNOTATIONS) && \
+		unzip -q -n val2017.zip && \
+		rm -f val2017.zip && \
+		unzip -q -n annotations_trainval2017.zip && \
+		rm -f annotations_trainval2017.zip
+	@echo "COCO dataset downloaded to $(COCO_DIR)"
 
+# Create .env file
 dotenv:
-	@echo "PROJECT_PATH=$$PWD" > .env
-	@echo "COCO_PATH=$$COCO_DIR" >> .env
+	@echo "PROJECT_PATH=$$(pwd)" > .env
+	@echo "COCO_PATH=$(COCO_DIR)" >> .env
+	@echo ".env file created with project paths"
 
-install:
-	@make project_path
-	@make venv
-	@make coco
+# Code quality
+format:
+	$(VENV_BIN)/ruff format .
+	$(VENV_BIN)/ruff check --fix .
+
+lint:
+	$(VENV_BIN)/ruff check .
+
+typecheck:
+	$(VENV_BIN)/mypy cods/ --ignore-missing-imports
+
+# Testing
+test:
+	$(VENV_BIN)/pytest tests/ -v
+
+test-fast:
+	$(VENV_BIN)/pytest tests/ -v -n auto
+
+test-watch:
+	$(VENV_BIN)/pytest-watch tests/
+
+coverage:
+	$(VENV_BIN)/pytest tests/ --cov=cods -cov-report=xml --cov-report=html --cov-report=term-missing
+	@echo ""
+	@echo "Coverage report generated in htmlcov/index.html"
+	@echo "XML report for CI at coverage.xml"
+
+quick-test:
+	$(VENV_BIN)/pytest tests/ -v -x --ff
+
+# Pre-commit
+pre-commit:
+	$(VENV_BIN)/pre-commit install
+	$(VENV_BIN)/pre-commit run --all-files
+
+# Cleaning
+clean:
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info
+	rm -rf .pytest_cache
+	rm -rf .ruff_cache
+	rm -rf .mypy_cache
+	rm -rf htmlcov/
+	rm -rf .coverage
+	find . -type d -name __pycache__ -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+
+# Building
+build: clean
+	$(VENV_BIN)/python -m build
+	$(VENV_BIN)/twine check dist/*
+
+# Run all CI checks locally
+ci: format lint test coverage
+	@echo ""
+	@echo "✓ All CI checks passed!"
+
+# Notebook support
+notebook:
+	$(VENV_BIN)/jupyter notebook
+
+# Documentation
+docs:
+	@echo "Generating documentation..."
+	@if [ ! -f "docs/conf.py" ]; then \
+		echo "Initializing Sphinx..."; \
+		mkdir -p docs; \
+		sphinx-quickstart docs \
+			--quiet \
+			--sep \
+			--project="CODS" \
+			--author="Léo Andéol, Luca Mossina" \
+			-v 0.3 \
+			--ext-autodoc \
+			--ext-viewcode \
+			--makefile \
+			--no-batchfile; \
+		echo "" >> docs/source/conf.py; \
+		echo "# Napoleon for Google/NumPy docstrings" >> docs/source/conf.py; \
+		echo "extensions.append('sphinx.ext.napoleon')" >> docs/source/conf.py; \
+		echo "import os, sys" >> docs/source/conf.py; \
+		echo "sys.path.insert(0, os.path.abspath('../..'))" >> docs/source/conf.py; \
+	fi
+	@echo "Generating API documentation..."
+	@sphinx-apidoc -f -o docs/source cods/
+	@echo "Building HTML..."
+	@cd docs && make html
+	@echo "✓ Documentation built in docs/build/html/index.html"
+
+docs-clean:
+	@rm -rf docs/build
+	@echo "Cleaned documentation build files (source preserved)"
+
+docs-rebuild: docs-clean docs
+	@echo "✓ Documentation rebuilt"
+
+docs-serve:
+	@if [ ! -d "docs/build/html" ]; then \
+		echo "Building docs first..."; \
+		$(MAKE) docs; \
+	fi
+	@echo "Serving documentation at http://localhost:8000"
+	@cd docs/build/html && python -m http.server 8000
+
+# Profile code
+profile:
+	$(VENV_BIN)/python -m line_profiler -v
