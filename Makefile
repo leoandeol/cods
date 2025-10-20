@@ -96,9 +96,10 @@ test-watch:
 	$(VENV_BIN)/pytest-watch tests/
 
 coverage:
-	$(VENV_BIN)/pytest tests/ --cov=cods --cov-report=html --cov-report=term-missing
+	$(VENV_BIN)/pytest tests/ --cov=cods -cov-report=xml --cov-report=html --cov-report=term-missing
 	@echo ""
 	@echo "Coverage report generated in htmlcov/index.html"
+	@echo "XML report for CI at coverage.xml"
 
 quick-test:
 	$(VENV_BIN)/pytest tests/ -v -x --ff
