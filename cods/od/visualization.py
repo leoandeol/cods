@@ -12,7 +12,7 @@ def _plot_preds_no_overlap(
     predictions: "ODPredictions",
     conformalized_predictions: "ODConformalizedPredictions" = None,
     confidence_threshold=None,
-    idx_to_label: dict = None,
+    idx_to_label: dict | None = None,
     save_as=None,
 ):
     """Plot predictions for one image while ensuring text labels (with background boxes)
@@ -56,11 +56,7 @@ def _plot_preds_no_overlap(
     cls_probas = cls_probas[keep]
     if is_conformal:
         conf_boxes = conf_boxes[keep]
-        conf_cls = [
-            c
-            for k, c in zip(keep, conformalized_predictions.conf_cls[idx])
-            if k
-        ]
+        conf_cls = [c for k, c in zip(keep, conformalized_predictions.conf_cls[idx]) if k]
 
     # Load image
     image = Image.open(img_path).convert("RGB")
@@ -91,10 +87,7 @@ def _plot_preds_no_overlap(
 
     def fits_without_overlap(disp_bbox):
         # Check against previously placed label bboxes
-        for other in placed_label_bboxes_disp:
-            if bboxes_overlap(disp_bbox, other):
-                return False
-        return True
+        return all(not bboxes_overlap(disp_bbox, other) for other in placed_label_bboxes_disp)
 
     def place_text_with_avoid(ax, x, y, text, color, fontsize=15, pad=2):
         """Try several anchor positions with background box and avoid overlaps.
@@ -130,14 +123,12 @@ def _plot_preds_no_overlap(
                 fontsize=fontsize,
                 ha=ha,
                 va=va,
-                bbox=dict(
-                    facecolor=color, alpha=0.55, edgecolor="none", pad=pad
-                ),
+                bbox={"facecolor": color, "alpha": 0.55, "edgecolor": "none", "pad": pad},
                 clip_on=True,
             )
             # Compute bbox in display space
             fig.canvas.draw()
-            bbox_disp = t.get_window_extent(renderer=renderer).transformed(
+            t.get_window_extent(renderer=renderer).transformed(
                 fig.transFigure.inverted(),
             )
             # Convert to display pixels (easier intersection calc)
@@ -169,13 +160,13 @@ def _plot_preds_no_overlap(
                         nudged = True
                         break
                 if not nudged:
-                    # Couldn’t find a spot; keep last position but register bbox to avoid further overlaps.
+                    # Couldn't find a spot; keep last position but register bbox to avoid further overlaps.
                     placed_label_bboxes_disp.append(disp_bbox)
                 return t
             placed_label_bboxes_disp.append(disp_bbox)
             return t
 
-        # Fallback (shouldn’t happen): keep the last attempt
+        # Fallback (shouldn't happen): keep the last attempt
         placed_label_bboxes_disp.append(disp_bbox)
         return t
 
@@ -228,11 +219,7 @@ def _plot_preds_no_overlap(
                 proba = proba.detach().cpu().numpy()
             cl = int(np.argmax(proba))
             score = float(proba[cl])
-            txt = (
-                f"{idx_to_label[cl]}: {score:0.2f}"
-                if idx_to_label
-                else f"{cl}: {score:0.2f}"
-            )
+            txt = f"{idx_to_label[cl]}: {score:0.2f}" if idx_to_label else f"{cl}: {score:0.2f}"
             # Prefer top-left
             place_text_with_avoid(ax, x1, y1, txt, color)
 
@@ -254,9 +241,7 @@ def _plot_preds_no_overlap(
         for box, conf_cls_i in zip(conf_boxes, conf_cls):
             if isinstance(box, torch.Tensor):
                 box = box.detach().cpu().numpy()
-            draw_rect(
-                ax, box.astype(float), "purple", conf_cls_i, conformal=True
-            )
+            draw_rect(ax, box.astype(float), "purple", conf_cls_i, conformal=True)
 
     # Arrows from GT to matched prediction (if available)
     if getattr(predictions, "matching", None) is not None:
@@ -271,7 +256,7 @@ def _plot_preds_no_overlap(
                 "",
                 xy=(true_box[0], true_box[1]),
                 xytext=(matching_pred_box[0], matching_pred_box[1]),
-                arrowprops=dict(arrowstyle="->", lw=2, color="blue"),
+                arrowprops={"arrowstyle": "->", "lw": 2, "color": "blue"},
             )
 
     plt.tight_layout(pad=0)
@@ -285,7 +270,7 @@ def _old_plot_preds(
     predictions: ODPredictions,
     conformalized_predictions: ODConformalizedPredictions = None,
     confidence_threshold=None,
-    idx_to_label: dict = None,
+    idx_to_label: dict | None = None,
     save_as=None,
 ):
     """Plot the predictions of an object detection model.
@@ -313,10 +298,7 @@ def _old_plot_preds(
         conf_boxes = conformalized_predictions.conf_boxes[idx]
         conf_cls = conformalized_predictions.conf_cls[idx]
 
-    if (
-        confidence_threshold is None
-        and predictions.confidence_threshold is not None
-    ):
+    if confidence_threshold is None and predictions.confidence_threshold is not None:
         confidence_threshold = predictions.confidence_threshold
         print("Using confidence threshold from preds")
     else:
@@ -377,7 +359,7 @@ def _old_plot_preds(
                     y1,
                     text,
                     fontsize=15,
-                    bbox=dict(facecolor=color, alpha=0.5),
+                    bbox={"facecolor": color, "alpha": 0.5},
                 )
             else:
                 # Print nb of labels
@@ -387,7 +369,7 @@ def _old_plot_preds(
                     y1,
                     text,
                     fontsize=15,
-                    bbox=dict(facecolor=color, alpha=0.5),
+                    bbox={"facecolor": color, "alpha": 0.5},
                 )
         elif isinstance(proba, int) or len(proba.shape) == 0:
             if isinstance(proba, torch.Tensor):
@@ -401,7 +383,7 @@ def _old_plot_preds(
                 y2,
                 text,
                 fontsize=15,
-                bbox=dict(facecolor=color, alpha=0.5),
+                bbox={"facecolor": color, "alpha": 0.5},
             )
         else:
             cl = proba.argmax().item()
@@ -415,7 +397,7 @@ def _old_plot_preds(
                 y1,
                 text,
                 fontsize=15,
-                bbox=dict(facecolor=color, alpha=0.5),
+                bbox={"facecolor": color, "alpha": 0.5},
             )
 
     ax = plt.gca()
@@ -438,7 +420,7 @@ def _old_plot_preds(
             "",
             xy=(true_box[0], true_box[1]),
             xytext=(matching_pred_box[0], matching_pred_box[1]),
-            arrowprops=dict(arrowstyle="->", lw=2, color="blue"),
+            arrowprops={"arrowstyle": "->", "lw": 2, "color": "blue"},
         )
 
     plt.axis("off")
@@ -451,7 +433,7 @@ def create_pdf_with_plots(
     predictions: ODPredictions,
     conformalized_predictions: ODConformalizedPredictions = None,
     confidence_threshold=None,
-    idx_to_label: dict = None,
+    idx_to_label: dict | None = None,
     output_pdf="output.pdf",
 ):
     """Create a PDF with plots for each image in the predictions.
@@ -467,10 +449,7 @@ def create_pdf_with_plots(
     """
     is_conformal = conformalized_predictions is not None
 
-    if (
-        confidence_threshold is None
-        and predictions.confidence_threshold is not None
-    ):
+    if confidence_threshold is None and predictions.confidence_threshold is not None:
         confidence_threshold = predictions.confidence_threshold
     elif confidence_threshold is None:
         raise ValueError("Confidence Threshold should be provided")
@@ -500,7 +479,15 @@ def create_pdf_with_plots(
             plt.figure(figsize=(14, 14))
             plt.imshow(image)
 
-            def draw_rect(ax, box, color, proba, conformal=False):
+            def draw_rect(
+                ax,
+                box,
+                color,
+                proba,
+                conformal=False,
+                image_width=image_width,
+                image_height=image_height,
+            ):
                 x1, y1, x2, y2 = box
                 x1 = max(0, x1)
                 y1 = max(0, y1)
@@ -532,7 +519,7 @@ def create_pdf_with_plots(
                             y1,
                             text,
                             fontsize=15,
-                            bbox=dict(facecolor=color, alpha=0.5),
+                            bbox={"facecolor": color, "alpha": 0.5},
                         )
                     else:
                         text = f"{len(proba)} labels"
@@ -541,15 +528,13 @@ def create_pdf_with_plots(
                             y1,
                             text,
                             fontsize=15,
-                            bbox=dict(facecolor=color, alpha=0.5),
+                            bbox={"facecolor": color, "alpha": 0.5},
                         )
                 elif isinstance(proba, int) or len(proba.shape) == 0:
                     if isinstance(proba, torch.Tensor):
                         proba = proba.item()
                     if idx_to_label is not None:
-                        text = (
-                            f"{idx_to_label[proba]}" if proba >= 0 else "conf"
-                        )
+                        text = f"{idx_to_label[proba]}" if proba >= 0 else "conf"
                     else:
                         text = f"{proba}" if proba >= 0 else "conf"
                     ax.text(
@@ -557,7 +542,7 @@ def create_pdf_with_plots(
                         y2,
                         text,
                         fontsize=15,
-                        bbox=dict(facecolor=color, alpha=0.5),
+                        bbox={"facecolor": color, "alpha": 0.5},
                     )
                 else:
                     cl = proba.argmax().item()
@@ -571,7 +556,7 @@ def create_pdf_with_plots(
                         y1,
                         text,
                         fontsize=15,
-                        bbox=dict(facecolor=color, alpha=0.5),
+                        bbox={"facecolor": color, "alpha": 0.5},
                     )
 
             ax = plt.gca()
@@ -597,7 +582,7 @@ def create_pdf_with_plots(
                         "",
                         xy=(true_box[0], true_box[1]),
                         xytext=(matching_pred_box[0], matching_pred_box[1]),
-                        arrowprops=dict(arrowstyle="->", lw=2, color="blue"),
+                        arrowprops={"arrowstyle": "->", "lw": 2, "color": "blue"},
                     )
                 except Exception as e:
                     print(e)
@@ -615,12 +600,9 @@ def plot_histograms_predictions(predictions: ODPredictions):
 
     list_true = [len(x) for x in predictions.true_boxes]
     list_pred = [len(x) for x in predictions.confidences]
-    list_pred_thresh = [
-        sum(x > predictions.confidence_threshold)
-        for x in predictions.confidence
-    ]
+    list_pred_thresh = [sum(x > predictions.confidence_threshold) for x in predictions.confidence]
 
-    fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+    _, axs = plt.subplots(1, 3, figsize=(15, 5))
     axs[0].hist(list_true, bins=20)
     axs[0].set_title(f"True boxes, mean size = {np.mean(list_true):.2f}")
     axs[1].hist(list_pred, bins=20)

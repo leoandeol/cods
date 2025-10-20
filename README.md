@@ -1,4 +1,9 @@
 # 🐟 CODS - Conformal Object Detection and Segmentation 🐟
+[![Python 3.8+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![CI/CD](https://github.com/leoandeol/cods/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/leoandeol/cods/actions/workflows/ci-cd.yml)
+[![codecov](https://codecov.io/gh/leoandeol/cods/graph/badge.svg?token=2KOEVMT877)](https://codecov.io/gh/leoandeol/cods)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 *A library for distribution-free model-agnostic finite-sample uncertainty quantification applied to computer vision tasks!*
 
@@ -10,15 +15,15 @@ A library for Conformal Classification, Object Detection and Segmentation, based
 
 ### What is Conformal Prediction?
 
-Conformal prediction is a framework in machine learning that provides a way to quantify the uncertainty of predictions. 
-It goes beyond traditional point predictions by providing a set of possible outcomes along with confidence levels. 
-This allows for more reliable and interpretable predictions, especially in situations where the training data is limited or noisy. 
+Conformal prediction is a framework in machine learning that provides a way to quantify the uncertainty of predictions.
+It goes beyond traditional point predictions by providing a set of possible outcomes along with confidence levels.
+This allows for more reliable and interpretable predictions, especially in situations where the training data is limited or noisy.
 Conformal prediction can be applied to various tasks, including classification, regression, object detection, and segmentation.
 
-### What is CODS and why? 
+### What is CODS and why?
 
 CODS is a vision-oriented python library that implements conformal prediction for classification, object detection and (soon) segmentation.
-It is built on top of PyTorch for efficiency (with CUDA support), and is designed to allow for easy addition of new conformal scores, procedures, models or dataset, and for quick benchmarking of those.  
+It is built on top of PyTorch for efficiency (with CUDA support), and is designed to allow for easy addition of new conformal scores, procedures, models or dataset, and for quick benchmarking of those.
 
 ## 🚀 Quick Start
 
@@ -86,7 +91,7 @@ This project was developped by Léo Andéol & Luca Mossina as part of the DEEL p
 If you use CODS in your research, please cite the following reference:
 
 ```bibtex
-@misc{andeol2024cods, 
+@misc{andeol2024cods,
     title={Conformal Object Detection \& Segmentation},
     author={Andéol, Léo and Mossina, Luca},
     year={2024},

@@ -1,5 +1,4 @@
 from hashlib import sha256
-from typing import Optional
 
 import torch
 import torchvision
@@ -16,7 +15,7 @@ class ODModel(Model):
         model_name: str,
         save_dir_path: str,
         pretrained: bool = True,
-        weights: Optional[str] = None,
+        weights: str | None = None,
         device: str = "cpu",
     ):
         """Initializes an instance of the ODModel class.
@@ -49,7 +48,7 @@ class ODModel(Model):
         force_recompute: bool = False,
         deletion_method: str = "nms",
         iou_threshold: float = 0.5,
-        filter_preds_by_confidence: Optional[float] = None,
+        filter_preds_by_confidence: float | None = None,
         **kwargs,
     ) -> ODPredictions:
         """Builds predictions for the given dataset.
@@ -124,7 +123,7 @@ class ODModel(Model):
         all_true_cls = []
         all_pred_cls = []
         with torch.no_grad():
-            for i, batch in pbar:
+            for _, batch in pbar:
                 res = self.predict_batch(batch)
 
                 image_paths = res["image_paths"]
@@ -135,14 +134,12 @@ class ODModel(Model):
                 true_cls = res["true_cls"]
                 pred_cls = res["pred_cls"]
 
-                pred_boxes, pred_cls, confidences, pred_boxes_unc = (
-                    self._filter_preds(
-                        pred_boxes,
-                        pred_cls,
-                        confidences,
-                        iou_threshold=iou_threshold,
-                        method=deletion_method,
-                    )
+                pred_boxes, pred_cls, confidences, pred_boxes_unc = self._filter_preds(
+                    pred_boxes,
+                    pred_cls,
+                    confidences,
+                    iou_threshold=iou_threshold,
+                    method=deletion_method,
                 )
 
                 all_image_paths.append(image_paths)
@@ -155,49 +152,27 @@ class ODModel(Model):
                 all_true_cls.append(true_cls)
                 all_pred_cls.append(pred_cls)
 
-        all_image_paths = list(
-            [path for arr_path in all_image_paths for path in arr_path],
-        )
-        all_image_shapes = list(
-            [shape for arr_shape in all_image_shapes for shape in arr_shape],
-        )
-        all_true_boxes = list(
-            [
-                box.to(self.device)
-                for arr_box in all_true_boxes
-                for box in arr_box
-            ],
-        )
-        all_pred_boxes = list(
-            [box for arr_box in all_pred_boxes for box in arr_box],
-        )
+        all_image_paths = ([path for arr_path in all_image_paths for path in arr_path],)
+
+        all_image_shapes = ([shape for arr_shape in all_image_shapes for shape in arr_shape],)
+
+        all_true_boxes = ([box.to(self.device) for arr_box in all_true_boxes for box in arr_box],)
+
+        all_pred_boxes = ([box for arr_box in all_pred_boxes for box in arr_box],)
+
         if len(all_pred_boxes_unc) > 0:
-            all_pred_boxes_unc = list(
-                [
-                    box_unc
-                    for arr_box_unc in all_pred_boxes_unc
-                    for box_unc in arr_box_unc
-                ],
+            all_pred_boxes_unc = (
+                [box_unc for arr_box_unc in all_pred_boxes_unc for box_unc in arr_box_unc],
             )
         else:
             all_pred_boxes_unc = None
-        all_confidences = list(
-            [
-                confidence
-                for arr_confidence in all_confidences
-                for confidence in arr_confidence
-            ],
+        all_confidences = (
+            [confidence for arr_confidence in all_confidences for confidence in arr_confidence],
         )
-        all_true_cls = list(
-            [
-                cls.to(self.device)
-                for arr_cls in all_true_cls
-                for cls in arr_cls
-            ],
-        )
-        all_pred_cls = list(
-            [proba for arr_proba in all_pred_cls for proba in arr_proba],
-        )
+
+        all_true_cls = ([cls.to(self.device) for arr_cls in all_true_cls for cls in arr_cls],)
+
+        all_pred_cls = ([proba for arr_proba in all_pred_cls for proba in arr_proba],)
 
         preds = ODPredictions(
             dataset_name=dataset_name,

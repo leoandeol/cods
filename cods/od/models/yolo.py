@@ -103,8 +103,8 @@ class YOLOModel(ODModel):
             box_output = raw_output[i].t()
 
             # Calculate scaling factors
-            width_scale = original_width / model_width
-            height_scale = original_height / model_height
+            original_width / model_width
+            original_height / model_height
 
             # convert to [x0, y0, x1, y1] format
             out_boxes = box_output[:, :4]
@@ -119,8 +119,8 @@ class YOLOModel(ODModel):
                 (original_height, original_width),
             )
 
-            temp = 1  # 0.2
-            cls_probs = torch.softmax(box_output[:, 4:] / temp, dim=-1)
+            # TODO: check if softmax is needed, and generalize temperature usage/calibration
+            cls_probs = box_output[:, 4:]  # torch.softmax(box_output[:, 4:] / temp, dim=-1)
 
             if self.is_coco:
                 # Extend to be of size 91 :
@@ -221,7 +221,7 @@ class YOLOModel(ODModel):
             else:
                 cls_probs_new = cls_probs
 
-            final_confidence, predicted_class = torch.max(
+            final_confidence, _ = torch.max(
                 cls_probs,
                 dim=-1,
             )
@@ -273,36 +273,28 @@ class YOLOModel(ODModel):
             model_input_size,
         )
         if self.is_coco:
-            true_boxes = list(
-                [
-                    torch.LongTensor(
+            true_boxes = [
+                torch.LongTensor(
+                    [
                         [
-                            [
-                                box["bbox"][0],
-                                box["bbox"][1],
-                                box["bbox"][0] + box["bbox"][2],
-                                box["bbox"][1] + box["bbox"][3],
-                            ]
-                            for box in true_box
-                        ],
-                    )
-                    for true_box in ground_truth
-                ],
-            )
-            true_cls = list(
-                [
-                    torch.LongTensor([box["category_id"] for box in true_box])
-                    for true_box in ground_truth
-                ],
-            )
+                            box["bbox"][0],
+                            box["bbox"][1],
+                            box["bbox"][0] + box["bbox"][2],
+                            box["bbox"][1] + box["bbox"][3],
+                        ]
+                        for box in true_box
+                    ],
+                )
+                for true_box in ground_truth
+            ]
+            true_cls = [
+                torch.LongTensor([box["category_id"] for box in true_box])
+                for true_box in ground_truth
+            ]
         else:
             # For SNCF, should be standardized in the dataset class rather
-            true_boxes = list(
-                [torch.LongTensor(x["boxes"]) for x in ground_truth],
-            )
-            true_cls = list(
-                [torch.LongTensor(x["labels"]) for x in ground_truth],
-            )
+            true_boxes = [torch.LongTensor(x["boxes"]) for x in ground_truth]
+            true_cls = [torch.LongTensor(x["labels"]) for x in ground_truth]
 
         return {
             "image_paths": image_paths,

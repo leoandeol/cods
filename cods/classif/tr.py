@@ -1,4 +1,5 @@
-from typing import Callable
+from collections.abc import Callable
+from types import MappingProxyType
 
 import torch
 
@@ -8,7 +9,7 @@ from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 
 
 class ClassificationToleranceRegion(ToleranceRegion):
-    ACCEPTED_PREPROCESS = {"softmax": torch.softmax}
+    ACCEPTED_PREPROCESS = MappingProxyType({"softmax": torch.softmax})
 
     def __init__(
         self,
@@ -17,8 +18,10 @@ class ClassificationToleranceRegion(ToleranceRegion):
         optimizer="binary_search",
         preprocess="softmax",
         device="cpu",
-        optimizer_args={},
+        optimizer_args=None,
     ):
+        if optimizer_args is None:
+            optimizer_args = {}
         super().__init__(
             inequality=inequality,
             optimizer=optimizer,
@@ -30,7 +33,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
             raise ValueError(
                 f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.",
             )
-        if preprocess not in self.ACCEPTED_PREPROCESS.keys():
+        if preprocess not in self.ACCEPTED_PREPROCESS:
             raise ValueError(
                 f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
             )
@@ -54,10 +57,12 @@ class ClassificationToleranceRegion(ToleranceRegion):
         alpha=0.1,
         delta=0.1,
         steps=13,
-        bounds=[0, 1],
+        bounds=None,
         verbose=True,
         objectness_threshold=0.8,
     ):
+        if bounds is None:
+            bounds = [0, 1]
         if self.lbd is not None:
             print("Replacing previously computed lambda")
         self._n_classes = predictions.n_classes

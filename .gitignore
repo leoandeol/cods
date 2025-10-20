@@ -183,3 +183,5 @@ final_experiments/*.csv
 monotonicity_*
 runs/
 cods-sncf/
+experiments/
+.DS_Store
