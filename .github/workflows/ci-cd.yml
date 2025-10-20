@@ -197,27 +197,6 @@ jobs:
           path: dist/
           retention-days: 7
 
-  # Optional: Docker build (only on main)
-  docker:
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          tags: your-detection-lib:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   # Summary job - always runs
   ci-success:
     needs: [quick-checks, test, build]
