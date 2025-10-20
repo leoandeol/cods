@@ -110,6 +110,7 @@ exclude = [
     "site-packages",
     "venv",
     "data",
+    "docs",
 ]
 
 [tool.ruff.lint]
@@ -152,7 +153,7 @@ force-single-line = false
 force-sort-within-sections = false
 
 [tool.ruff.format]
-exclude = ["*.ipynb"]
+exclude = ["*.ipynb", "docs"]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
