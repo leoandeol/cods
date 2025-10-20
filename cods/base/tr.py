@@ -1,7 +1,8 @@
-from typing import Callable, Union
+from collections.abc import Callable
+from types import MappingProxyType
 
 import torch
-from scipy.optimize import bisect, brentq
+from scipy.optimize import brentq
 from scipy.stats import binom
 
 from cods.base.optim import BinarySearchOptimizer, GaussianProcessOptimizer
@@ -36,7 +37,7 @@ def bernstein_uni_lim(Rhat, n, delta):
     return Rhat + part1 + part2
 
 
-def binom_inv_cdf(Rhat, n, delta):
+def binom_inv_cdf(Rhat, n, delta, device="cpu"):
     k = int(Rhat * n)
 
     n = n.detach().cpu().numpy()
@@ -49,7 +50,7 @@ def binom_inv_cdf(Rhat, n, delta):
     # print(f_bin(0), f_bin(1))
     # if f_bin(0) < 0:
     #     return 1.0
-    # todo: check this closely
+    # TODO: check this closely
 
     if f_bin(1) > 0:
         return 1.0
@@ -61,53 +62,59 @@ def binom_inv_cdf(Rhat, n, delta):
 
 
 class ToleranceRegion:
-    AVAILABLE_INEQUALITIES = {
-        "hoeffding": hoeffding,
-        "bernstein_emp": bernstein_emp,
-        "bernstein": bernstein,
-        "bernstein_uni": bernstein_uni,
-        "bernstein_uni_lim": bernstein_uni_lim,
-        "binomial_inverse_cdf": binom_inv_cdf,
-    }
-    ACCEPTED_OPTIMIZERS = {
-        "binary_search": BinarySearchOptimizer,
-        "gpr": GaussianProcessOptimizer,
-        "gaussianprocess": GaussianProcessOptimizer,
-        "kriging": GaussianProcessOptimizer,
-    }
+    AVAILABLE_INEQUALITIES = MappingProxyType(
+        {
+            "hoeffding": hoeffding,
+            "bernstein_emp": bernstein_emp,
+            "bernstein": bernstein,
+            "bernstein_uni": bernstein_uni,
+            "bernstein_uni_lim": bernstein_uni_lim,
+            "binomial_inverse_cdf": binom_inv_cdf,
+        }
+    )
+    ACCEPTED_OPTIMIZERS = MappingProxyType(
+        {
+            "binary_search": BinarySearchOptimizer,
+            "gpr": GaussianProcessOptimizer,
+            "gaussianprocess": GaussianProcessOptimizer,
+            "kriging": GaussianProcessOptimizer,
+        }
+    )
 
     def __init__(
         self,
-        inequality: Union[str, Callable] = "binomial_inverse_cdf",
+        inequality: str | Callable = "binomial_inverse_cdf",
         optimizer: str = "binary_search",
-        optimizer_args: dict = {},
+        optimizer_args: dict | None = None,
     ):
+        if optimizer_args is None:
+            optimizer_args = {}
         if inequality not in self.AVAILABLE_INEQUALITIES:
             raise ValueError(
-                f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}"
+                f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}",
             )
         self.inequality_name = inequality
         self.f_inequality = self.AVAILABLE_INEQUALITIES[inequality]
         if optimizer not in self.ACCEPTED_OPTIMIZERS:
             raise ValueError(
-                f"Available optimizers are {self.ACCEPTED_OPTIMIZERS.keys()}"
+                f"Available optimizers are {self.ACCEPTED_OPTIMIZERS.keys()}",
             )
         self.optimizer_name = optimizer
         self.optimizer = self.ACCEPTED_OPTIMIZERS[optimizer](**optimizer_args)
 
     def calibrate(self, preds, alpha=0.1, delta=0.1, verbose=True, **kwargs):
         raise NotImplementedError(
-            "ToleranceRegion is an abstract class, must be instantiated on a given task."
+            "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
 
     def conformalize(self, preds, verbose=True, **kwargs):
         raise NotImplementedError(
-            "ToleranceRegion is an abstract class, must be instantiated on a given task."
+            "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
 
     def evaluate(self, preds, verbose=True, **kwargs):
         raise NotImplementedError(
-            "ToleranceRegion is an abstract class, must be instantiated on a given task."
+            "ToleranceRegion is an abstract class, must be instantiated on a given task.",
         )
 
 
@@ -120,25 +127,18 @@ class CombiningToleranceRegions(ToleranceRegion):
         if parameters is None:
             parameters = [{} for _ in range(len(self.tregions))]
         if self.mode == "bonferroni":
-            return list(
-                [
-                    conformalizer.calibrate(
-                        preds,
-                        alpha=alpha / len(self.tregions),
-                        delta=delta / len(self.tregions),
-                        **parameters[i],
-                    )
-                    for i, conformalizer in enumerate(self.tregions)
-                ]
-            )
+            return [
+                conformalizer.calibrate(
+                    preds,
+                    alpha=alpha / len(self.tregions),
+                    delta=delta / len(self.tregions),
+                    **parameters[i],
+                )
+                for i, conformalizer in enumerate(self.tregions)
+            ]
 
     def conformalize(self, preds):
-        return list([tregion.conformalize(preds) for tregion in self.tregions])
+        return [tregion.conformalize(preds) for tregion in self.tregions]
 
     def evaluate(self, preds, verbose=True):
-        return list(
-            [
-                tregion.evaluate(preds, verbose=verbose)
-                for tregion in self.tregions
-            ]
-        )
+        return [tregion.evaluate(preds, verbose=verbose) for tregion in self.tregions]

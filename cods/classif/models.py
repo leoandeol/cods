@@ -45,18 +45,21 @@ class ClassificationModel(Model):
             if verbose:
                 print("Predictions already exist, loading them...")
             return preds
-        elif verbose:
+        if verbose:
             print("Predictions do not exist, building them...")
 
         dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle, **kwargs
+            dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            **kwargs,
         )
         predictions = {"true_cls": [], "pred_cls": []}
         if verbose:
             print("Building predictions...")
         ids = []
         with torch.no_grad():
-            for i, data in enumerate(tqdm(dataloader, disable=not verbose)):
+            for _i, data in enumerate(tqdm(dataloader, disable=not verbose)):
                 id, images, labels = data
                 images = images.to(self.device)
                 labels = labels.to(self.device)

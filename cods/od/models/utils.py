@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+from torch import nn
 from torchvision.ops import box_iou
 
 
@@ -12,8 +12,7 @@ class ResizeChannels(nn.Module):
     def forward(self, image):
         if image.shape[0] == 1:
             return image.repeat(3, 1, 1)
-        else:
-            return image
+        return image
 
 
 def bayesod(
@@ -25,11 +24,15 @@ def bayesod(
     """_summary_
 
     Args:
+    ----
         pred_boxes (torch.Tensor): _description_
         confidences (torch.Tensor): _description_
         pred_cls (torch.Tensor): _description_
         iou_threshold (float): _description_
+
     """
+    # TODO
+    raise NotImplementedError("BayesOD is not implemented yet")
 
     # Sort the predictions by confidence in descending order
     args = torch.argsort(confidences, descending=True)
@@ -53,9 +56,7 @@ def bayesod(
         tmp_cluster = torch.where(row).cpu().numpy().tolist()
 
         # TODO(leo) @luca : there's absolutely a better way to do that
-        cluster = list(
-            [element for element in tmp_cluster if element not in already_used]
-        )
+        cluster = [element for element in tmp_cluster if element not in already_used]
 
         if len(cluster) > 0:
             clusters.append(cluster)
@@ -73,7 +74,7 @@ def bayesod(
         curr_boxes = torch.stack([pred_boxes[i] for i in cluster])
         # weighted mean
         new_box = (curr_boxes * confidences[cluster].reshape(-1, 1)).sum(
-            0
+            0,
         ) / confidences[cluster].sum()
         # variance (?)
         new_box_unc = (curr_boxes - new_box).pow(2).sum(0)
@@ -87,7 +88,7 @@ def bayesod(
         # merge the softmax probabilities in a weighted way
         # such that it is guaranteed to still be probability distribution
         new_cls = torch.zeros_like(pred_cls[0])
-        for i, c in enumerate(cluster):
+        for _, c in enumerate(cluster):
             new_cls += pred_cls[c] * confidences[c]
         new_cls /= confidences[cluster].sum()
         assert (new_cls.sum().item() - 1) < 1e-8
@@ -99,3 +100,17 @@ def bayesod(
         torch.stack(new_pred_cls),
         torch.stack(new_pred_boxes_unc),
     )
+
+
+# Filter the preds_cal and preds_val with confidence below 0.001
+
+
+def filter_preds(preds, confidence_threshold=0.001):
+    filters = [
+        conf > confidence_threshold if (conf > confidence_threshold).any() else conf.argmin(0)[None]
+        for conf in preds.confidences
+    ]
+    preds.pred_boxes = [pbs[f] for pbs, f in zip(preds.pred_boxes, filters)]
+    preds.pred_cls = [pcs[f] for pcs, f in zip(preds.pred_cls, filters)]
+    preds.confidences = [conf[f] for conf, f in zip(preds.confidences, filters)]
+    return preds

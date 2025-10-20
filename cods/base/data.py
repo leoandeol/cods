@@ -1,26 +1,25 @@
 from time import time_ns
-from typing import Optional
 
 
 class Predictions:
-    """
-    Abstract class for predictions
-    """
+    """Abstract class for predictions"""
 
     def __init__(
         self,
         dataset_name: str,
         split_name: str,
         task_name: str,
-        unique_id: Optional[int] = None,
+        unique_id: int | None = None,
     ):
-        """
-        Initializes a new instance of the Predictions class.
+        """Initializes a new instance of the Predictions class.
+
         Args:
+        ----
             unique_id (int): The unique ID of the predictions.
             dataset_name (str): The name of the dataset.
             split_name (str): The name of the split.
             task_name (str): The name of the task.
+
         """
         if unique_id is None:
             unique_id = time_ns()
@@ -33,13 +32,14 @@ class Predictions:
 class Parameters:
     """Abstract class for parameters"""
 
-    def __init__(self, predictions_id: int, unique_id: Optional[int] = None):
-        """
-        Initializes a new instance of the Parameters class.
+    def __init__(self, predictions_id: int, unique_id: int | None = None):
+        """Initializes a new instance of the Parameters class.
 
-        Parameters:
+        Parameters
+        ----------
         predictions_id (int): The unique ID of the predictions.
         unique_id (int): The unique ID of the parameters.
+
         """
         self.predictions_id = predictions_id
         if unique_id is None:
@@ -54,14 +54,15 @@ class ConformalizedPredictions:
         self,
         predictions_id: int,
         parameters_id: int,
-        unique_id: Optional[int] = None,
+        unique_id: int | None = None,
     ):
-        """
-        Initializes a new instance of the Data class.
+        """Initializes a new instance of the Data class.
 
-        Parameters:
+        Parameters
+        ----------
         predictions_id (int): The unique ID of the predictions.
         parameters_id (int): The unique ID of the parameters.
+
         """
         self.predictions_id = predictions_id
         self.parameters_id = parameters_id
@@ -74,15 +75,19 @@ class Results:
     """Abstract class for results"""
 
     def __init__(
-        self, predictions_id: int, parameters_id: int, conformalized_id: int
+        self,
+        predictions_id: int,
+        parameters_id: int,
+        conformalized_id: int,
     ):
-        """
-        Initializes a new instance of the Data class.
+        """Initializes a new instance of the Data class.
 
-        Parameters:
+        Parameters
+        ----------
         predictions_id (int): The unique ID of the predictions.
         parameters_id (int): The unique ID of the parameters.
         conformalized_id (int): The unique ID of the conformalized predictions.
+
         """
         self.predictions_id = predictions_id
         self.parameters_id = parameters_id

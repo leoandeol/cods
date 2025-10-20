@@ -1,7 +1,0 @@
-ruff
-ipykernel
-jupyter
-notebook
-ipykernel
-wandb
-lazydocs

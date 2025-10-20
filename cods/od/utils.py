@@ -1,12 +1,13 @@
+from __future__ import annotations
+
 from logging import getLogger
-from typing import List
-
-logger = getLogger("cods")
-
 
 import numpy as np
 import torch
+from scipy.optimize import linear_sum_assignment
 from tqdm import tqdm
+
+logger = getLogger("cods")
 
 
 def mesh_func(
@@ -37,39 +38,25 @@ def mesh_func(
         torch.linspace(y1, y2, y2 - y1 + 1).to(device),
         indexing="xy",
     )
-    outxx = (xx.reshape((1, -1)) >= pbs[:, 0, None]) & (
-        xx.reshape((1, -1)) <= (pbs[:, 2, None])
-    )
-    outyy = (yy.reshape((1, -1)) >= pbs[:, 1, None]) & (
-        yy.reshape((1, -1)) <= (pbs[:, 3, None])
-    )
+    outxx = (xx.reshape((1, -1)) >= pbs[:, 0, None]) & (xx.reshape((1, -1)) <= (pbs[:, 2, None]))
+    outyy = (yy.reshape((1, -1)) >= pbs[:, 1, None]) & (yy.reshape((1, -1)) <= (pbs[:, 3, None]))
 
     Z = torch.any(outxx & outyy, dim=0).reshape((x2 - x1 + 1, y2 - y1 + 1))
     return Z
 
 
 def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
-    """Compute the covered areas of ground truth bounding boxes using union.
-
-    Args:
-    ----
-        pred_boxes (List[List[int]]): List of predicted bounding boxes.
-        true_boxes (List[List[int]]): List of ground truth bounding boxes.
-
-    Returns:
-    -------
-        torch.Tensor: Covered areas of ground truth bounding boxes.
-
-    """
+    """ """
     device = pred_boxes[0].device
     areas = []
     for tb, pbs in zip(true_boxes, pred_boxes):
         if len(pbs) == 0:
             areas.append(torch.tensor(0).float().to(device))
             continue
+        if len(pbs.shape) == 1:
+            pbs = pbs.unsqueeze(0)
         x1, y1, x2, y2 = tb
         x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
-
         Z = mesh_func(x1, y1, x2, y2, pbs)
 
         area = Z.sum() / ((x2 - x1 + 1) * (y2 - y1 + 1))
@@ -78,7 +65,54 @@ def get_covered_areas_of_gt_union(pred_boxes, true_boxes):
     return areas
 
 
-def contained(tb, pb):
+def fast_covered_areas_of_gt(pred_boxes, true_boxes):
+    # device = pred_boxes[0].device
+    # areas = []
+    # for tb, pb in zip(true_boxes, pred_boxes):
+    #     if len(pb) == 0:
+    #         areas.append(torch.tensor(0).float().to(device))
+    #         continue
+    #     if len(pb.shape) > 1:
+    #         pb = pb[0]
+    #     if tb.shape[0] != 4 or pb.shape[0] != 4:
+    #         assert False
+    #     area = contained(tb, pb)
+    #     areas.append(area)
+    # areas = torch.stack(areas)
+    areas = contained(true_boxes, pred_boxes)
+    return areas
+
+
+def contained(tb: torch.Tensor, pb: torch.Tensor) -> torch.Tensor:
+    """Compute the intersection over union (IoU) between two bounding boxes.
+
+    Args:
+    ----
+        tb (torch.Tensor): Ground truth bounding boxes (N, 4).
+        pb (torch.Tensor): Predicted bounding boxes (N, 4).
+
+    Returns:
+    -------
+        torch.Tensor: IoU values (N,).
+
+    """
+    # TODO: only considering the case where all matchings exist, or none exist
+    if pb.nelement() == 0:
+        return torch.zeros(tb.size(0), device=tb.device)
+
+    xA = torch.maximum(tb[:, 0], pb[:, 0])
+    yA = torch.maximum(tb[:, 1], pb[:, 1])
+    xB = torch.minimum(tb[:, 2], pb[:, 2])
+    yB = torch.minimum(tb[:, 3], pb[:, 3])
+
+    interArea = (xB - xA + 1).clamp(min=0) * (yB - yA + 1).clamp(min=0)
+    tbArea = (tb[:, 2] - tb[:, 0] + 1) * (tb[:, 3] - tb[:, 1] + 1)
+
+    ratio = interArea / tbArea
+    return ratio  # .clamp(min=0) # TODO tmp fix to avoid
+
+
+def contained_old(tb, pb):
     """Compute the intersection over union (IoU) between two bounding boxes.
 
     Args:
@@ -99,7 +133,7 @@ def contained(tb, pb):
     interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
     tbArea = (tb[2] - tb[0] + 1) * (tb[3] - tb[1] + 1)
 
-    iou = interArea / float(tbArea)
+    iou = interArea / tbArea
     return iou
 
 
@@ -130,7 +164,164 @@ def f_iou(boxA, boxB):
     return iou
 
 
-def assymetric_hausdorff_distance(true_box, pred_box):
+def generalized_iou(boxA, boxB):
+    """Compute the Generalized Intersection over Union (GIoU) between two bounding boxes.
+
+    Args:
+    ----
+        boxA (List[int]): First bounding box.
+        boxB (List[int]): Second bounding box.
+
+    Returns:
+    -------
+        float: Generalized Intersection over Union (GIoU) value.
+
+    """
+    # Calculate the intersection
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
+    boxBArea = (boxB[2] - boxB[0] + 1) * (boxB[3] - boxB[1] + 1)
+
+    # Calculate the union
+    unionArea = boxAArea + boxBArea - interArea
+
+    # Calculate IoU
+    iou = interArea / (unionArea + 1e-12)
+
+    # Calculate the convex hull
+    xC1 = min(boxA[0], boxB[0])
+    yC1 = min(boxA[1], boxB[1])
+    xC2 = max(boxA[2], boxB[2])
+    yC2 = max(boxA[3], boxB[3])
+
+    convexHullArea = (xC2 - xC1 + 1) * (yC2 - yC1 + 1)
+
+    # Calculate GIoU
+    giou = iou - (convexHullArea - unionArea) / (convexHullArea + 1e-12)
+
+    return giou
+
+
+def vectorized_generalized_iou(
+    boxesA: np.ndarray,
+    boxesB: np.ndarray,
+) -> np.ndarray:
+    """Compute the Generalized Intersection over Union (GIoU) between two sets of
+    bounding boxes.
+
+    Calculates the GIoU for every pair of boxes between boxesA and boxesB.
+
+    Args:
+    ----
+        boxesA (np.ndarray): A NumPy array of shape (N, 4) representing N bounding boxes.
+                             Each row is [x1, y1, x2, y2].
+        boxesB (np.ndarray): A NumPy array of shape (M, 4) representing M bounding boxes.
+                             Each row is [x1, y1, x2, y2].
+
+    Returns:
+    -------
+        np.ndarray: A NumPy array of shape (N, M) containing the GIoU values for
+                    each pair of boxes (boxesA[i], boxesB[j]).
+
+    Raises:
+    ------
+        ValueError: If input arrays do not have shape (N, 4) or (M, 4).
+
+    """
+    if boxesA.ndim != 2 or boxesA.shape[1] != 4:
+        raise ValueError(
+            f"boxesA must have shape (N, 4), but got {boxesA.shape}",
+        )
+    if boxesB.ndim != 2 or boxesB.shape[1] != 4:
+        raise ValueError(
+            f"boxesB must have shape (M, 4), but got {boxesB.shape}",
+        )
+
+    zero_tensor = torch.tensor(0).to(boxesA.device)
+
+    # Ensure inputs are float arrays for calculations
+    boxesA = boxesA.float()
+    boxesB = boxesB.float()
+
+    # Add a dimension to boxesA and boxesB for broadcasting
+    # boxesA becomes (N, 1, 4), boxesB becomes (1, M, 4)
+    boxesA_reshaped = boxesA[:, None, :]
+    boxesB_reshaped = boxesB[None, :, :]
+
+    # --- Calculate Intersection ---
+    # Top-left corner of intersection (xA, yA)
+    # Shape: (N, M)
+    xA = torch.maximum(boxesA_reshaped[:, :, 0], boxesB_reshaped[:, :, 0])
+    yA = torch.maximum(boxesA_reshaped[:, :, 1], boxesB_reshaped[:, :, 1])
+
+    # Bottom-right corner of intersection (xB, yB)
+    # Shape: (N, M)
+    xB = torch.minimum(boxesA_reshaped[:, :, 2], boxesB_reshaped[:, :, 2])
+    yB = torch.minimum(boxesA_reshaped[:, :, 3], boxesB_reshaped[:, :, 3])
+
+    # Area of intersection
+    # Add 1 because coordinates are inclusive (as in the original code)
+    # Use np.maximum(0, ...) to handle cases with no overlap
+    # Shape: (N, M)
+    interWidth = torch.maximum(zero_tensor, xB - xA + 1)
+    interHeight = torch.maximum(zero_tensor, yB - yA + 1)
+    interArea = interWidth * interHeight
+
+    # --- Calculate Individual Box Areas ---
+    # Add 1 because coordinates are inclusive
+    # Shape: (N, 1) and (1, M) - will broadcast correctly later
+    boxAArea = (boxesA_reshaped[:, :, 2] - boxesA_reshaped[:, :, 0] + 1) * (
+        boxesA_reshaped[:, :, 3] - boxesA_reshaped[:, :, 1] + 1
+    )
+    boxBArea = (boxesB_reshaped[:, :, 2] - boxesB_reshaped[:, :, 0] + 1) * (
+        boxesB_reshaped[:, :, 3] - boxesB_reshaped[:, :, 1] + 1
+    )
+
+    # --- Calculate Union ---
+    # Shape: (N, M)
+    unionArea = boxAArea + boxBArea - interArea
+
+    # Add a small epsilon to avoid division by zero
+    epsilon = 1e-12
+
+    # --- Calculate IoU ---
+    # Shape: (N, M)
+    iou = interArea / (unionArea + epsilon)
+
+    # --- Calculate Convex Hull (Enclosing Box) ---
+    # Top-left corner of convex hull (xC1, yC1)
+    # Shape: (N, M)
+    xC1 = torch.minimum(boxesA_reshaped[:, :, 0], boxesB_reshaped[:, :, 0])
+    yC1 = torch.minimum(boxesA_reshaped[:, :, 1], boxesB_reshaped[:, :, 1])
+
+    # Bottom-right corner of convex hull (xC2, yC2)
+    # Shape: (N, M)
+    xC2 = torch.maximum(boxesA_reshaped[:, :, 2], boxesB_reshaped[:, :, 2])
+    yC2 = torch.maximum(boxesA_reshaped[:, :, 3], boxesB_reshaped[:, :, 3])
+
+    # Area of convex hull
+    # Add 1 because coordinates are inclusive
+    # Shape: (N, M)
+    convexHullWidth = torch.maximum(
+        zero_tensor,
+        xC2 - xC1 + 1,
+    )  # Max with 0 just in case of weird inputs
+    convexHullHeight = torch.maximum(zero_tensor, yC2 - yC1 + 1)
+    convexHullArea = convexHullWidth * convexHullHeight
+
+    # --- Calculate GIoU ---
+    # Shape: (N, M)
+    giou = iou - (convexHullArea - unionArea) / (convexHullArea + epsilon)
+
+    return giou
+
+
+def assymetric_hausdorff_distance_old(true_box, pred_box):
     up_distance = pred_box[1] - true_box[1]
     down_distance = true_box[3] - pred_box[3]
     left_distance = pred_box[0] - true_box[0]
@@ -145,89 +336,165 @@ def assymetric_hausdorff_distance(true_box, pred_box):
     )
 
 
+def assymetric_hausdorff_distance(true_boxes, pred_boxes):
+    true_boxes = true_boxes.clone()
+    pred_boxes = pred_boxes.clone()
+    true_boxes[:, :2] *= -1
+    pred_boxes[:, 2:] *= -1
+    distances = true_boxes[:, None, :] + pred_boxes[None, :, :]
+    distances = torch.max(distances, dim=-1).values
+    return distances
+
+
+def f_lac(true_cls, pred_cls):
+    m = len(pred_cls)
+    n = len(true_cls)
+    result = pred_cls.gather(1, true_cls.unsqueeze(0).expand(m, n)).T
+    result = 1 - result
+    return result
+
+
+def rank_distance(true_cls, pred_cls):
+    sorted_indices = torch.argsort(pred_cls, descending=True, dim=1)
+    ranks = (sorted_indices == true_cls.unsqueeze(1, 1)).nonzero(
+        as_tuple=True,
+    )[1]  # ???
+    return ranks
+
+
 def match_predictions_to_true_boxes(
     preds,
     distance_function,
     overload_confidence_threshold=None,
     verbose=False,
+    hungarian=False,
+    idx=None,
+    class_factor: float = 0.25,
 ) -> None:
     """Matching predictions to true boxes. Done in place, modifies the preds object."""
     # TODO(leo): switch to gpu
-    dist_iou = lambda x, y: -f_iou(x, y)
-    DISTANCE_FUNCTIONS = {
-        "iou": dist_iou,
-        "hausdorff": assymetric_hausdorff_distance,
-    }
+    # dist_iou = lambda x, y: -f_iou(x, y)
+    # dist_generalized_iou = lambda x, y: -generalized_iou(x, y)
+    DISTANCE_FUNCTIONS = ["giou", "lac", "mix", "hausdorff"]
+    # {
+    #     "iou": dist_iou,
+    #     "giou": dist_generalized_iou,
+    #     "hausdorff": assymetric_hausdorff_distance_old,
+    #     "lac": None,
+    #     "mix": None,
+    # }
 
     if verbose and distance_function is None:
         print("Using default:  asymmetric Hausdorff distance")
 
-    if distance_function not in DISTANCE_FUNCTIONS.keys():
+    if distance_function not in DISTANCE_FUNCTIONS:
         raise ValueError(
             f"Distance function {distance_function} not supported, must be one of {DISTANCE_FUNCTIONS.keys()}",
         )
 
-    f_dist = DISTANCE_FUNCTIONS[distance_function]
+    # f_dist = DISTANCE_FUNCTIONS[distance_function]
 
-    all_matching = []
     if overload_confidence_threshold is not None:
         conf_thr = overload_confidence_threshold
     elif preds.confidence_threshold is not None:
         conf_thr = preds.confidence_threshold
     else:
         conf_thr = 0
-    # filter pred_boxes with low objectness
-    preds_boxes = [
-        x.cpu().numpy()[
-            y.cpu().numpy() >= conf_thr
-        ]  # if len(x[y >= conf_thr]) > 0 else x[None, y.argmax()]
-        for x, y in zip(preds.pred_boxes, preds.confidence)
-    ]
-    true_boxes = [
-        true_boxes_i.cpu().numpy() for true_boxes_i in preds.true_boxes
-    ]
-    for pred_boxes, true_boxes in tqdm(
-        zip(preds_boxes, true_boxes),
+
+    # device = preds.pred_boxes[0].device
+    # once, not per-iter
+    # preds.pred_boxes = [x.to(device, dtype=torch.float16).contiguous() for x in preds.pred_boxes]
+    # preds.true_boxes = [x.to(device, dtype=torch.float16).contiguous() for x in preds.true_boxes]
+    # if your class losses are used in the mix:
+    # preds.pred_cls   = [x.to(device) for x in preds.pred_cls]   # keep int/long as-is
+    # preds.true_cls   = [x.to(device) for x in preds.true_cls]
+
+    # To only update it on a single image
+    with torch.no_grad():
+        if idx is not None:
+            masks = [preds.confidences[idx] >= conf_thr]
+            pred_boxess = [preds.pred_boxes[idx][masks[0]]]
+            preds_clss = [preds.pred_cls[idx][masks[0]]]
+            true_boxess = [preds.true_boxes[idx]]
+            true_clss = [preds.true_cls[idx]]
+        else:
+            masks = [c >= conf_thr for c in preds.confidences]
+            pred_boxess = [b[m] for b, m in zip(preds.pred_boxes, masks)]
+            preds_clss = [c[m] for c, m in zip(preds.pred_cls, masks)]
+            true_boxess = preds.true_boxes
+            true_clss = preds.true_cls
+
+    torch.set_grad_enabled(False)
+    all_matching_tensors = []
+    use_giou = distance_function == "giou"
+    use_haus = distance_function == "hausdorff"
+    use_lac = distance_function == "lac"
+    use_mix = distance_function == "mix"
+
+    for pred_boxes, true_boxes, pred_cls, true_cls in tqdm(
+        zip(pred_boxess, true_boxess, preds_clss, true_clss),
         disable=not verbose,
     ):
-        matching = []
-
-        for i, true_box in enumerate(true_boxes):
-            distances = []
-
-            if len(pred_boxes) == 0:
-                matching.append([])
-                continue
+        if len(true_boxes) == 0:
+            matching = []
+        elif len(pred_boxes) == 0:
+            matching = [[]] * len(true_boxes)
+        else:
+            # with torch.cuda.amp.autocast(enabled=True):
+            true_boxes = true_boxes.clone()
+            pred_boxes = pred_boxes.clone()
+            if use_haus:
+                distance_matrix = assymetric_hausdorff_distance(
+                    true_boxes,
+                    pred_boxes,
+                )
+            elif use_lac:
+                distance_matrix = f_lac(true_cls, pred_cls)
+            elif use_mix:
+                l_lac = f_lac(true_cls, pred_cls)
+                l_ass = assymetric_hausdorff_distance(true_boxes, pred_boxes)
+                scale = torch.clamp(l_ass.max(), min=1e-12)
+                l_ass = l_ass / scale
+                distance_matrix = class_factor * l_lac + (1 - class_factor) * l_ass
+            elif use_giou:
+                distance_matrix = vectorized_generalized_iou(
+                    true_boxes,
+                    pred_boxes,
+                )
             else:
-                for j, pred_box in enumerate(pred_boxes):
-                    dist = f_dist(true_box, pred_box)
-                    dist = (
-                        dist.cpu().numpy()
-                        if isinstance(dist, torch.Tensor)
-                        else dist
-                    )
-                    distances.append(dist)  # .cpu().numpy())
+                raise NotImplementedError(
+                    "Only hausdorff and lac are supported",
+                )
+            if hungarian:
+                # TODO(leo): to test
+                row_ind, col_ind = linear_sum_assignment(distance_matrix)
+                matching = [[]] * len(true_boxes)
+                for x, y in zip(row_ind, col_ind):
+                    if x < len(true_boxes) and y < len(pred_boxes):
+                        matching[x] = [y]
+            else:
+                matching = torch.argmin(distance_matrix, dim=1).unsqueeze(1)
 
-                # TODO: replace this by possible a set of matches
-                # TODO: must always be an array
-                matching.append([np.argmin(distances)])  # np.argmax(ious))
-                # print(matching[-1])
-        all_matching.append(matching)
-        # break
+        all_matching_tensors.append(matching)
 
+    all_matching = [
+        m.cpu().tolist() if isinstance(m, torch.Tensor) else m for m in all_matching_tensors
+    ]
+    if idx is not None:
+        return all_matching[0]
     preds.matching = all_matching
-    # return all_matching
+    return all_matching
 
 
-def apply_margins(pred_boxes: List[torch.Tensor], Qs, mode="additive"):
+def apply_margins(pred_boxes: list[torch.Tensor], Qs: float, mode: str = "additive"):
     n = len(pred_boxes)
     new_boxes = []
     device = pred_boxes[0].device
-    Qst = torch.FloatTensor([Qs]).to(device)
+    Qst = torch.FloatTensor([np.array(Qs)]).to(device)
     correction_factor = torch.FloatTensor([[-1, -1, 1, 1]]).to(device)
 
     for i in range(n):
-        if len(pred_boxes[i]) == 0:
+        if not pred_boxes[i].numel():
             new_boxes.append(torch.tensor([]).float().to(device))
             continue
         if mode == "additive":
@@ -279,7 +546,7 @@ def compute_risk_object_level(
 
     for i, tb_all in enumerate(true_boxes):
         true_boxes_i = tb_all  # true_boxes[i]
-        true_cls_i = true_cls[i] 
+        true_cls_i = true_cls[i]
         conf_boxes_i = conf_boxes[i]
         conf_cls_i = conf_cls[i]
         matching_i = predictions.matching[i]
@@ -305,11 +572,7 @@ def compute_risk_object_level(
                 [matched_conf_cls_i_j],
             )
             # TODO: investigate why we need to do that
-            loss_value = (
-                loss_value
-                if len(loss_value.shape) > 0
-                else loss_value.unsqueeze(0)
-            )
+            loss_value = loss_value if len(loss_value.shape) > 0 else loss_value.unsqueeze(0)
             losses.append(loss_value)
     losses = torch.stack(losses).ravel()
     return losses if return_list else torch.mean(losses)
@@ -346,35 +609,151 @@ def compute_risk_image_level(
             device,
         )  # TODO: why the cuda for cls and not boxes
         conf_cls_i = conf_cls[i]
-        # for j in range(len(true_boxes_i)):
+        # TODO(leo): temporary fix
         matching_i = predictions.matching[i]
-        matched_conf_boxes_i = list(
-            [
-                (
-                    torch.stack([conf_boxes_i[m] for m in matching_i[j]])
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ],
+        # matched_conf_boxes_i = list(
+        #     [
+        #         (#TODO: here we have a list of n [tensor] while for the other we just have n x tensor, need to pick which
+        #             torch.stack([conf_boxes_i[m] for m in matching_i[j]])
+        #             if len(matching_i[j]) > 0
+        #             else torch.tensor([]).float().to(device)
+        #         )
+        #         for j in range(len(true_boxes_i))
+        #     ],
+        # )
+        # TODO: only works when you have 1 matching box
+        matched_conf_boxes_i = [
+            (
+                torch.stack([conf_boxes_i[m] for m in matching_i[j]])[0]
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
+        matched_conf_boxes_i = (
+            torch.stack(matched_conf_boxes_i)
+            if len(matched_conf_boxes_i) > 0 and matched_conf_boxes_i[0].numel() > 0
+            else torch.tensor([]).float().to(device)
         )
-        matched_conf_cls_i = list(
-            [
-                (
-                    torch.stack([conf_cls_i[m] for m in matching_i[j]])
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ],
-        )
+        # print(matched_conf_boxes_i.shape)
+        matched_conf_cls_i = [
+            (
+                torch.stack([conf_cls_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
+        # print(type(matched_conf_boxes_i), type(true_boxes_i))
+        # print("Shape", true_boxes_i.shape, matched_conf_boxes_i.shape)
         loss_value = loss(
             true_boxes_i,
-            true_cls_i, 
+            true_cls_i,
             matched_conf_boxes_i,
             matched_conf_cls_i,
         )
         # loss_value_i = aggregator_func(losses_i)
         losses.append(loss_value)
+    losses = torch.stack(losses).ravel()
+    return losses if return_list else torch.mean(losses)
+
+
+def compute_risk_image_level_confidence(
+    conformalized_predictions,
+    predictions,
+    confidence_loss,
+    other_losses=None,
+    # aggregator="mean",
+    return_list: bool = False,
+) -> torch.Tensor:
+    # aggregtion_funcs = {
+    #     "mean": torch.mean,
+    #     "sum": torch.sum,
+    #     "max": torch.max,
+    # }
+    # if aggregator not in aggregtion_funcs:
+    #     raise ValueError(
+    #         f"Aggregator {aggregator} not supported, must be one of {aggregtion_funcs.keys()}",
+    #     )
+    # aggregator_func = aggregtion_funcs[aggregator]
+
+    losses = []
+    true_boxes = predictions.true_boxes
+    true_cls = predictions.true_cls
+    conf_boxes = conformalized_predictions.conf_boxes
+    conf_cls = conformalized_predictions.conf_cls
+    device = conf_boxes[0].device
+    for i in range(len(true_boxes)):
+        true_boxes_i = true_boxes[i]
+        conf_boxes_i = conf_boxes[i]
+        true_cls_i = true_cls[i].to(
+            device,
+        )  # TODO: why the cuda for cls and not boxes
+        conf_cls_i = conf_cls[i]
+        # TODO(leo): temporary fix
+        matching_i = predictions.matching[i]
+        tmp_matched_boxes = [
+            (
+                torch.stack([conf_boxes_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
+        matched_conf_boxes_i = (
+            torch.stack(tmp_matched_boxes)
+            if len(tmp_matched_boxes) > 0
+            else torch.tensor([]).float().to(device)
+        )
+        matched_conf_cls_i = [
+            (
+                torch.stack([conf_cls_i[m] for m in matching_i[j]])
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
+        conf_loss_value_i = confidence_loss(
+            true_boxes_i,
+            true_cls_i,
+            conf_boxes_i,
+            conf_cls_i,
+        )
+
+        if other_losses is None:
+            other_losses_i = []
+            loss_value_i = conf_loss_value_i
+        else:
+            ## FIXME: MUST BE HANDLED PROPERLY FOR EACH INPUT IMAGE SIZE
+            MAGIC_BIG_MARGIN = [2500, 2500, 2500, 2500]
+            matched_conf_boxes_i = apply_margins(
+                [matched_conf_boxes_i],
+                MAGIC_BIG_MARGIN,
+                mode="additive",
+            )[0]
+
+            # Second, prediction sets for classification with always everything
+            n_classes = len(predictions.pred_cls[0][0].squeeze())
+            matched_conf_cls_i = [
+                torch.arange(n_classes)[None, ...].to(device)
+                for _ in range(len(matched_conf_cls_i))
+            ]
+
+            other_losses_i = [
+                loss(
+                    true_boxes_i,
+                    true_cls_i,
+                    matched_conf_boxes_i,
+                    matched_conf_cls_i,
+                )
+                for loss in other_losses
+            ]
+
+            loss_value_i = torch.max(
+                torch.stack([conf_loss_value_i, *other_losses_i]),
+            )
+
+        # loss_value_i = aggregator_func(losses_i)
+        losses.append(loss_value_i)
     losses = torch.stack(losses).ravel()
     return losses if return_list else torch.mean(losses)

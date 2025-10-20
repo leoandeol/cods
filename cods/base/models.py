@@ -1,7 +1,6 @@
 import os
 import pickle
 from logging import getLogger
-from typing import Optional
 
 import torch
 
@@ -30,16 +29,21 @@ class Model:
         logger.info(f"Model {model_name} initialized")
 
     def build_predictions(
-        self, dataloader: torch.utils.data.DataLoader, verbose=True, **kwargs
+        self,
+        dataloader: torch.utils.data.DataLoader,
+        verbose=True,
+        **kwargs,
     ) -> Predictions:
         raise NotImplementedError("Please Implement this method")
 
-    def _save_preds(self, predictions: Predictions, hash: str):
+    def _save_preds(self, predictions: Predictions, hash: str, verbose=True):
         """Save predictions to file
 
         Args:
+        ----
             predictions (Predictions): predictions object
             path (str): path to file
+
         """
         path = f"{self.save_dir_path}/{hash}.pkl"
         # create directory if it doesn't exist
@@ -47,31 +51,34 @@ class Model:
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
         # check if file exists
-        print(f"Saving predictions to {path}")
+        if verbose:
+            logger.info(f"Saving predictions to {path}")
         if os.path.exists(path):
-            print(f"File {path} already exists, overwriting it")
+            logger.warning(f"File {path} already exists, overwriting it")
         with open(path, "wb") as f:
             pickle.dump(predictions, f)
 
     def _load_preds_if_exists(
         self,
         hash: str,
-        # dataset_name: str,
-        # split_name: str,
-        # task_name: str,
-    ) -> Optional[Predictions]:
+        verbose: bool = True,
+    ) -> Predictions | None:
         """Load predictions if they exist, else return None
 
         Args:
+        ----
             path (str): path to predictions file
 
         Returns:
+        -------
             Predictions: predictions object
+
         """
         path = f"{self.save_dir_path}/{hash}.pkl"
         if not os.path.exists(path):
-            print(f"File {path} does not exist")
+            logger.error(f"File {path} does not exist")
             return None
         with open(path, "rb") as f:
-            print(f"Loading predictions from {path}")
+            if verbose:
+                logger.info(f"Loading predictions from {path}")
             return pickle.load(f)

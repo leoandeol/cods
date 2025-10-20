@@ -32,10 +32,10 @@ def rescale_bboxes(out_bbox, size):
 
 
 class DETRModel(ODModel):
-    MODEL_NAMES = [
+    MODEL_NAMES = (
         "detr_resnet50",
         "detr_resnet101",
-    ]
+    )
 
     def __init__(
         self,
@@ -55,16 +55,18 @@ class DETRModel(ODModel):
         )
         if model_name not in self.MODEL_NAMES:
             raise ValueError(
-                f"Model name {model_name} not available. Available models are {self.MODEL_NAMES}"
+                f"Model name {model_name} not available. Available models are {self.MODEL_NAMES}",
             )
         self._model_name = model_name
         if pretrained is True:
             self.model = torch.hub.load(
-                "facebookresearch/detr", model_name, pretrained=pretrained
+                "facebookresearch/detr",
+                model_name,
+                pretrained=pretrained,
             )
         else:
             raise NotImplementedError(
-                "Only pretrained models are available for now"
+                "Only pretrained models are available for now",
             )
         self.device = device
         self.model.eval()
@@ -75,9 +77,10 @@ class DETRModel(ODModel):
                 T.ToTensor(),
                 ResizeChannels(3),
                 T.Normalize(
-                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
                 ),
-            ]
+            ],
         )
 
     # Unsure if this is the right way to do it, there is different ways to define the softmax
@@ -104,13 +107,14 @@ class DETRModel(ODModel):
         return scaled_pred_boxes, confidences, pred_cls
 
     def predict_batch(self, batch: list, **kwargs) -> dict:
-        """
-        Predicts the output given a batch of input tensors.
+        """Predicts the output given a batch of input tensors.
 
         Args:
+        ----
             batch (list): The input batch
 
         Returns:
+        -------
             dict: The predicted output as a dictionary with the following keys:
                 - "image_paths" (list): The paths of the input images
                 - "true_boxes" (list): The true bounding boxes of the objects in the images
@@ -118,40 +122,38 @@ class DETRModel(ODModel):
                 - "confidences" (list): The confidence scores of the predicted bounding boxes
                 - "true_cls" (list): The true class labels of the objects in the images
                 - "pred_cls" (list): The predicted class labels of the objects in the images
-        """
 
+        """
         image_paths, image_sizes, images, ground_truth = batch
         img_shapes = torch.FloatTensor(
-            np.stack([image.size for image in images])
+            np.stack([image.size for image in images]),
         ).to(self.device)
         images = [self.transform(image) for image in images]
-        images = list([image.to(self.device) for image in images])
+        images = [image.to(self.device) for image in images]
         outputs = self.model(images)
         pred_boxes, confidences, pred_cls = self.postprocess(
-            outputs, img_shapes
+            outputs,
+            img_shapes,
         )
-        true_boxes = list(
-            [
-                torch.LongTensor(
+        true_boxes = [
+            torch.LongTensor(
+                [
                     [
-                        [
-                            box["bbox"][0],
-                            box["bbox"][1],
-                            box["bbox"][0] + box["bbox"][2],
-                            box["bbox"][1] + box["bbox"][3],
-                        ]
-                        for box in true_box
+                        box["bbox"][0],
+                        box["bbox"][1],
+                        box["bbox"][0] + box["bbox"][2],
+                        box["bbox"][1] + box["bbox"][3],
                     ]
-                )
-                for true_box in ground_truth
-            ]
-        )
-        true_cls = list(
-            [
-                torch.LongTensor([box["category_id"] for box in true_box])
-                for true_box in ground_truth
-            ]
-        )
+                    for box in true_box
+                ],
+            )
+            for true_box in ground_truth
+        ]
+
+        true_cls = [
+            torch.LongTensor([box["category_id"] for box in true_box]) for true_box in ground_truth
+        ]
+
         true_boxes = true_boxes
 
         return {

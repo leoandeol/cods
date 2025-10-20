@@ -1,4 +1,5 @@
-from typing import Callable
+from collections.abc import Callable
+from types import MappingProxyType
 
 import torch
 
@@ -8,7 +9,7 @@ from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
 
 
 class ClassificationToleranceRegion(ToleranceRegion):
-    ACCEPTED_PREPROCESS = {"softmax": torch.softmax}
+    ACCEPTED_PREPROCESS = MappingProxyType({"softmax": torch.softmax})
 
     def __init__(
         self,
@@ -17,20 +18,24 @@ class ClassificationToleranceRegion(ToleranceRegion):
         optimizer="binary_search",
         preprocess="softmax",
         device="cpu",
-        optimizer_args={},
+        optimizer_args=None,
     ):
+        if optimizer_args is None:
+            optimizer_args = {}
         super().__init__(
-            inequality=inequality, optimizer=optimizer, optimizer_args={}
+            inequality=inequality,
+            optimizer=optimizer,
+            optimizer_args={},
         )
         self.ACCEPTED_LOSSES = CLASSIFICATION_LOSSES
         self.lbd = None
         if loss not in self.ACCEPTED_LOSSES:
             raise ValueError(
-                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}."
+                f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.",
             )
-        if preprocess not in self.ACCEPTED_PREPROCESS.keys():
+        if preprocess not in self.ACCEPTED_PREPROCESS:
             raise ValueError(
-                f"preprocess '{preprocess}' not accepted, must be one of {self.accepted_preprocess}"
+                f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
             )
         self.device = device
         self.preprocess = preprocess
@@ -43,7 +48,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
             self.loss = loss()
         else:
             raise ValueError(
-                f"loss must be a string or a ClassificationLoss instance, got {loss}"
+                f"loss must be a string or a ClassificationLoss instance, got {loss}",
             )
 
     def calibrate(
@@ -52,10 +57,12 @@ class ClassificationToleranceRegion(ToleranceRegion):
         alpha=0.1,
         delta=0.1,
         steps=13,
-        bounds=[0, 1],
+        bounds=None,
         verbose=True,
         objectness_threshold=0.8,
     ):
+        if bounds is None:
+            bounds = [0, 1]
         if self.lbd is not None:
             print("Replacing previously computed lambda")
         self._n_classes = predictions.n_classes
@@ -137,7 +144,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
     ) -> list:
         if self.lbd is None:
             raise ValueError(
-                "Conformalizer must be calibrated before conformalizing."
+                "Conformalizer must be calibrated before conformalizing.",
             )
         conf_cls = []
         for pred_cls in predictions.pred_cls:
@@ -156,7 +163,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
     ):
         if self.lbd is None:
             raise ValueError(
-                "Conformalizer must be calibrated before evaluating."
+                "Conformalizer must be calibrated before evaluating.",
             )
         losses = []
         set_sizes = []
@@ -170,6 +177,6 @@ class ClassificationToleranceRegion(ToleranceRegion):
         set_sizes = torch.stack(set_sizes)
         if verbose:
             print(
-                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}"
+                f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}",
             )
         return losses, set_sizes

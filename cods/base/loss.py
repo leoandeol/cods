@@ -9,7 +9,7 @@ class NCScore:
         pass
 
 
-# todo: perhaps rename to something better than loss, to avoid confusion with usual losses
+# TODO: perhaps rename to something better than loss, to avoid confusion with usual losses
 class Loss:
     def __init__(self):
         pass
@@ -20,29 +20,4 @@ class Loss:
         conformalized_predictions: ConformalizedPredictions,
         **kwargs,
     ) -> torch.Tensor:
-        raise NotImplementedError()
-
-
-# class MultiLoss(Loss):
-#     def __init__(self):
-#         pass
-
-#     def __call__(self, **kwargs):
-#         raise NotImplementedError()
-
-
-# class BonferroniMultiLoss(Loss):
-#     def __init__(self):
-#         pass
-
-#     def __call__(self, **kwargs):
-#         raise NotImplementedError()
-
-
-# class HMPMultiLoss(Loss):
-#     def __init__(self):
-#         pass
-
-#     def __call__(self, **kwargs):
-#         print("WARNING: ASYMPOTITC GUARANTEES ONLY")
-#         raise NotImplementedError()
+        raise NotImplementedError

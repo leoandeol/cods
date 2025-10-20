@@ -1,0 +1,64 @@
+# Pre-commit hooks - practical configuration
+# Install: pip install pre-commit && pre-commit install
+# Run manually: pre-commit run --all-files
+# Skip hooks: SKIP=mypy git commit -m "message"
+
+repos:
+  # Basic file checks - fast and useful
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=50000']
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Ruff - format and lint in one tool
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.3
+    hooks:
+      # Linting - auto-fix safe issues (skip notebooks)
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        exclude: '^docs/|\.ipynb$'
+
+      # Formatting (skip notebooks)
+      - id: ruff-format
+        exclude: '^docs/|\.ipynb$'
+
+  # MyPy - optional, can be slow, so make it easy to skip
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+        args: [--ignore-missing-imports, --show-error-codes]
+        additional_dependencies: [types-PyYAML]
+        verbose: true
+        stages: [manual, pre-push]
+
+  # Optional: Security check (can be slow, run only on push)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.6
+    hooks:
+      - id: bandit
+        args: ["-c", "pyproject.toml", "-ll"]
+        additional_dependencies: ["bandit[toml]"]
+        stages: [pre-push]
+        pass_filenames: true
+
+# Configuration for ci (GitHub Actions)
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: [mypy]
+  submodules: false
