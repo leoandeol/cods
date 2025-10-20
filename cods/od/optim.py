@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from logging import getLogger
-from typing import Callable
 
 import numpy as np
 import torch
@@ -219,7 +219,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         )
 
         previous_lbd = lambda_conf
-        previous_risk = max_risk
 
         pbar = tqdm(
             list(
@@ -244,7 +243,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         # Step 2: Update one loss at a time
         for image_id, conf_score in pbar:
             previous_lbd = lambda_conf
-            previous_risk = max_risk
             lambda_conf = 1 - conf_score.cpu().numpy().item()
             if lambda_conf > init_lambda:
                 continue

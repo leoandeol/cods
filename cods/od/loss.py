@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import List
 
 import torch
 
@@ -10,8 +9,10 @@ from cods.classif.loss import ClassificationLoss
 from cods.od.utils import (
     assymetric_hausdorff_distance,
     f_lac,
+    fast_covered_areas_of_gt,
     # get_covered_areas_of_gt_max,
     get_covered_areas_of_gt_union,
+    vectorized_generalized_iou,
 )
 
 logger = getLogger("cods")
@@ -123,10 +124,10 @@ class BoxCountTwosidedConfidenceLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        conf_boxes: torch.Tensor | List[torch.Tensor],
-        conf_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        conf_boxes: torch.Tensor | list[torch.Tensor],
+        conf_cls: list[torch.Tensor],
     ) -> torch.Tensor:
         """Call the Confidence Loss.
 
@@ -174,10 +175,10 @@ class BoxCountRecallConfidenceLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        conf_boxes: torch.Tensor | List[torch.Tensor],
-        conf_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        conf_boxes: torch.Tensor | list[torch.Tensor],
+        conf_cls: list[torch.Tensor],
     ) -> torch.Tensor:
         """Call the Confidence Loss.
 
@@ -286,10 +287,10 @@ class ThresholdedBoxDistanceConfidenceLoss(ODLoss):
 
     def __call__(
         self,
-        true_boxes: torch.Tensor | List[torch.Tensor],
-        true_cls: torch.Tensor | List[torch.Tensor],
-        pred_boxes: torch.Tensor | List[torch.Tensor],
-        pred_cls: List[torch.Tensor],
+        true_boxes: torch.Tensor | list[torch.Tensor],
+        true_cls: torch.Tensor | list[torch.Tensor],
+        pred_boxes: torch.Tensor | list[torch.Tensor],
+        pred_cls: list[torch.Tensor],
     ) -> torch.Tensor:
         """Call the Confidence Loss.
 
@@ -552,9 +553,6 @@ class ClassBoxWiseRecallLoss(ODLoss):
         return miscoverage
 
 
-from cods.od.utils import fast_covered_areas_of_gt
-
-
 class BoxWiseRecallLoss(ODLoss):
     """Box-wise recall loss: 1 - mean(areas of the union of the boxes),
 
@@ -749,9 +747,6 @@ class BoxWisePrecisionLoss(ODLoss):
         # TODO: here, there's always as many preds as gt, because this is done after matching
         # TODO: should the matching be done... inside the loss ?
         return miscoverage
-
-
-from cods.od.utils import vectorized_generalized_iou
 
 
 class BoxWiseIoULoss(ODLoss):

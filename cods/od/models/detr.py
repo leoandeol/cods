@@ -32,10 +32,10 @@ def rescale_bboxes(out_bbox, size):
 
 
 class DETRModel(ODModel):
-    MODEL_NAMES = [
+    MODEL_NAMES = (
         "detr_resnet50",
         "detr_resnet101",
-    ]
+    )
 
     def __init__(
         self,
@@ -129,34 +129,32 @@ class DETRModel(ODModel):
             np.stack([image.size for image in images]),
         ).to(self.device)
         images = [self.transform(image) for image in images]
-        images = list([image.to(self.device) for image in images])
+        images = [image.to(self.device) for image in images]
         outputs = self.model(images)
         pred_boxes, confidences, pred_cls = self.postprocess(
             outputs,
             img_shapes,
         )
-        true_boxes = list(
-            [
-                torch.LongTensor(
+        true_boxes = [
+            torch.LongTensor(
+                [
                     [
-                        [
-                            box["bbox"][0],
-                            box["bbox"][1],
-                            box["bbox"][0] + box["bbox"][2],
-                            box["bbox"][1] + box["bbox"][3],
-                        ]
-                        for box in true_box
-                    ],
-                )
-                for true_box in ground_truth
-            ],
-        )
-        true_cls = list(
-            [
-                torch.LongTensor([box["category_id"] for box in true_box])
-                for true_box in ground_truth
-            ],
-        )
+                        box["bbox"][0],
+                        box["bbox"][1],
+                        box["bbox"][0] + box["bbox"][2],
+                        box["bbox"][1] + box["bbox"][3],
+                    ]
+                    for box in true_box
+                ],
+            )
+            for true_box in ground_truth
+        ]
+
+        true_cls = [
+            torch.LongTensor([box["category_id"] for box in true_box])
+            for true_box in ground_truth
+        ]
+
         true_boxes = true_boxes
 
         return {

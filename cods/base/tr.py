@@ -1,4 +1,5 @@
-from typing import Callable, Union
+from collections.abc import Callable
+from types import MappingProxyType
 
 import torch
 from scipy.optimize import brentq
@@ -61,27 +62,33 @@ def binom_inv_cdf(Rhat, n, delta, device="cpu"):
 
 
 class ToleranceRegion:
-    AVAILABLE_INEQUALITIES = {
-        "hoeffding": hoeffding,
-        "bernstein_emp": bernstein_emp,
-        "bernstein": bernstein,
-        "bernstein_uni": bernstein_uni,
-        "bernstein_uni_lim": bernstein_uni_lim,
-        "binomial_inverse_cdf": binom_inv_cdf,
-    }
-    ACCEPTED_OPTIMIZERS = {
-        "binary_search": BinarySearchOptimizer,
-        "gpr": GaussianProcessOptimizer,
-        "gaussianprocess": GaussianProcessOptimizer,
-        "kriging": GaussianProcessOptimizer,
-    }
+    AVAILABLE_INEQUALITIES = MappingProxyType(
+        {
+            "hoeffding": hoeffding,
+            "bernstein_emp": bernstein_emp,
+            "bernstein": bernstein,
+            "bernstein_uni": bernstein_uni,
+            "bernstein_uni_lim": bernstein_uni_lim,
+            "binomial_inverse_cdf": binom_inv_cdf,
+        }
+    )
+    ACCEPTED_OPTIMIZERS = MappingProxyType(
+        {
+            "binary_search": BinarySearchOptimizer,
+            "gpr": GaussianProcessOptimizer,
+            "gaussianprocess": GaussianProcessOptimizer,
+            "kriging": GaussianProcessOptimizer,
+        }
+    )
 
     def __init__(
         self,
-        inequality: Union[str, Callable] = "binomial_inverse_cdf",
+        inequality: str | Callable = "binomial_inverse_cdf",
         optimizer: str = "binary_search",
-        optimizer_args: dict = {},
+        optimizer_args: dict | None = None,
     ):
+        if optimizer_args is None:
+            optimizer_args = {}
         if inequality not in self.AVAILABLE_INEQUALITIES:
             raise ValueError(
                 f"Available inequalities are {self.AVAILABLE_INEQUALITIES.keys()}",
@@ -120,25 +127,21 @@ class CombiningToleranceRegions(ToleranceRegion):
         if parameters is None:
             parameters = [{} for _ in range(len(self.tregions))]
         if self.mode == "bonferroni":
-            return list(
-                [
-                    conformalizer.calibrate(
-                        preds,
-                        alpha=alpha / len(self.tregions),
-                        delta=delta / len(self.tregions),
-                        **parameters[i],
-                    )
-                    for i, conformalizer in enumerate(self.tregions)
-                ],
-            )
+            return [
+                conformalizer.calibrate(
+                    preds,
+                    alpha=alpha / len(self.tregions),
+                    delta=delta / len(self.tregions),
+                    **parameters[i],
+                )
+                for i, conformalizer in enumerate(self.tregions)
+            ]
 
     def conformalize(self, preds):
-        return list([tregion.conformalize(preds) for tregion in self.tregions])
+        return [tregion.conformalize(preds) for tregion in self.tregions]
 
     def evaluate(self, preds, verbose=True):
-        return list(
-            [
-                tregion.evaluate(preds, verbose=verbose)
-                for tregion in self.tregions
-            ],
-        )
+        return [
+            tregion.evaluate(preds, verbose=verbose)
+            for tregion in self.tregions
+        ]

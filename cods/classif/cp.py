@@ -1,4 +1,5 @@
-from typing import Any, Optional, Tuple
+from types import MappingProxyType
+from typing import Any
 
 import torch
 
@@ -8,32 +9,32 @@ from cods.classif.score import APSNCScore, ClassifNCScore, LACNCScore
 
 
 class ClassificationConformalizer(Conformalizer):
-    ACCEPTED_METHODS = {"lac": LACNCScore, "aps": APSNCScore}
-    ACCEPTED_PREPROCESS = {"softmax": torch.softmax}
+    ACCEPTED_METHODS = MappingProxyType({"lac": LACNCScore, "aps": APSNCScore})
+    ACCEPTED_PREPROCESS = MappingProxyType({"softmax": torch.softmax})
 
     def __init__(self, method="lac", preprocess="softmax", device="cpu"):
-        if method not in self.ACCEPTED_METHODS.keys() and not isinstance(
+        if method not in self.ACCEPTED_METHODS and not isinstance(
             method,
             ClassifNCScore,
         ):
             raise ValueError(
                 f"method '{method}' not accepted, must be one of {self.ACCEPTED_METHODS} or a ClassifNCScore",
             )
-        if preprocess not in self.ACCEPTED_PREPROCESS.keys():
+        if preprocess not in self.ACCEPTED_PREPROCESS:
             raise ValueError(
                 f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
             )
 
         self.preprocess = preprocess
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
-        self._quantile: Optional[Any] = None
-        self._n_classes: Optional[Any] = None
+        self._quantile: Any | None = None
+        self._n_classes: Any | None = None
         self.device = device
 
         self.method = method
         if isinstance(method, ClassifNCScore):
             self._score_function = method
-        elif method in self.ACCEPTED_METHODS.keys():
+        elif method in self.ACCEPTED_METHODS:
             self._score_function = None
 
     def calibrate(
@@ -42,7 +43,7 @@ class ClassificationConformalizer(Conformalizer):
         alpha: float = 0.1,
         verbose: bool = True,
         lbd_minus: bool = False,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         self._n_classes = preds.n_classes
         if self._score_function is None:
             self._score_function = self.ACCEPTED_METHODS[self.method](

@@ -4,12 +4,13 @@ import pickle
 from itertools import product
 from logging import getLogger
 from time import time
+from types import MappingProxyType
 
 import numpy as np
 import torch
+import wandb
 from tqdm import tqdm
 
-import wandb
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
 from cods.od.metrics import get_recall_precision
@@ -21,11 +22,13 @@ MODES = ["classification", "localization", "detection"]
 
 
 class Benchmark:
-    DATASETS = {
-        "mscoco": MSCOCODataset,
-    }
+    DATASETS = MappingProxyType(
+        {
+            "mscoco": MSCOCODataset,
+        }
+    )
 
-    MODELS = {"detr": DETRModel, "yolo": YOLOModel}
+    MODELS = MappingProxyType({"detr": DETRModel, "yolo": YOLOModel})
 
     def __init__(self, config, device):
         self.config = config
@@ -148,7 +151,7 @@ class Benchmark:
         # Load model
         if experiment["model"] not in self.MODELS:
             raise NotImplementedError(
-                f"Model { experiment['model']} not implemented yet.",
+                f"Model {experiment['model']} not implemented yet.",
             )
         model = self.MODELS[experiment["model"]](
             pretrained=True,
@@ -270,7 +273,7 @@ class Benchmark:
         #     verbose=verbose,
         # )
         # Just recall-precision for now
-        recalls, precisions, scores = get_recall_precision(
+        recalls, precisions, _ = get_recall_precision(
             preds_val,
             SCORE_THRESHOLD=preds_val.confidence_threshold,
             IOU_THRESHOLD=experiment["nms_iou_threshold"],
