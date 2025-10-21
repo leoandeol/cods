@@ -51,7 +51,6 @@ from cods.od.utils import (
 )
 
 logger = logging.getLogger("cods")
-# FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
 FORMAT = (
     "[%(asctime)s:%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
 )

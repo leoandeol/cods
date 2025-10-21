@@ -76,9 +76,6 @@ class ODModel(Model):
         if not force_recompute:
             preds = self._load_preds_if_exists(
                 hash,
-                # dataset_name=dataset_name,
-                # split_name=split_name,
-                # task_name="object_detection",
             )
             if preds is not None:
                 if verbose:

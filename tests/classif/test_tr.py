@@ -4,20 +4,14 @@ from unittest.mock import MagicMock, patch
 import torch
 
 from cods.classif.loss import CLASSIFICATION_LOSSES, ClassificationLoss
-
-# Imports from the project
 from cods.classif.tr import ClassificationToleranceRegion
-
-# Assuming MockClassificationPredictions can be reused or defined here
-# For now, let's define it here for simplicity, similar to test_cp.py
 
 
 class MockClassificationPredictions:
     def __init__(self, pred_cls, true_cls, n_classes):
-        self.pred_cls = pred_cls  # List of tensors
-        self.true_cls = true_cls  # List of tensors
+        self.pred_cls = pred_cls
+        self.true_cls = true_cls
         self.n_classes = n_classes
-        self.conf_cls = None  # To store output of conformalize
 
 
 class TestClassificationToleranceRegion(unittest.TestCase):
@@ -29,19 +23,11 @@ class TestClassificationToleranceRegion(unittest.TestCase):
         )
 
     def test_init_valid_inputs(self):
-        # Default params
         ctr = ClassificationToleranceRegion()
         self.assertEqual(ctr.loss_name, "lac")  # Default loss
         self.assertIsInstance(ctr.loss, CLASSIFICATION_LOSSES["lac"])
         self.assertEqual(ctr.preprocess, "softmax")
         self.assertIsNotNone(ctr.f_preprocess)
-
-        # Testing custom ClassificationLoss instances is removed here because the current
-        # __init__ logic in ClassificationToleranceRegion makes it hard to test reliably:
-        # any instance not strictly equal to a key in ACCEPTED_LOSSES (e.g. "lac")
-        # gets caught by the `if loss not in self.ACCEPTED_LOSSES:` check,
-        # preventing the `elif isinstance(loss, ClassificationLoss):` block from being tested
-        # with a custom mock instance as intended.
 
     def test_init_invalid_loss_string(self):
         with self.assertRaisesRegex(ValueError, r"Loss invalid_loss_str not supported.*"):

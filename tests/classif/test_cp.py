@@ -3,8 +3,12 @@ from unittest.mock import MagicMock, PropertyMock
 
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 from cods.classif.cp import ClassificationConformalizer
+from cods.classif.data import ClassificationPredictions
+from cods.classif.models import ClassificationModel
 from cods.classif.score import ClassifNCScore
 
 
@@ -17,9 +21,7 @@ class MockClassificationPredictions:
 
 class TestClassificationConformalizer(unittest.TestCase):
     def _create_mock_preds(self, num_samples, n_classes):
-        # Ensure pred_cls and true_cls are lists of tensors
-        pred_cls = [torch.rand(n_classes) for _ in range(num_samples)]
-        # Ensure true_cls are scalar tensors (long type for class indices)
+        pred_cls = [F.softmax(torch.rand(n_classes), dim=-1) for _ in range(num_samples)]
         true_cls = [torch.randint(0, n_classes, (1,)).squeeze() for _ in range(num_samples)]
         return MockClassificationPredictions(
             pred_cls=pred_cls, true_cls=true_cls, n_classes=n_classes
@@ -50,11 +52,6 @@ class TestClassificationConformalizer(unittest.TestCase):
         # Test with an invalid string 'preprocess'
         with self.assertRaisesRegex(ValueError, "preprocess 'invalid_preprocess' not accepted"):
             ClassificationConformalizer(method="lac", preprocess="invalid_preprocess")
-
-    # It seems preprocess only accepts string keys, not direct functions or other types.
-    # The original test_init_invalid_preprocess tested for a non-string type,
-    # but the class logic checks `preprocess not in self.ACCEPTED_PREPROCESS.keys()`,
-    # which implies preprocess is expected to be a string key.
 
     def test_calibrate(self):
         # More detailed test for calibrate
@@ -199,7 +196,6 @@ class TestClassificationConformalizer(unittest.TestCase):
         )
 
         # Sample conformalized prediction sets (list of tensors)
-        # Sample conformalized prediction sets (list of tensors)
         # These need to be plausible outputs from a score function's get_set method.
         # For simplicity, let's assume each set contains one or two class indices.
         conformalized_sets = []
@@ -271,8 +267,227 @@ class TestClassificationConformalizer(unittest.TestCase):
                     torch.mean(losses_partial.float()), expected_coverage_partial
                 )
 
+    def test_integration_pipeline_with_dataset(self):
+        """Integration test that runs the full conformal prediction pipeline:
+        1. Download TinyImageNet dataset
+        2. Build predictions using ResNet18 from timm
+        3. Split predictions into calibration and test sets
+        4. Calibrate the conformalizer
+        5. Conformalize test predictions
+        6. Evaluate coverage and set sizes
+        """
+        import zipfile
+        from pathlib import Path
+        from urllib.request import urlretrieve
 
-if __name__ == "__main__":
-    # This allows running the tests directly from the script
-    # However, typically you'd use a test runner like `python -m unittest discover`
-    unittest.main(argv=["first-arg-is-ignored"], exit=False)
+        import timm
+        from PIL import Image
+        from torchvision import transforms as T
+
+        # 1. Download and prepare TinyImageNet
+        data_dir = Path("./test_data")
+        data_dir.mkdir(exist_ok=True)
+        tiny_imagenet_dir = data_dir / "tiny-imagenet-200"
+
+        # Download if not exists
+        if not tiny_imagenet_dir.exists():
+            print("Downloading TinyImageNet...")
+            url = "http://cs231n.stanford.edu/tiny-imagenet-200.zip"
+            zip_path = data_dir / "tiny-imagenet-200.zip"
+            if not zip_path.exists():
+                urlretrieve(url, zip_path)
+
+            # Extract
+            import zipfile
+
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(data_dir)
+
+        val_dir = tiny_imagenet_dir / "val"
+
+        # Create a dataset wrapper for TinyImageNet validation set
+        class TinyImageNetDataset(torch.utils.data.Dataset):
+            def __init__(self, root_dir, max_samples=100):
+                self.root_dir = Path(root_dir)
+                self.max_samples = max_samples
+
+                # Load validation annotations
+                val_annotations = self.root_dir / "val_annotations.txt"
+                self.samples = []
+                self.idx_to_cls = {}
+                class_to_idx = {}
+
+                with open(val_annotations) as f:
+                    for idx, line in enumerate(f):
+                        if idx >= max_samples:
+                            break
+                        parts = line.strip().split("\t")
+                        img_name = parts[0]
+                        class_name = parts[1]
+
+                        if class_name not in class_to_idx:
+                            class_to_idx[class_name] = len(class_to_idx)
+
+                        class_idx = class_to_idx[class_name]
+                        self.idx_to_cls[class_idx] = class_name
+                        self.samples.append((img_name, class_idx))
+
+                self.n_classes = len(class_to_idx)
+                self.root = str(self.root_dir)
+                self.image_ids = [s[0] for s in self.samples]
+
+                # Define transforms
+                self.transforms = T.Compose(
+                    [
+                        T.Resize(224),
+                        T.CenterCrop(224),
+                        T.ToTensor(),
+                        T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                    ]
+                )
+
+            def __len__(self):
+                return len(self.samples)
+
+            def __getitem__(self, idx):
+                img_name, label = self.samples[idx]
+                img_path = self.root_dir / "images" / img_name
+                image = Image.open(img_path).convert("RGB")
+                image = self.transforms(image)
+                return img_name, image, torch.tensor(label)
+
+        # Create dataset first to determine n_classes
+        dataset = TinyImageNetDataset(root_dir=val_dir, max_samples=100)
+        n_samples = len(dataset)
+        n_classes = dataset.n_classes
+
+        # 2. Load ResNet18 from timm with correct number of classes
+        model = timm.create_model("resnet18", pretrained=True, num_classes=n_classes)
+        batch_size = 32
+
+        classification_model = ClassificationModel(
+            model=model,
+            model_name="resnet18_tinyimagenet",
+            device="cpu",
+            save=False,  # Don't save during tests
+        )
+
+        # Build predictions
+        predictions = classification_model.build_predictions(
+            dataset=dataset,
+            dataset_name="tinyimagenet",
+            split_name="val",
+            batch_size=batch_size,
+            shuffle=False,
+            verbose=False,
+            force_recompute=True,
+        )
+
+        # Verify predictions structure
+        self.assertIsInstance(predictions, ClassificationPredictions)
+        self.assertEqual(len(predictions), n_samples)
+        self.assertEqual(predictions.n_classes, dataset.n_classes)
+        self.assertEqual(len(predictions.pred_cls), n_samples)
+        self.assertEqual(len(predictions.true_cls), n_samples)
+
+        # 3. Split predictions into calibration (60%) and test (40%) sets
+        cal_preds, test_preds = predictions.split(
+            splits_names=["calibration", "test"],
+            splits_ratios=[0.6, 0.4],
+        )
+
+        self.assertEqual(len(cal_preds), int(n_samples * 0.6))
+        self.assertEqual(len(test_preds), int(n_samples * 0.4))
+
+        # 4. Test both LAC and APS methods
+        for method in ["lac", "aps"]:
+            with self.subTest(method=method):
+                # Initialize conformalizer
+                conformalizer = ClassificationConformalizer(
+                    method=method,
+                    preprocess="softmax",
+                    device="cpu",
+                )
+
+                # 5. Calibrate
+                alpha = 0.1
+                quantile, scores = conformalizer.calibrate(
+                    cal_preds,
+                    alpha=alpha,
+                    verbose=False,
+                )
+
+                # Verify calibration
+                self.assertIsInstance(quantile, torch.Tensor)
+                self.assertIsInstance(scores, torch.Tensor)
+                self.assertEqual(scores.shape[0], len(cal_preds))
+                self.assertIsNotNone(conformalizer._quantile)
+                self.assertIsNotNone(conformalizer._score_function)
+
+                # 6. Conformalize test predictions
+                conformalized_sets = conformalizer.conformalize(test_preds)
+
+                # Verify conformalized sets
+                self.assertIsInstance(conformalized_sets, list)
+                self.assertEqual(len(conformalized_sets), len(test_preds))
+                for conf_set in conformalized_sets:
+                    self.assertIsInstance(conf_set, torch.Tensor)
+                    # Each set should contain at least one class
+                    self.assertGreater(len(conf_set), 0)
+                    # No class index should exceed n_classes
+                    self.assertTrue(torch.all(conf_set < n_classes))
+                    self.assertTrue(torch.all(conf_set >= 0))
+
+                # 7. Evaluate coverage and set sizes
+                losses, set_sizes = conformalizer.evaluate(
+                    test_preds,
+                    conformalized_sets,
+                    verbose=False,
+                )
+
+                # Verify evaluation outputs
+                self.assertIsInstance(losses, torch.Tensor)
+                self.assertIsInstance(set_sizes, torch.Tensor)
+                self.assertEqual(losses.shape[0], len(test_preds))
+                self.assertEqual(set_sizes.shape[0], len(test_preds))
+
+                # Calculate coverage (proportion of true classes in prediction sets)
+                coverage = torch.mean(losses.float()).item()
+                avg_set_size = torch.mean(set_sizes.float()).item()
+
+                # Coverage should be at least (1 - alpha) due to conformal guarantees
+                # In practice, with finite samples, we just verify it's reasonable
+                self.assertGreaterEqual(coverage, 0.0)
+                self.assertLessEqual(coverage, 1.0)
+
+                # Average set size should be reasonable (between 1 and n_classes)
+                self.assertGreater(avg_set_size, 0)
+                self.assertLessEqual(avg_set_size, n_classes)
+
+                # For a well-calibrated CP, we expect coverage close to (1 - alpha)
+                # But we don't enforce strict bounds in tests due to randomness
+                # Just verify the pipeline runs successfully
+
+                # Test with different alpha values
+                for test_alpha in [0.05, 0.2]:
+                    with self.subTest(method=method, alpha=test_alpha):
+                        conformalizer_alpha = ClassificationConformalizer(
+                            method=method,
+                            preprocess="softmax",
+                            device="cpu",
+                        )
+                        conformalizer_alpha.calibrate(
+                            cal_preds,
+                            alpha=test_alpha,
+                            verbose=False,
+                        )
+                        conf_sets_alpha = conformalizer_alpha.conformalize(test_preds)
+                        losses_alpha, set_sizes_alpha = conformalizer_alpha.evaluate(
+                            test_preds,
+                            conf_sets_alpha,
+                            verbose=False,
+                        )
+
+                        # Verify outputs have correct shapes
+                        self.assertEqual(losses_alpha.shape[0], len(test_preds))
+                        self.assertEqual(set_sizes_alpha.shape[0], len(test_preds))

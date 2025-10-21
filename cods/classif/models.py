@@ -1,3 +1,5 @@
+from hashlib import sha256
+
 import torch
 from tqdm import tqdm
 
@@ -34,19 +36,31 @@ class ClassificationModel(Model):
         batch_size: int,
         shuffle: bool = False,
         verbose: bool = True,
+        force_recompute: bool = False,
         **kwargs,
     ):
-        preds = self._load_preds_if_exists(
-            dataset_name=dataset_name,
-            split_name=split_name,
-            task_name="classification",
-        )
-        if preds is not None:
+        string_to_hash = f"{dataset.root}_{dataset_name}_{split_name}_{batch_size}_{shuffle}_{self.model_name}_classification_{dataset.image_ids}"
+        hash = sha256(string_to_hash.encode()).hexdigest()
+        preds = None
+        if not force_recompute:
+            preds = self._load_preds_if_exists(
+                hash,
+            )
+            if preds is not None:
+                if verbose:
+                    print("Predictions already exist, loading them...")
+                if isinstance(preds, ClassificationPredictions):
+                    preds.to(self.device)
+                    return preds
+                raise ValueError(
+                    "Predictions file exists but is not of type ClassificationPredictions",
+                )
             if verbose:
-                print("Predictions already exist, loading them...")
-            return preds
-        if verbose:
-            print("Predictions do not exist, building them...")
+                print("Predictions do not exist, building them...")
+        elif verbose:
+            print(
+                "Force recompute is set to True, building predictions...",
+            )
 
         dataloader = torch.utils.data.DataLoader(
             dataset,
@@ -76,5 +90,5 @@ class ClassificationModel(Model):
         predictions["pred_cls"] = torch.stack(predictions["pred_cls"])
         predictions["true_cls"] = torch.stack(predictions["true_cls"])
         preds = ClassificationPredictions(**predictions)
-        self._save_preds(preds)
+        self._save_preds(preds, hash)
         return preds
