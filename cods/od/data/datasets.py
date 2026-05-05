@@ -298,6 +298,30 @@ class VOCDataset(VOCDetection):
         "tvmonitor",
     ]
 
+    def __init__(
+        self,
+        root,
+        year="2007",
+        image_set="train",
+        download=False,
+        transforms=None,
+        indices=None,
+    ):
+        super().__init__(
+            root=root,
+            year=year,
+            image_set=image_set,
+            download=download,
+            transforms=transforms,
+        )
+
+        self.transforms = transforms
+        self.indices = list(range(len(self.images))) if indices is None else list(indices)
+
+
+    def __len__(self) -> int:
+        return len(self.indices)
+        
     def __getitem__(self, index: int) -> Tuple[Any, Any, Any, Any]:
         """Args:
             index (int): Index
@@ -319,3 +343,50 @@ class VOCDataset(VOCDetection):
         image_size = img.size
 
         return img_path, image_size, img, target
+
+    def _collate_fn(self, batch):
+        return list([list(x) for x in zip(*batch)])
+
+    def shuffle(self):
+        pairs = list(zip(self.images, self.annotations))
+        random.shuffle(pairs)
+        self.images, self.annotations = map(list, zip(*pairs))
+
+    def split_dataset(
+        self,
+        proportion,
+        shuffle=False,
+        n_calib_test: Optional[int] = None,
+    ):
+        if shuffle:
+            logger.info("Shuffling dataset")
+            self.shuffle()
+
+        n_total_samples = len(self)
+        if n_calib_test is not None and n_calib_test < n_total_samples:
+            n_total_samples = n_calib_test
+
+        n_split = int(proportion * n_total_samples)
+
+        ds1 = VOCDataset(
+            root=self.root,
+            year=self.year,
+            image_set=self.image_set,
+            download=False,
+            transforms=self.transforms,
+        )
+        ds2 = VOCDataset(
+            root=self.root,
+            year=self.year,
+            image_set=self.image_set,
+            download=False,
+            transforms=self.transforms,
+        )
+
+        ds1.images = self.images[:n_split]
+        ds1.annotations = self.annotations[:n_split]
+
+        ds2.images = self.images[n_split:n_total_samples]
+        ds2.annotations = self.annotations[n_split:n_total_samples]
+
+        return ds1, ds2
