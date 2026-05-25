@@ -231,3 +231,7 @@ class ODResults(Results):
         self.classification_set_sizes = classification_set_sizes
         self.classification_coverages = classification_coverages
         self.global_coverage = global_coverage
+
+    @property
+    def global_risk(self):
+        return 1 - self.global_coverage

@@ -76,9 +76,6 @@ class ODModel(Model):
         if not force_recompute:
             preds = self._load_preds_if_exists(
                 hash,
-                # dataset_name=dataset_name,
-                # split_name=split_name,
-                # task_name="object_detection",
             )
             if preds is not None:
                 if verbose:
@@ -152,27 +149,23 @@ class ODModel(Model):
                 all_true_cls.append(true_cls)
                 all_pred_cls.append(pred_cls)
 
-        all_image_paths = ([path for arr_path in all_image_paths for path in arr_path],)
+        all_image_paths = [path for arr_path in all_image_paths for path in arr_path]
 
-        all_image_shapes = ([shape for arr_shape in all_image_shapes for shape in arr_shape],)
+        all_image_shapes = [shape for arr_shape in all_image_shapes for shape in arr_shape]
 
-        all_true_boxes = ([box.to(self.device) for arr_box in all_true_boxes for box in arr_box],)
+        all_true_boxes = [box.to(self.device) for arr_box in all_true_boxes for box in arr_box]
 
-        all_pred_boxes = ([box for arr_box in all_pred_boxes for box in arr_box],)
+        all_pred_boxes = [box for arr_box in all_pred_boxes for box in arr_box]
 
         if len(all_pred_boxes_unc) > 0:
-            all_pred_boxes_unc = (
-                [box_unc for arr_box_unc in all_pred_boxes_unc for box_unc in arr_box_unc],
-            )
+            all_pred_boxes_unc = [box_unc for arr_box_unc in all_pred_boxes_unc for box_unc in arr_box_unc]
         else:
             all_pred_boxes_unc = None
-        all_confidences = (
-            [confidence for arr_confidence in all_confidences for confidence in arr_confidence],
-        )
+        all_confidences = [confidence for arr_confidence in all_confidences for confidence in arr_confidence]
 
-        all_true_cls = ([cls.to(self.device) for arr_cls in all_true_cls for cls in arr_cls],)
+        all_true_cls = [cls.to(self.device) for arr_cls in all_true_cls for cls in arr_cls]
 
-        all_pred_cls = ([proba for arr_proba in all_pred_cls for proba in arr_proba],)
+        all_pred_cls = [proba for arr_proba in all_pred_cls for proba in arr_proba]
 
         preds = ODPredictions(
             dataset_name=dataset_name,
@@ -188,9 +181,9 @@ class ODModel(Model):
             pred_boxes_uncertainty=all_pred_boxes_unc,
         )
         self._save_preds(preds, hash)
-
         # Done after saving : we always save and therefore load all predictions without filtering
         if filter_preds_by_confidence is not None:
+
             preds = filter_preds(
                 preds,
                 confidence_threshold=filter_preds_by_confidence,

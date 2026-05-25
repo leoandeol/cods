@@ -28,7 +28,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
             optimizer_args={},
         )
         self.ACCEPTED_LOSSES = CLASSIFICATION_LOSSES
-        self.lbd = None
+        self._lbd = None
         if loss not in self.ACCEPTED_LOSSES:
             raise ValueError(
                 f"Loss {loss} not supported. Choose from {self.ACCEPTED_LOSSES}.",
@@ -41,11 +41,11 @@ class ClassificationToleranceRegion(ToleranceRegion):
         self.preprocess = preprocess
         self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
         if isinstance(loss, str):
-            self.loss_name = loss
-            self.loss = self.ACCEPTED_LOSSES[loss]()
+            self._loss_name = loss
+            self._loss = self.ACCEPTED_LOSSES[loss]()
         elif isinstance(loss, ClassificationLoss):
-            self.loss_name = loss.__class__.__name__
-            self.loss = loss()
+            self._loss_name = loss.__class__.__name__
+            self._loss = loss()
         else:
             raise ValueError(
                 f"loss must be a string or a ClassificationLoss instance, got {loss}",
@@ -63,11 +63,11 @@ class ClassificationToleranceRegion(ToleranceRegion):
     ):
         if bounds is None:
             bounds = [0, 1]
-        if self.lbd is not None:
+        if self._lbd is not None:
             print("Replacing previously computed lambda")
         self._n_classes = predictions.n_classes
-        if self.loss is None:
-            self.loss = self.ACCEPTED_LOSSES[self.loss_name]()
+        if self._loss is None:
+            self._loss = self.ACCEPTED_LOSSES[self._loss_name]()
         # if preds.matching is None:
         #     if verbose:
         #         print("Computing Matching of Boxes")
@@ -83,13 +83,15 @@ class ClassificationToleranceRegion(ToleranceRegion):
         )
 
         lbd = self.optimizer.optimize(
-            risk_function=risk_function,
+            objective_function=risk_function,
             alpha=alpha,
             bounds=bounds,
             steps=steps,
             verbose=verbose,
         )
-        self.lbd = lbd
+        # TODO: temporary before redoing optimizers in pytorch
+        lbd = torch.tensor(lbd)
+        self._lbd = lbd
         self.confidence_threshold = objectness_threshold
         return lbd
 
@@ -109,8 +111,8 @@ class ClassificationToleranceRegion(ToleranceRegion):
                 # for j, true_cls in enumerate(true_cls_img):
                 # pred_cls = predictions.cls_prob[i][matching[i][j]]
                 pred_cls = self.f_preprocess(predictions.pred_cls[i], -1)
-                conf_set = self.loss.get_set(pred_cls=pred_cls, lbd=lbd)
-                score = self.loss(true_cls=true_cls, conf_cls=conf_set)
+                conf_set = self._loss.get_set(pred_cls=pred_cls, lbd=lbd)
+                score = self._loss(true_cls=true_cls, conf_cls=conf_set)
                 risk.append(score)
             risk = torch.stack(risk)
             risk = torch.mean(risk)
@@ -129,7 +131,6 @@ class ClassificationToleranceRegion(ToleranceRegion):
         n,
         delta,
     ):
-        # TODO: fix
         return self.f_inequality(
             Rhat=risk,
             n=torch.tensor(n, dtype=torch.float).to(self.device),
@@ -142,14 +143,14 @@ class ClassificationToleranceRegion(ToleranceRegion):
         verbose: bool = True,
         **kwargs,
     ) -> list:
-        if self.lbd is None:
+        if self._lbd is None:
             raise ValueError(
                 "Conformalizer must be calibrated before conformalizing.",
             )
         conf_cls = []
         for pred_cls in predictions.pred_cls:
             pred_cls = self.f_preprocess(pred_cls, -1)
-            ys = self.loss.get_set(pred_cls=pred_cls, lbd=self.lbd)
+            ys = self._loss.get_set(pred_cls=pred_cls, lbd=self._lbd)
             conf_cls.append(ys)
         predictions.conf_cls = conf_cls
         return conf_cls
@@ -161,7 +162,7 @@ class ClassificationToleranceRegion(ToleranceRegion):
         verbose=True,
         **kwargs,
     ):
-        if self.lbd is None:
+        if self._lbd is None:
             raise ValueError(
                 "Conformalizer must be calibrated before evaluating.",
             )

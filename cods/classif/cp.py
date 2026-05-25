@@ -1,5 +1,6 @@
+import logging
+from collections.abc import Callable
 from types import MappingProxyType
-from typing import Any
 
 import torch
 
@@ -7,12 +8,23 @@ from cods.base.cp import Conformalizer
 from cods.classif.data import ClassificationPredictions
 from cods.classif.score import APSNCScore, ClassifNCScore, LACNCScore
 
+logger = logging.getLogger("cods")
+FORMAT = (
+    "[%(asctime)s:%(levelname)s:%(filename)s:%(module)s:%(lineno)s - %(funcName)s ] %(message)s"
+)
+logging.basicConfig(format=FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
+
 
 class ClassificationConformalizer(Conformalizer):
     ACCEPTED_METHODS = MappingProxyType({"lac": LACNCScore, "aps": APSNCScore})
     ACCEPTED_PREPROCESS = MappingProxyType({"softmax": torch.softmax})
 
-    def __init__(self, method="lac", preprocess="softmax", device="cpu"):
+    def __init__(
+        self,
+        method: str | ClassifNCScore = "lac",
+        preprocess: str | Callable = "softmax",
+        device: str | torch.device = "cpu",
+    ):
         if method not in self.ACCEPTED_METHODS and not isinstance(
             method,
             ClassifNCScore,
@@ -20,15 +32,20 @@ class ClassificationConformalizer(Conformalizer):
             raise ValueError(
                 f"method '{method}' not accepted, must be one of {self.ACCEPTED_METHODS} or a ClassifNCScore",
             )
-        if preprocess not in self.ACCEPTED_PREPROCESS:
+        if preprocess not in self.ACCEPTED_PREPROCESS and not callable(preprocess):
             raise ValueError(
                 f"preprocess '{preprocess}' not accepted, must be one of {self.ACCEPTED_PREPROCESS}",
             )
 
-        self.preprocess = preprocess
-        self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
-        self._quantile: Any | None = None
-        self._n_classes: Any | None = None
+        if isinstance(preprocess, str):
+            self.preprocess = preprocess
+            self.f_preprocess = self.ACCEPTED_PREPROCESS[preprocess]
+        else:
+            # extract name of function
+            self.preprocess = preprocess.__name__
+            self.f_preprocess = preprocess
+        self._quantile = None
+        self._n_classes = None
         self.device = device
 
         self.method = method
@@ -67,14 +84,14 @@ class ClassificationConformalizer(Conformalizer):
         self._scores = scores
 
         if lbd_minus:
-            print("Using lbd_minus")
+            logger.info("Using lbd_minus")
             quantile = torch.quantile(
                 scores,
                 1 - (alpha * (n + 1) / n),
                 interpolation="higher",
             )
         else:
-            print("Using lbd_plus")
+            logger.info("Using lbd_plus")
             quantile = torch.quantile(
                 scores,
                 (1 - alpha) * ((n + 1) / n),
@@ -83,11 +100,11 @@ class ClassificationConformalizer(Conformalizer):
         self._quantile = quantile
 
         if verbose:
-            print(f"Calibrated quantile: {quantile}")
+            logger.info(f"Calibrated quantile: {quantile}")
 
         return quantile, scores
 
-    def conformalize(self, preds: ClassificationPredictions) -> list:
+    def conformalize(self, preds: ClassificationPredictions) -> list[list]:
         if self._quantile is None:
             raise ValueError(
                 "Conformalizer must be calibrated before conformalizing.",
@@ -113,8 +130,8 @@ class ClassificationConformalizer(Conformalizer):
         self,
         preds: ClassificationPredictions,
         conf_cls: list,
-        verbose=True,
-    ):
+        verbose: bool = True,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         if self._quantile is None:
             raise ValueError(
                 "Conformalizer must be calibrated before evaluating.",
@@ -135,7 +152,7 @@ class ClassificationConformalizer(Conformalizer):
         losses = torch.stack(losses).ravel()
         set_sizes = torch.stack(set_sizes).ravel()
         if verbose:
-            print(
+            logger.info(
                 f"Coverage: {torch.mean(losses)}, Avg. set size: {torch.mean(set_sizes)}",
             )
         return losses, set_sizes

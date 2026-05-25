@@ -51,7 +51,8 @@ class APSNCScore(ClassifNCScore):
         # Randomized nonconformity score for calibration
         u = torch.rand(1).item() * values[match[0]]
         score = cumsum[match[0]] - values[match[0]] + u
-        return max(score.item(), 0.0)
+        final_score, _ = torch.max(score, 0)
+        return final_score
 
     def get_set(
         self,
