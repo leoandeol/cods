@@ -74,7 +74,7 @@ jobs:
         continue-on-error: ${{ matrix.python-version == '3.13' }}  # Allow 3.13 to fail
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v6
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         with:
           files: ./coverage.xml
