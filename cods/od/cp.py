@@ -394,7 +394,9 @@ class ConfidenceConformalizer(Conformalizer):
     def calibrate(
         self,
         predictions: ODPredictions,
-        alpha: float = 0.1,
+        alpha_cnf: float = 0.1,
+        alpha_loc: float = 0.1,
+        alpha_cls: float = 0.1,
         steps: int = 13,
         bounds: list[float] | None = None,
         verbose: bool = True,
@@ -413,8 +415,10 @@ class ConfidenceConformalizer(Conformalizer):
             self.other_losses[0],
             self.other_losses[1],
             self.matching_function,
-            alpha,
-            self.device,
+            alpha_cnf=alpha_cnf,
+            alpha_loc=alpha_loc,
+            alpha_cls=alpha_cls,
+            device=self.device,
             B=1,
             verbose=False,
         )
@@ -426,8 +430,10 @@ class ConfidenceConformalizer(Conformalizer):
             self.other_losses[0],
             self.other_losses[1],
             self.matching_function,
-            alpha,
-            self.device,
+            alpha_cnf=alpha_cnf,
+            alpha_loc=alpha_loc,
+            alpha_cls=alpha_cls,
+            device=self.device,
             B=0,
             verbose=False,
         )
@@ -974,7 +980,9 @@ class ODConformalizer(Conformalizer):
             lambda_confidence_minus, lambda_confidence_plus = (
                 self.confidence_conformalizer.calibrate(
                     predictions,
-                    alpha=alpha_confidence,
+                    alpha_cnf=alpha_confidence,
+                    alpha_loc=alpha_localization,
+                    alpha_cls=alpha_classification,
                     verbose=verbose,
                 )
             )
