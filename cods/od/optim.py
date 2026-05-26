@@ -46,7 +46,9 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         localization_loss: ODLoss,
         classification_loss: ODLoss,
         matching_function,
-        alpha: float,
+        alpha_cnf: float,
+        alpha_loc: float,
+        alpha_cls: float,
         device: str,
         B: float = 1,
         init_lambda: float = 1,
@@ -187,24 +189,17 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         _log_raw_localization_losses = localization_losses.copy()
         _log_raw_classification_losses = classification_losses.copy()
 
-        max_risk = torch.max(
-            torch.stack(
-                [confidence_risk, localization_risk, classification_risk],
-            ),
-        )
-        logger.info(f"First risk: {max_risk.detach().cpu().numpy()}")
-        if max_risk.detach().cpu().numpy() > alpha:
+        if confidence_risk.detach().cpu().numpy() > alpha_cnf or localization_risk.detach().cpu().numpy() > alpha_loc or classification_risk.detach().cpu().numpy() > alpha_cls:
             # Debug: all three risks to see why there isn't any solution
             logger.debug(f"Confidence risk: {confidence_risk}")
             logger.debug(f"Localization risk: {localization_risk}")
             logger.debug(f"Classification risk: {classification_risk}")
-            logger.debug(f"Max risk: {max_risk} > {alpha}. No solution found.")
             logger.warning(
                 "There does not exist any solution satisfying the constraints.",
             )
             return 1.0
         logger.debug(
-            f"Risk after 1st epoch is {max_risk.detach().cpu().numpy()} < {alpha}",
+            f"Risk after 1st epoch is {confidence_risk.detach().cpu().numpy()} < {alpha_cnf}",
         )
 
         previous_lbd = lambda_conf
@@ -219,11 +214,9 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             disable=not verbose,
         )
 
-        self.all_risks_raw = [max_risk.detach().cpu().numpy()]
         self.all_risks_raw_conf = [confidence_risk.detach().cpu().numpy()]
         self.all_risks_raw_loc = [localization_risk.detach().cpu().numpy()]
         self.all_risks_raw_cls = [classification_risk.detach().cpu().numpy()]
-        self.all_risks_mon = [max_risk.detach().cpu().numpy()]
         self.all_risks_mon_conf = [confidence_risk.detach().cpu().numpy()]
         self.all_risks_mon_loc = [localization_risk.detach().cpu().numpy()]
         self.all_risks_mon_cls = [classification_risk.detach().cpu().numpy()]
@@ -350,11 +343,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 B,
             )
 
-            max_risk = torch.max(
-                torch.stack(
-                    [confidence_risk, localization_risk, classification_risk],
-                ),
-            )
             _log_raw_confidence_risk = self._correct_risk(
                 _log_raw_confidence_losses,
                 len(predictions),
@@ -370,17 +358,7 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 len(predictions),
                 B,
             )
-            _log_raw_max_risk = torch.max(
-                torch.stack(
-                    [
-                        _log_raw_confidence_risk,
-                        _log_raw_localization_risk,
-                        _log_raw_classification_risk,
-                    ],
-                ),
-            )
             self.all_lbds.append(lambda_conf)
-            self.all_risks_raw.append(_log_raw_max_risk.detach().cpu().numpy())
             self.all_risks_raw_conf.append(
                 _log_raw_confidence_risk.detach().cpu().numpy(),
             )
@@ -391,7 +369,6 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 _log_raw_classification_risk.detach().cpu().numpy(),
             )
 
-            self.all_risks_mon.append(max_risk.detach().cpu().numpy())
             self.all_risks_mon_conf.append(
                 confidence_risk.detach().cpu().numpy()
                 if isinstance(confidence_risk, torch.Tensor)
@@ -409,12 +386,12 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             )
 
             pbar.set_description(
-                f"λ={lambda_conf}. Corrected Risk = {max_risk.detach().cpu().numpy():.4f}",
+                f"λ={lambda_conf}. Corrected Risk = {confidence_risk.detach().cpu().numpy():.4f}",
             )
 
-            if max_risk.detach().cpu().numpy() > alpha:
+            if confidence_risk.detach().cpu().numpy() > alpha_cnf or localization_risk.detach().cpu().numpy() > alpha_loc or classification_risk.detach().cpu().numpy() > alpha_cls:
                 logger.info(
-                    f"Solution Found: {previous_lbd} with risk {max_risk}",
+                    f"Solution Found: {previous_lbd} with risk {confidence_risk}",
                 )
 
                 print("--------------------------------------------------")
@@ -427,20 +404,16 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 confidence_risk_raw = self.all_risks_raw_conf[-2]
                 localization_risk_raw = self.all_risks_raw_loc[-2]
                 classification_risk_raw = self.all_risks_raw_cls[-2]
-                max_risk_raw = self.all_risks_raw[-2]
                 print(f"\tConfidence Risk: {confidence_risk_raw}")
                 print(f"\tLocalization Risk: {localization_risk_raw}")
                 print(f"\tClassification Risk: {classification_risk_raw}")
-                print(f"\tMax Risk: {max_risk_raw}")
                 print("All risks monotonized (precomputed):")
                 confidence_risk_mon = self.all_risks_mon_conf[-2]
                 localization_risk_mon = self.all_risks_mon_loc[-2]
                 classification_risk_mon = self.all_risks_mon_cls[-2]
-                max_risk_mon = self.all_risks_mon[-2]
                 print(f"\tConfidence Risk: {confidence_risk_mon}")
                 print(f"\tLocalization Risk: {localization_risk_mon}")
                 print(f"\tClassification Risk: {classification_risk_mon}")
-                print(f"\tMax Risk: {max_risk_mon}")
                 print("Confidence risk (recomputed):")
                 conf_losses = []
                 for i in range(len(predictions)):
