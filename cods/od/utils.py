@@ -152,8 +152,8 @@ def f_iou(boxA, boxB):
     """
     xA = max(boxA[0], boxB[0])
     yA = max(boxA[1], boxB[1])
-    xB = max(boxA[2], boxB[2])
-    yB = max(boxA[3], boxB[3])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
 
     interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
     boxAArea = (boxA[2] - boxA[0] + 1) * (boxA[3] - boxA[1] + 1)
