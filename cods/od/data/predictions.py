@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, List, Optional, Union
 
 import torch
@@ -109,6 +111,29 @@ class ODPredictions(Predictions):
                 uncertainty.to(device)
                 for uncertainty in self.pred_boxes_uncertainty
             ]
+
+    def get_subset(self, indices: List[int]) -> ODPredictions:
+        return ODPredictions(
+            dataset_name=self.dataset_name,
+            split_name=self.split_name,
+            image_paths=[self.image_paths[i] for i in indices],
+            image_shapes=[self.image_shapes[i] for i in indices],
+            true_boxes=[self.true_boxes[i] for i in indices],
+            pred_boxes=[self.pred_boxes[i] for i in indices],
+            confidences=[self.confidences[i] for i in indices],
+            true_cls=[self.true_cls[i] for i in indices],
+            pred_cls=[self.pred_cls[i] for i in indices],
+            names=[self.names[i] for i in indices],
+        )
+
+    def split(self, proportion:float=0.5)->tuple[ODPredictions, ODPredictions]:
+        n = len(self)
+        indices = torch.randperm(n).tolist()
+        split_idx = int(n * proportion)
+        subset1_indices = indices[:split_idx]
+        subset2_indices = indices[split_idx:]
+        return self.get_subset(subset1_indices), self.get_subset(subset2_indices)
+
 
 
 class ODParameters(Parameters):

@@ -1535,3 +1535,230 @@ class AsymptoticLocalizationObjectnessConformalizer(Conformalizer):
             set_size_loc,
             global_coverage,
         )
+
+
+
+class BonferroniConformalizer(ODConformalizer):
+    def __init__(
+        self,
+        guarantee_level: str = "image",
+        matching_function: str = "hausdorff",
+        confidence_threshold: float | None = None,
+        confidence_method: ConfidenceConformalizer | str = None,
+        localization_method: LocalizationConformalizer | str | None = None,
+        localization_prediction_set: str = "additive",  # Fix where we type check
+        classification_method: ClassificationConformalizer | str | None = None,
+        classification_prediction_set: str = "lac",  # Fix where we type check
+        optimizer="binary_search",
+        device="cpu",
+        split_cal_dataset:bool=False
+    ):
+        super().__init__(
+            backend="auto",
+            guarantee_level=guarantee_level,
+            matching_function=matching_function,
+            confidence_threshold=confidence_threshold,
+            multiple_testing_correction="bonferroni",
+            confidence_method=confidence_method,
+            localization_method=localization_method,
+            localization_prediction_set=localization_prediction_set,
+            classification_method=classification_method,
+            classification_prediction_set=classification_prediction_set,
+            optimizer=optimizer,
+            device=device,
+        )
+        self.split_cal_dataset = split_cal_dataset
+
+    def calibrate(
+        self,
+        predictions: ODPredictions,
+        global_alpha: float | None = None,
+        alpha_confidence: float | None = None,
+        alpha_localization: float | None = None,
+        alpha_classification: float | None = None,
+        verbose: bool = True,
+    ) -> ODParameters:
+        if self.split_cal_dataset:
+            cnf_predictions, second_step_predictions = predictions.split(0.5)
+        else:
+            cnf_predictions = predictions
+            second_step_predictions = predictions
+
+        if global_alpha is not None:
+            alpha_confidence: float = global_alpha / 3
+            alpha_localization: float = global_alpha / 3
+            alpha_classification: float = global_alpha / 3
+        elif None in [alpha_confidence, alpha_localization, alpha_classification]:
+            raise ValueError("When global_alpha is not provided, explicit alpha values for each conformalizer must be provided.")
+
+        # check that all the conformalizers has been given
+        assert None not in [
+                self.confidence_conformalizer,
+                self.localization_conformalizer,
+                self.classification_conformalizer,
+            ]
+
+        # Confidence
+        if self.confidence_conformalizer is not None:
+            if verbose:
+                logger.info("Calibrating Confidence Conformalizer")
+
+            _, lambda_confidence_plus = (
+                self.confidence_conformalizer.calibrate(
+                    cnf_predictions,
+                    alpha_cnf=alpha_confidence,
+                    alpha_loc=alpha_localization,
+                    alpha_cls=alpha_classification,
+                    verbose=verbose,
+                )
+            )
+
+            lambda_confidence_minus = lambda_confidence_plus
+
+            # Unique to Confidence due to dependence
+            logger.info("Setting Confidence Threshold of Predictions")
+            self.confidence_conformalizer.conformalize(
+                second_step_predictions,
+                verbose=verbose,
+            )
+            self.confidence_threshold = (
+                1 - lambda_confidence_plus
+            )  # predictions.confidence_threshold
+
+            optimistic_confidence_threshold = 1 - lambda_confidence_minus
+
+            if verbose:
+                logger.info(
+                    f"Calibrated Confidence λ : {lambda_confidence_plus:.4f}\n\t and associated Confidence Threshold : {second_step_predictions.confidence_threshold}",
+                )
+        else:
+            second_step_predictions.confidence_threshold = self.confidence_threshold
+            second_step_predictions.matching = None
+            optimistic_confidence_threshold = self.confidence_threshold
+            lambda_confidence_minus = None
+            lambda_confidence_plus = None
+
+        # Now that we fixed the confidence threshold, we need to do the matching before moving on to the next steps
+
+        if second_step_predictions.matching is not None:
+            logger.warning("Overwriting previous matching")
+        if verbose:
+            logger.info("Matching Predictions to True Boxes")
+
+        match_predictions_to_true_boxes(
+            second_step_predictions,  # ref to predictions object, modified in place within func call
+            distance_function=self.matching_function,
+            verbose=verbose,
+            overload_confidence_threshold=optimistic_confidence_threshold,
+        )
+
+        # Localization
+
+        if self.localization_conformalizer is not None:
+            if verbose:
+                logger.info("Calibrating Localization Conformalizer")
+
+            lambda_localization = self.localization_conformalizer.calibrate(
+                second_step_predictions,
+                alpha=alpha_localization,
+                verbose=verbose,
+                overload_confidence_threshold=optimistic_confidence_threshold,
+            )
+
+            if verbose:
+                logger.info(
+                    f"Calibrated Localization λ : {lambda_localization}",
+                )
+
+        # Classification
+
+        if self.classification_conformalizer is not None:
+            if verbose:
+                logger.info("Calibrating Classification Conformalizer")
+
+            lambda_classification = self.classification_conformalizer.calibrate(
+                second_step_predictions,
+                alpha=alpha_classification,
+                verbose=verbose,
+                overload_confidence_threshold=optimistic_confidence_threshold,
+            )
+
+            if verbose:
+                logger.info(
+                    f"Calibrated Classification λ : {lambda_classification}",
+                )
+
+        result = ODParameters(
+            predictions_id=None,
+            global_alpha=global_alpha,
+            alpha_confidence=alpha_confidence,
+            alpha_localization=alpha_localization,
+            alpha_classification=alpha_classification,
+            lambda_confidence_plus=lambda_confidence_plus,
+            lambda_confidence_minus=lambda_confidence_minus,
+            lambda_localization=lambda_localization,
+            lambda_classification=lambda_classification,
+            confidence_threshold=1 - lambda_confidence_plus,
+        )
+
+        # Saving the last parameters id to conformalize the predictions
+        self._last_parameters_id = result.unique_id
+
+        return result
+
+class SplitCalBonferroniConformalizer(BonferroniConformalizer):
+    def __init__(
+        self,
+        guarantee_level: str = "image",
+        matching_function: str = "hausdorff",
+        confidence_threshold: float | None = None,
+        confidence_method: ConfidenceConformalizer | str = None,
+        localization_method: LocalizationConformalizer | str | None = None,
+        localization_prediction_set: str = "additive",  # Fix where we type check
+        classification_method: ClassificationConformalizer | str | None = None,
+        classification_prediction_set: str = "lac",  # Fix where we type check
+        optimizer="binary_search",
+        device="cpu",
+    ):
+        super().__init__(
+            guarantee_level=guarantee_level,
+            matching_function=matching_function,
+            confidence_threshold=confidence_threshold,
+            confidence_method=confidence_method,
+            localization_method=localization_method,
+            localization_prediction_set=localization_prediction_set,
+            classification_method=classification_method,
+            classification_prediction_set=classification_prediction_set,
+            optimizer=optimizer,
+            device=device,
+            split_cal_dataset=True
+        )
+
+class DoubleCRCConformalizer(ODConformalizer):
+    def __init__(
+        self,
+        guarantee_level: str = "image",
+        matching_function: str = "hausdorff",
+        confidence_threshold: float = 0.5,
+        multiple_testing_correction: str | None = None,
+        localization_method: LocalizationConformalizer | str | None = None,
+        localization_prediction_set: str = "additive",  # Fix where we type check
+        classification_method: ClassificationConformalizer | str | None = None,
+        classification_prediction_set: str = "lac",  # Fix where we type check
+        optimizer="binary_search",
+        device="cpu",
+    ):
+        super().__init__(
+            backend="auto",
+            guarantee_level=guarantee_level,
+            matching_function=matching_function,
+            confidence_threshold=confidence_threshold,
+            multiple_testing_correction=multiple_testing_correction,
+            confidence_method=None,
+            localization_method=localization_method,
+            localization_prediction_set=localization_prediction_set,
+            classification_method=classification_method,
+            classification_prediction_set=classification_prediction_set,
+            optimizer=optimizer,
+            device=device,
+        )
