@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
-from cods.od.models import DETRModel, YOLOModel
+from cods.od.models import COCODETRModel, COCOYOLOModel
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = (
@@ -57,9 +57,9 @@ def setup_experiment(
         raise ValueError(f"Model name {model_name} not in {MODEL_NAMES}")
 
     if model_name == "yolov8x.pt":
-        model = YOLOModel(model_name=model_name, pretrained=True, device="cpu")
+        model = COCOYOLOModel(model_name=model_name, device="cpu")
     else:
-        model = DETRModel(model_name=model_name, pretrained=True, device="cpu")
+        model = COCODETRModel(model_name=model_name, device="cpu")
 
     preds_cal = model.build_predictions(
         data_cal,

@@ -5,7 +5,7 @@ import traceback
 
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
-from cods.od.models import YOLOModel
+from cods.od.models import COCOYOLOModel
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = (
@@ -34,7 +34,7 @@ if use_smaller_subset:
 else:
     data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)
 
-model = YOLOModel(model_name="yolov8x.pt", pretrained=True)
+model = COCOYOLOModel(model_name="yolov8x.pt")
 
 
 print(f"{len(data) = }")

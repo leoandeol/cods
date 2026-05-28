@@ -8,7 +8,7 @@ import numpy as np
 
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
-from cods.od.models import DETRModel
+from cods.od.models import COCODETRModel
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"  # see issue #152
 os.environ["CUDA_VISIBLE_DEVICES"] = (
@@ -36,8 +36,8 @@ else:
     data_cal, data_val = data.split_dataset(calibration_ratio, shuffle=False)
 
 # model and weights are downloaded from https://github.com/facebookresearch/detr
-model = DETRModel(model_name="detr_resnet50", pretrained=True, device="cpu")
-# model = YOLOModel(model_name="yolov8x.pt", pretrained=True)
+model = COCODETRModel(model_name="detr_resnet50", device="cpu")
+# model = COCOYOLOModel(model_name="yolov8x.pt", pretrained=True)
 
 
 print(f"{len(data) = }")

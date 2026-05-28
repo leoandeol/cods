@@ -19,7 +19,7 @@ class Model:
         device="cpu",
     ):
         self.model_name = model_name
-        self.model = None  # TODO: add model loading
+        #self.model = None  # TODO: add model loading
         self.pretrained = pretrained
         self.weights = weights
         self.device = device

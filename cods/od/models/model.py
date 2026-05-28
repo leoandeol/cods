@@ -272,3 +272,4 @@ class ODModel(Model):
 
         """
         raise NotImplementedError("Please Implement this method")
+

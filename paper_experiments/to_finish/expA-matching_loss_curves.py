@@ -11,7 +11,7 @@ from cods.od.loss import (
     ODBinaryClassificationLoss,
     PixelWiseRecallLoss,
 )
-from cods.od.models import DETRModel, YOLOModel
+from cods.od.models import COCODETRModel, COCOYOLOModel
 from cods.od.utils import (
     assymetric_hausdorff_distance_old,
     generalized_iou,
@@ -280,14 +280,14 @@ def build_plots(models):
 
 
 if __name__ == "__main__":
-    model_detr50 = DETRModel(
-        model_name="detr_resnet50", pretrained=True, device="cpu"
+    model_detr50 = COCODETRModel(
+        model_name="detr_resnet50", device="cpu"
     )
-    model_detr101 = DETRModel(
-        model_name="detr_resnet101", pretrained=True, device="cpu"
+    model_detr101 = COCODETRModel(
+        model_name="detr_resnet101", device="cpu"
     )
-    model_yolov8x = YOLOModel(
-        model_name="yolov8x.pt", pretrained=True, device="cpu"
+    model_yolov8x = COCOYOLOModel(
+        model_name="yolov8x.pt", device="cpu"
     )
 
     build_plots([model_detr50, model_detr101, model_yolov8x])

@@ -14,7 +14,8 @@ from tqdm import tqdm
 from cods.od.cp import ODConformalizer
 from cods.od.data import MSCOCODataset
 from cods.od.metrics import get_recall_precision
-from cods.od.models import DETRModel, YOLOModel
+from cods.od.models import COCODETRModel
+from cods.od.models import COCOYOLOModel
 
 logger = getLogger("cods")
 
@@ -28,7 +29,7 @@ class Benchmark:
         }
     )
 
-    MODELS = MappingProxyType({"detr": DETRModel, "yolo": YOLOModel})
+    MODELS = MappingProxyType({"detr": COCODETRModel, "yolo": COCOYOLOModel})
 
     def __init__(self, config, device):
         self.config = config
@@ -154,7 +155,6 @@ class Benchmark:
                 f"Model {experiment['model']} not implemented yet.",
             )
         model = self.MODELS[experiment["model"]](
-            pretrained=True,
             device=self.device,
         )
 
