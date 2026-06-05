@@ -30,10 +30,9 @@ from cods.od.loss import (
     ODBinaryClassificationLoss,
     ODLoss,
     PixelWiseRecallLoss,
+    RecallMimickingCnfLoss,
     ThresholdedBoxDistanceConfidenceLoss,
     ThresholdedRecallLoss,
-    InjectiveMatchingRMCL,
-    NonInjectiveMatchingRMCL
 )
 from cods.od.metrics import ODEvaluator, compute_global_coverage
 from cods.od.optim import (
@@ -348,8 +347,7 @@ class ConfidenceConformalizer(Conformalizer):
             "box_count_recall": BoxCountRecallConfidenceLoss,
             "box_thresholded_distance": ThresholdedBoxDistanceConfidenceLoss,
             "box_count_twosided_recall": BoxCountTwosidedConfidenceLoss,
-            "injective_RMCL": InjectiveMatchingRMCL,
-            "non_injective_RMCL": NonInjectiveMatchingRMCL,
+            "RMCL": RecallMimickingCnfLoss,
         }
     )
 

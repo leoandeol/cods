@@ -861,16 +861,13 @@ def get_all_mappings(n_inputs, n_outputs, injections_only=False):
         return product(range(n_outputs), repeat=n_inputs)
 
 class RecallMimickingCnfLoss(ODLoss):
-
     def __init__(self,
                  upper_bound: int = 1,
                  iou_threshold:float = 0.5,
-                 injective_matching:bool=True,
                  device: str = "cpu",
                  ):
         super().__init__(upper_bound=upper_bound, device=device)
         self.iou_threshold = iou_threshold
-        self.injective_matching = injective_matching
 
     def __call__(
         self,
@@ -878,69 +875,36 @@ class RecallMimickingCnfLoss(ODLoss):
         true_cls: torch.Tensor, # shape (n_true,)
         conf_boxes: torch.Tensor, # shape (n_conf, 4)
         conf_cls: torch.Tensor, # shape (n_conf, n_classes)
+        *,
+        matching:list[list[int]]
     ) -> torch.Tensor:
-        # Cas limites
-        if len(true_boxes) == 0:
+        n_true = len(true_boxes)
+
+        if n_true == 0:
             return torch.zeros(1, device=self.device)
+
         if len(conf_boxes) == 0:
             return torch.ones(1, device=self.device)
 
-        pred_top1 = conf_cls.argmax(dim=-1) # shape (n_conf,)
-        ious = box_iou(true_boxes.float(), conf_boxes.float())
+        s = 0
 
-        loc_ok = ious >= self.iou_threshold
-        cls_ok = true_cls[:, None] == pred_top1[None, :]
+        for j in range(n_true):
+            bj = true_boxes[j : j + 1].float()
+            cj = true_cls[j]
 
-        # matrix of acceptable matches between true boxes and predicted boxes
-        good_matches = torch.logical_and(loc_ok, cls_ok)
+            pi_x_j = matching[j]
 
-        if self.injective_matching:
-            n_matched = self.max_binary_matching(good_matches)
-        else:
-            n_matched = good_matches.any(dim=1).float().sum()
+            for pred_idx in pi_x_j:
+                b_pi_x_j = conf_boxes[pred_idx : pred_idx + 1].float()
+                c_pi_x_j = conf_cls[pred_idx]
 
-        recall = n_matched / len(true_boxes)
-        return 1 - recall.reshape(1)
+                predicted_class = c_pi_x_j.argmax(dim=-1)
 
-    def max_binary_matching(self, good_matches: torch.Tensor) -> torch.Tensor:
-        good = good_matches.detach().cpu().bool()
-        n_gt, n_pred = good.shape
+                iou_j = box_iou(bj, b_pi_x_j)[0, 0]
 
-        pred_to_gt = [-1] * n_pred
-
-        def try_match(gt_idx, seen):
-            for pred_idx in range(n_pred):
-                if not good[gt_idx, pred_idx] or seen[pred_idx]:
-                    continue
-
-                seen[pred_idx] = True
-
-                if pred_to_gt[pred_idx] == -1 or try_match(pred_to_gt[pred_idx], seen):
-                    pred_to_gt[pred_idx] = gt_idx
-                    return True
-
-            return False
-
-        matched = 0
-        for gt_idx in range(n_gt):
-            seen = [False] * n_pred
-            if try_match(gt_idx, seen):
-                matched += 1
-
-        return torch.tensor(float(matched), device=self.device)
-    
-class InjectiveMatchingRMCL(RecallMimickingCnfLoss):
-    def __init__(self,
-                 upper_bound: int = 1,
-                 iou_threshold:float = 0.5,
-                 device: str = "cpu",
-                 ):
-        super().__init__(upper_bound=upper_bound, iou_threshold=iou_threshold, injective_matching=True, device=device)
-
-class NonInjectiveMatchingRMCL(RecallMimickingCnfLoss):
-    def __init__(self,
-                 upper_bound: int = 1,
-                 iou_threshold:float = 0.5,
-                 device: str = "cpu",
-                 ):
-        super().__init__(upper_bound=upper_bound, iou_threshold=iou_threshold, injective_matching=False, device=device)
+                if iou_j >= self.iou_threshold and predicted_class == cj:
+                    s += 1
+                    break
+        
+        res = 1 - s / n_true
+        return torch.tensor(res, device=self.device, dtype=torch.float32)

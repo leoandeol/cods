@@ -108,7 +108,7 @@ class VOCDataset(VOCDetection):
         dataset_1 = VOCDataset(
             root=self.root,
             year=self.year,
-            image_set=self.image_set,
+            split=self.split,
             download=False,
             transforms=self.transforms,
             indices=indices_1,
@@ -117,7 +117,7 @@ class VOCDataset(VOCDetection):
         dataset_2 = VOCDataset(
             root=self.root,
             year=self.year,
-            image_set=self.image_set,
+            split=self.split,
             download=False,
             transforms=self.transforms,
             indices=indices_2,

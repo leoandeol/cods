@@ -111,6 +111,7 @@ class ODPredictions(Predictions):
                 uncertainty.to(device)
                 for uncertainty in self.pred_boxes_uncertainty
             ]
+        return self
 
     def get_subset(self, indices: List[int]) -> ODPredictions:
         return ODPredictions(
@@ -123,7 +124,7 @@ class ODPredictions(Predictions):
             confidences=[self.confidences[i] for i in indices],
             true_cls=[self.true_cls[i] for i in indices],
             pred_cls=[self.pred_cls[i] for i in indices],
-            names=[self.names[i] for i in indices],
+            names=self.names,
         )
 
     def split(self, proportion:float=0.5)->tuple[ODPredictions, ODPredictions]:

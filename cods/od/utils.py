@@ -490,7 +490,8 @@ def apply_margins(pred_boxes: list[torch.Tensor], Qs: float, mode: str = "additi
     n = len(pred_boxes)
     new_boxes = []
     device = pred_boxes[0].device
-    Qst = torch.FloatTensor([np.array(Qs)]).to(device)
+    Qst = torch.as_tensor(np.asarray(Qs), dtype=torch.float32, device=device).unsqueeze(0)
+    #Qst = torch.FloatTensor([np.array(Qs)]).to(device)
     correction_factor = torch.FloatTensor([[-1, -1, 1, 1]]).to(device)
 
     for i in range(n):

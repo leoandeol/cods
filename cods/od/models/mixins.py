@@ -29,26 +29,43 @@ class COCOLikeTargetMixin:
             torch.tensor(boxes, dtype=torch.float32),
             torch.tensor(labels, dtype=torch.long),
         )
-
 class TargetProjectionMixin:
-    TARGET_TO_COCO_NAME: ClassVar[dict[str, str]]
+    TARGET_TO_COCO_NAME: ClassVar[dict[str, str | None]]
     SOURCE_CLASSES: ClassVar[list[str]]
+
+    unsupported_score: float = 1e-12
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        source_to_idx = {name: idx for idx, name in enumerate(self.SOURCE_CLASSES) if name is not None and name != "N/A"}
+
+        source_to_idx = {
+            name: idx
+            for idx, name in enumerate(self.SOURCE_CLASSES)
+            if name is not None and name != "N/A"
+        }
 
         self.target_to_source_idx = torch.tensor(
             [
-                source_to_idx[source_name]
+                -1 if source_name is None else source_to_idx[source_name]
                 for source_name in self.TARGET_TO_COCO_NAME.values()
             ],
             dtype=torch.long,
         )
 
-    def map_source_probs(self, yolo_probs: torch.Tensor) -> torch.Tensor:
-        idx = self.target_to_source_idx.to(yolo_probs.device)
-        return yolo_probs[..., idx]
+    def map_source_probs(self, source_probs: torch.Tensor) -> torch.Tensor:
+        idx = self.target_to_source_idx.to(source_probs.device)
+
+        out = torch.full(
+            (*source_probs.shape[:-1], len(idx)),
+            fill_value=self.unsupported_score,
+            dtype=source_probs.dtype,
+            device=source_probs.device,
+        )
+
+        supported = idx >= 0
+        out[..., supported] = source_probs[..., idx[supported]]
+
+        return out
 
 class BDD100KModelMixin(TargetProjectionMixin, COCOLikeTargetMixin):
     TARGET_TO_COCO_NAME: ClassVar[dict[str, str]] = {
@@ -57,7 +74,7 @@ class BDD100KModelMixin(TargetProjectionMixin, COCOLikeTargetMixin):
         "car": "car",
         "motor": "motorcycle",
         "person": "person",
-        "rider": "person",
+        "rider": None,
         "traffic light": "traffic light",
         "traffic sign": "stop sign",
         "train": "train",

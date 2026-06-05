@@ -111,10 +111,17 @@ class YOLOModel(ABC, ODModel):
         out_boxes = box_output[:, :4]
         boxes = xywh2xyxy_scaled(out_boxes, width_scale, height_scale)
 
-        yolo_probs = torch.softmax(box_output[:, 4:], dim=-1)
-        pred_cls = self.map_source_probs(yolo_probs)
+        # yolo_probs = torch.softmax(box_output[:, 4:], dim=-1)
+        yolo_probs = box_output[:, 4:]
 
-        confidences = pred_cls.max(dim=-1).values
+        mapped_scores = self.map_source_probs(yolo_probs)
+
+        confidences = mapped_scores.max(dim=-1).values
+
+        pred_cls = mapped_scores / mapped_scores.sum(
+            dim=-1,
+            keepdim=True,
+        ).clamp_min(1e-12)
 
         return boxes, confidences, pred_cls
 
@@ -184,8 +191,18 @@ class YOLOModel(ABC, ODModel):
         }
 
 class COCOYOLOModel(COCOLikeTargetMixin, YOLOModel):
-    unused_coco_91:ClassVar[list[int]] = {0, 12, 26, 29, 30, 45, 66, 68, 69, 71, 83, 91}
-    convert_to_91:ClassVar[torch.Tensor] = torch.tensor(list(set(range(91)) - set(unused_coco_91)), dtype=torch.long)
+    COCO91_USED_IDS: ClassVar[list[int]] = [
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19,
+        20, 21, 22, 23, 24, 25, 27, 28, 31, 32, 33, 34, 35, 36, 37, 38,
+        39, 40, 41, 42, 43, 44, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+        56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 67, 70, 72, 73, 74, 75,
+        76, 77, 78, 79, 80, 81, 82, 84, 85, 86, 87, 88, 89, 90,
+    ]
+
+    CONVERT_TO_91: ClassVar[torch.Tensor] = torch.tensor(
+        COCO91_USED_IDS,
+        dtype=torch.long,
+    )
     def map_source_probs(self, yolo_probs: torch.Tensor) -> torch.Tensor:
         cls_probs_new = torch.zeros(
             yolo_probs.shape[0],
@@ -193,7 +210,7 @@ class COCOYOLOModel(COCOLikeTargetMixin, YOLOModel):
             device=yolo_probs.device,
             dtype=yolo_probs.dtype,
         )
-        cls_probs_new[:, self.convert_to_91.to(yolo_probs.device)] = yolo_probs
+        cls_probs_new[:, self.CONVERT_TO_91.to(yolo_probs.device)] = yolo_probs
         return cls_probs_new
 
 class BDD100KYOLOModel(BDD100KModelMixin, YOLOModel):

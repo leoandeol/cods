@@ -125,10 +125,15 @@ class DETRModel(ABC, ODModel):
         # confidences = confidence_probas.max(-1).values
 
         detr_probs = F.softmax(out_logits, -1)[..., :-1]
-        pred_cls = self.map_source_probs(detr_probs)
 
-        confidences = pred_cls.max(-1).values
-        # pred_cls, cls_label = prob[..., :-1].max(-1)
+        mapped_scores = self.map_source_probs(detr_probs)
+
+        confidences = mapped_scores.max(dim=-1).values
+
+        pred_cls = mapped_scores / mapped_scores.sum(
+            dim=-1,
+            keepdim=True,
+        ).clamp_min(1e-12)
 
         return scaled_pred_boxes, confidences, pred_cls
 

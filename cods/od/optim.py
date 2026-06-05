@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from cods.base.optim import Optimizer
 from cods.od.data import ODPredictions
-from cods.od.loss import ODLoss
+from cods.od.loss import ODLoss, RecallMimickingCnfLoss
 from cods.od.utils import apply_margins, match_predictions_to_true_boxes
 
 logger = getLogger("cods")
@@ -108,12 +108,19 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 else torch.tensor([]).float().to(device)
             )
 
+            loss_kwargs = {}
+            if isinstance(confidence_loss, RecallMimickingCnfLoss):
+                loss_kwargs = {
+                    "matching":predictions.matching[i]
+                }
+
             # no confidence filtering here because lambda_conf = 1 for this first loop
             confidence_loss_i = confidence_loss(
                 true_boxes_i,
                 true_cls_i,
                 pred_boxes_i,
                 pred_cls_i,
+                **loss_kwargs
             )
 
             tmp_matched_boxes_i = [
@@ -245,12 +252,12 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 else torch.tensor([]).float().to(device)
             )
 
-            confidence_loss_i = confidence_loss(
-                true_boxes_i,
-                true_cls_i,
-                pred_boxes_i,
-                pred_cls_i,
-            )
+            # confidence_loss_i = confidence_loss(
+            #     true_boxes_i,
+            #     true_cls_i,
+            #     pred_boxes_i,
+            #     pred_cls_i,
+            # )
 
             matching_i = match_predictions_to_true_boxes(
                 predictions,
@@ -261,6 +268,20 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             )
 
             predictions.matching[i] = matching_i
+
+            loss_kwargs = {}
+            if isinstance(confidence_loss, RecallMimickingCnfLoss):
+                loss_kwargs = {
+                    "matching": matching_i,
+                }
+
+            confidence_loss_i = confidence_loss(
+                true_boxes_i,
+                true_cls_i,
+                pred_boxes_i,
+                pred_cls_i,
+                **loss_kwargs
+            )
 
             tmp_matched_boxes_i = [
                 (
@@ -415,57 +436,57 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 print(f"\tLocalization Risk: {localization_risk_mon}")
                 print(f"\tClassification Risk: {classification_risk_mon}")
                 print("Confidence risk (recomputed):")
-                conf_losses = []
-                for i in range(len(predictions)):
-                    true_boxes_i = true_boxes[i]
-                    pred_boxes_i = pred_boxes[i]
-                    pred_cls_i = pred_cls[i]
-                    confidences_i = confidences[i]
-                    true_cls_i = true_cls[i]
+                # conf_losses = []
+                # for i in range(len(predictions)):
+                #     true_boxes_i = true_boxes[i]
+                #     pred_boxes_i = pred_boxes[i]
+                #     pred_cls_i = pred_cls[i]
+                #     confidences_i = confidences[i]
+                #     true_cls_i = true_cls[i]
 
-                    matching_i = predictions.matching[i]
+                #     matching_i = predictions.matching[i]
 
-                    pred_boxes_i = pred_boxes_i[confidences_i >= 1 - previous_lbd]
-                    pred_cls_i = [
-                        x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - previous_lbd
-                    ]
-                    confidence_loss_i = confidence_loss(
-                        true_boxes_i,
-                        true_cls_i,
-                        pred_boxes_i,
-                        pred_cls_i,
-                    )
+                #     pred_boxes_i = pred_boxes_i[confidences_i >= 1 - previous_lbd]
+                #     pred_cls_i = [
+                #         x for x, c in zip(pred_cls_i, confidences_i) if c >= 1 - previous_lbd
+                #     ]
+                #     confidence_loss_i = confidence_loss(
+                #         true_boxes_i,
+                #         true_cls_i,
+                #         pred_boxes_i,
+                #         pred_cls_i,
+                #     )
 
-                    conf_losses.append(confidence_loss_i)
-                conf_losses = torch.stack(conf_losses)
-                print(f"\tConfidence Risk: {torch.mean(conf_losses)}")
-                confidence_losses = torch.stack(confidence_losses)
-                print("Comparison of the two :")
-                print(
-                    f"\t (isclose) {torch.isclose(conf_losses, confidence_losses).float().mean()}",
-                )
-                print(
-                    f"\t (eq) {torch.eq(conf_losses, confidence_losses).float().mean()}",
-                )
-                # now get the indices of where the losses differ, and print the image id as well as the two losses, for about 20 images
-                diff_indices = torch.where(
-                    torch.ne(conf_losses, confidence_losses),
-                )[0]
-                for i in diff_indices[:10]:
-                    print(
-                        f"\tImage {i} loss: {conf_losses[i]} (eval) vs {confidence_losses[i]} (opti)",
-                    )
-                    print(
-                        f"\tImage {i} confidence: {predictions.confidences[i]}",
-                    )
-                    # print number of ground truths
-                    print(
-                        f"\tImage {i} number of ground truths: {len(predictions.true_boxes[i])}",
-                    )
-                    print(
-                        f"\tImage {i} number of predictions: {len(predictions.pred_boxes[i][predictions.confidences[i] >= 1 - previous_lbd])}",
-                    )
-                print("--------------------------------------------------")
+                #     conf_losses.append(confidence_loss_i)
+                # conf_losses = torch.stack(conf_losses)
+                # print(f"\tConfidence Risk: {torch.mean(conf_losses)}")
+                # confidence_losses = torch.stack(confidence_losses)
+                # print("Comparison of the two :")
+                # print(
+                #     f"\t (isclose) {torch.isclose(conf_losses, confidence_losses).float().mean()}",
+                # )
+                # print(
+                #     f"\t (eq) {torch.eq(conf_losses, confidence_losses).float().mean()}",
+                # )
+                # # now get the indices of where the losses differ, and print the image id as well as the two losses, for about 20 images
+                # diff_indices = torch.where(
+                #     torch.ne(conf_losses, confidence_losses),
+                # )[0]
+                # for i in diff_indices[:10]:
+                #     print(
+                #         f"\tImage {i} loss: {conf_losses[i]} (eval) vs {confidence_losses[i]} (opti)",
+                #     )
+                #     print(
+                #         f"\tImage {i} confidence: {predictions.confidences[i]}",
+                #     )
+                #     # print number of ground truths
+                #     print(
+                #         f"\tImage {i} number of ground truths: {len(predictions.true_boxes[i])}",
+                #     )
+                #     print(
+                #         f"\tImage {i} number of predictions: {len(predictions.pred_boxes[i][predictions.confidences[i] >= 1 - previous_lbd])}",
+                #     )
+                # print("--------------------------------------------------")
                 return previous_lbd
         return lambda_conf
 
