@@ -1006,6 +1006,7 @@ class ODConformalizer(Conformalizer):
         localization_prediction_set: str = "additive",  # Fix where we type check
         classification_method: ClassificationConformalizer | str | None = None,
         classification_prediction_set: str = "lac",  # Fix where we type check
+        evaluation_confidence_loss: ODLoss | str | None = None,
         optimizer="binary_search",
         device="cpu",
         mode:str = "seqcrc",
@@ -1156,10 +1157,18 @@ class ODConformalizer(Conformalizer):
             self.confidence_method = confidence_method.loss_name
             self.confidence_method.matching_function = matching_function
 
+        if isinstance(evaluation_confidence_loss, ODLoss):
+            self.evaluation_confidence_loss = evaluation_confidence_loss
+        elif isinstance(evaluation_confidence_loss, str):
+            if evaluation_confidence_loss in ConfidenceConformalizer.ACCEPTED_LOSSES:
+                self.evaluation_confidence_loss = ConfidenceConformalizer.ACCEPTED_LOSSES[evaluation_confidence_loss](device=device)
+            else:
+                raise ValueError(f"Unknown Loss {evaluation_confidence_loss}")
+
         self.evaluator = ODEvaluator(
             confidence_loss=self.confidence_conformalizer.loss
             if self.confidence_conformalizer
-            else None,
+            else self.evaluation_confidence_loss,
             localization_loss=self.localization_conformalizer.loss
             if self.localization_conformalizer
             else None,
@@ -1525,7 +1534,7 @@ class ODConformalizer(Conformalizer):
         if verbose:
             # log results
             logger.info("Evaluation Results:")
-            if self.confidence_conformalizer is not None:
+            if self.confidence_conformalizer is not None or self.evaluation_confidence_loss is not None:
                 logger.info("\t Confidence:")
                 logger.info(f"\t\t Risk: {torch.mean(coverage_obj):.2f}")
                 logger.info(
