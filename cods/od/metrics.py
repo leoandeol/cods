@@ -13,6 +13,7 @@ from cods.od.data import (
     ODResults,
 )
 from cods.od.utils import f_iou
+from cods.od.loss import RecallMimickingCnfLoss
 
 logger = getLogger("cods")
 
@@ -451,11 +452,19 @@ class ODEvaluator:
             conf_cls_i = [x for x, c in zip(conf_cls_i, confidences_i) if c >= confidence_threshold]
 
             if self.confidence_loss is not None:
+                loss_kwargs = {}
+
+                if isinstance(self.confidence_loss, RecallMimickingCnfLoss):
+                    loss_kwargs = {
+                        "matching": predictions.matching[i],
+                    }
+
                 confidence_loss_i = self.confidence_loss(
                     true_boxes_i,
                     true_cls_i,
-                    pred_boxes_i,
-                    pred_cls_i,  # conf_boxes_i, conf_cls_i
+                    conf_boxes_i,
+                    conf_cls_i,
+                    **loss_kwargs,
                 )
                 confidence_set_size_i = pred_boxes_i.shape[0]
 

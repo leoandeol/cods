@@ -907,4 +907,4 @@ class RecallMimickingCnfLoss(ODLoss):
                     break
         
         res = 1 - s / n_true
-        return torch.tensor(res, device=self.device, dtype=torch.float32)
+        return torch.tensor([res], device=self.device, dtype=torch.float32)

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 import logging
 from types import MappingProxyType
 
 import torch
+
+#from scipy.optimize import brentq
 
 from cods.base.cp import Conformalizer
 from cods.base.optim import (
@@ -65,6 +68,124 @@ TODO:
 
 ################ BASIC BRICS #####################
 
+def solve_crc(
+            R_n,
+            n,
+            alpha,
+            B,
+            bounds:tuple[float, float] = (0, 1),
+    ):
+    if n == 0:
+        raise ValueError("Cannot calibrate on empty predictions.")
+    B = float(B)
+
+    def f_to_minimize(lambda_):
+        corrected_risk = n / (n + 1) * R_n(lambda_) + B / (n + 1)
+        if isinstance(corrected_risk, torch.Tensor):
+            corrected_risk = corrected_risk.item()
+        return corrected_risk
+        # return float(corrected_risk - alpha)
+
+    #a, b = bounds
+    # TODO : remplacer brent par binary search de base.optim
+    # ajouter les parametres qui vont bien
+    bso = BinarySearchOptimizer()
+    return bso.optimize(
+        f_to_minimize,
+        alpha=alpha,
+        bounds=bounds,
+        steps=40,   
+    )
+
+    #return brentq(f_to_minimize, a=a, b=b)
+
+def evaluate_risk(
+    lbd,
+    loss,
+    predictions,
+    build_predictions,
+    matching_function,
+    lambda_conf,
+):
+
+    true_boxes = predictions.true_boxes
+    pred_boxes = predictions.pred_boxes
+    true_cls = predictions.true_cls
+    pred_cls = predictions.pred_cls
+    confidences = predictions.confidences
+    device = predictions.true_boxes[0].device
+
+
+    match_predictions_to_true_boxes(
+        predictions,
+        distance_function=matching_function,
+        verbose=False,
+        overload_confidence_threshold=1 - lambda_conf,
+    )
+
+    losses = []
+
+    for i in range(len(predictions)):
+        true_boxes_i = true_boxes[i]
+        true_cls_i = true_cls[i]
+        confidences_i = confidences[i]
+
+        pred_boxes_i = pred_boxes[i][confidences_i >= 1 - lambda_conf]
+        pred_cls_i = [x for x, c in zip(pred_cls[i], confidences_i) if c >= 1 - lambda_conf]
+
+        matching_i = predictions.matching[i]
+        # matching_i = match_predictions_to_true_boxes(
+        #     predictions,
+        #     distance_function=matching_function,
+        #     verbose=False,
+        #     overload_confidence_threshold=1 - lambda_conf,
+        #     idx=i,
+        # )
+
+        pred_cls_i = (
+            torch.stack(pred_cls_i)
+            if len(pred_cls_i) > 0
+            else torch.tensor([]).float().to(device)
+        )
+
+        tmp_matched_boxes_i = [
+            (
+                torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
+        matched_pred_boxes_i = (
+            torch.stack(tmp_matched_boxes_i)
+            if len(tmp_matched_boxes_i) > 0
+            else torch.tensor([]).float().to(device)
+        )
+        matched_pred_cls_i = [
+            (
+                torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+                if len(matching_i[j]) > 0
+                else torch.tensor([]).float().to(device)
+            )
+            for j in range(len(true_boxes_i))
+        ]
+
+        matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
+            matched_pred_boxes_i,
+            matched_pred_cls_i,
+            lbd,
+        )
+
+        loss_i = loss(
+            true_boxes_i,
+            true_cls_i,
+            matched_conf_boxes_i,
+            matched_conf_cls_i,
+        )
+
+        losses.append(loss_i)
+    return torch.cat(losses).mean()
+
 
 class LocalizationConformalizer(Conformalizer):
     """A class for performing localization conformalization. Should be used within an ODConformalizer.
@@ -123,6 +244,7 @@ class LocalizationConformalizer(Conformalizer):
         optimizer: str | Optimizer | None = None,
         backend: str = "auto",
         device: str = "cpu",
+        mode:str = "seqcrc",
     ):
         """Initialize the CP class.
 
@@ -147,6 +269,10 @@ class LocalizationConformalizer(Conformalizer):
 
         """
         super().__init__()
+        self.mode = mode.lower()
+        if self.mode != "seqcrc" and self.mode != "crc":
+            raise ValueError(f"mode {mode} not accepted, must be one of ['seqcrc', 'crc']")
+
         self.device = device
         self.matching_function = matching_function
         if isinstance(loss, str) and loss in self.LOSSES:
@@ -208,8 +334,41 @@ class LocalizationConformalizer(Conformalizer):
             raise ValueError(
                 f"optimizer {optimizer} not accepted, must be one of {self.OPTIMIZERS.keys()} or an instance of Optimizer",
             )
-
         self.lambda_localization = None
+
+    def crc_calibrate(self,
+                      predictions : ODPredictions,
+                      build_prediction_function:Callable,
+                      lambda_cnf:float,
+                      alpha_loc:float,
+                      bounds:tuple[float]):
+        n = len(predictions)
+        B = float(self.loss.upper_bound)
+
+        def f_to_minimize(lambda_loc):
+            risk = evaluate_risk(
+                lbd=lambda_loc,
+                loss=self.loss,
+                predictions=predictions,
+                build_predictions=build_prediction_function,
+                matching_function=self.matching_function,
+                lambda_conf=lambda_cnf,
+            )
+            if risk is None:
+                raise RuntimeError("No valid lambda loc found during CRC calibration")
+
+            corrected_risk = n / (n + 1) * risk + B / (n + 1)
+            corrected_risk = corrected_risk.item()
+            return corrected_risk
+            #return float(corrected_risk - alpha_loc)
+        bso = BinarySearchOptimizer()
+        return bso.optimize(
+            f_to_minimize,
+            alpha=alpha_loc,
+            bounds=bounds,
+            steps=40,   
+        )
+        #return brentq(f_to_minimize, a=bounds[0], b=bounds[1])
 
     def calibrate(
         self,
@@ -234,6 +393,7 @@ class LocalizationConformalizer(Conformalizer):
         - lbd (float): The calibrated lambda value.
 
         """
+
         if self.lambda_localization is not None:
             logger.info("Replacing previously computed λ")
 
@@ -254,6 +414,21 @@ class LocalizationConformalizer(Conformalizer):
                 for pred_cls_i_j in matched_pred_cls_i
             ]
             return conf_boxes, conf_cls
+
+        if self.mode == "crc":
+            if overload_confidence_threshold is None :
+                if predictions.confidence_threshold is None:
+                    raise ValueError("predictions.confidence_threshold must be set for CRC calibration if overload_confidence_threshold is not provided")
+                overload_confidence_threshold = predictions.confidence_threshold
+            self.lambda_localization = self.crc_calibrate(
+                predictions,
+                build_prediction_function=build_predictions,
+                lambda_cnf=1 - overload_confidence_threshold,
+                alpha_loc=alpha,
+                bounds=(0, 1000 if self.prediction_set == "additive" else 100),
+            )
+            return self.lambda_localization
+
 
         self.optimizer2 = SecondStepMonotonizingOptimizer()
         lambda_localization = self.optimizer2.optimize(
@@ -359,10 +534,15 @@ class ConfidenceConformalizer(Conformalizer):
         other_losses: list | None = None,
         optimizer: str = "binary_search",
         device="cpu",
+        mode:str = "seqcrc"
     ):
         """ """
         super().__init__()
         self.device = device
+        self.mode = mode.lower()
+        if self.mode != "seqcrc" and self.mode != "crc":
+            raise ValueError(f"mode {mode} not accepted, must be one of ['seqcrc', 'crc']")
+
         if loss not in self.ACCEPTED_LOSSES:
             raise ValueError(
                 f"loss {loss} not accepted, must be one of {self.ACCEPTED_LOSSES.keys()}",
@@ -393,6 +573,46 @@ class ConfidenceConformalizer(Conformalizer):
         self.lambda_minus = None
         self.lambda_plus = None
 
+    def crc_calibrate(self,
+        predictions:ODPredictions,
+        alpha_cnf: float = 0.1,
+        bounds:tuple[float] = (0, 1)):
+
+        n = len(predictions)
+
+        B = self.loss.upper_bound
+
+        def L_i_cnf(i, lambda_cnf):
+            keep_i = predictions.confidences[i] >= 1 - lambda_cnf
+
+            loss_kwargs = {}
+            if isinstance(self.loss, RecallMimickingCnfLoss):
+                loss_kwargs["matching"] = predictions.matching[i]
+
+            return self.loss(
+                true_boxes=predictions.true_boxes[i],
+                true_cls=predictions.true_cls[i],
+                conf_boxes=predictions.pred_boxes[i][keep_i],
+                conf_cls=predictions.pred_cls[i][keep_i],
+                **loss_kwargs
+            ).reshape(1)
+
+        def R_n_cnf(lambda_cnf:float)->float:
+            if isinstance(self.loss, RecallMimickingCnfLoss):
+                match_predictions_to_true_boxes(
+                    predictions,
+                    distance_function=self.matching_function,
+                    verbose=False,
+                    overload_confidence_threshold=1 - lambda_cnf,
+                )
+            losses = [L_i_cnf(i, lambda_cnf) for i in range(n)]
+            return torch.cat(losses).mean()
+
+        lambda_cnf_plus = solve_crc(R_n_cnf, n, alpha_cnf, B, bounds)
+        return lambda_cnf_plus
+
+
+
     def calibrate(
         self,
         predictions: ODPredictions,
@@ -409,7 +629,14 @@ class ConfidenceConformalizer(Conformalizer):
         if self.lambda_plus is not None:
             logger.info("Replacing previously computed λ")
 
+        if self.mode == "crc":
+            lambda_cnf = self.crc_calibrate(predictions, alpha_cnf, tuple(bounds))
+            self.lambda_minus = lambda_cnf
+            self.lambda_plus = lambda_cnf
+            return lambda_cnf, lambda_cnf
+
         logger.debug("Optimizing for lambda_plus")
+        #TODO : pour triple CRC, remplacer cette partie par un brent qui optimise la fonction définie ligne 1 du doc UQ40D (lambda_cnf_plus)
         self.optimizer2_plus = FirstStepMonotonizingOptimizer()
         lambda_plus = self.optimizer2_plus.optimize(
             predictions,
@@ -494,9 +721,15 @@ class ODClassificationConformalizer(ClassificationConformalizer):
         guarantee_level="image",
         optimizer="binary_search",
         device="cpu",
+        mode:str = "seqcrc",
         # TODO(leo) remove if nonessential: **kwargs,
     ):
         """ """
+
+        self.mode = mode.lower()
+        if self.mode != "seqcrc" and self.mode != "crc":
+            raise ValueError(f"mode {mode} not accepted, must be one of ['seqcrc', 'crc']")
+    
         self.matching_function = matching_function
         # TODO(leo): tmp
         preprocess = "softmax"
@@ -547,6 +780,42 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             )
         self.optimizer = self.OPTIMIZERS[optimizer]()
 
+
+    def crc_calibrate(self,
+                      predictions : ODPredictions,
+                      build_prediction_function:Callable,
+                      lambda_cnf:float,
+                      alpha_cls:float,
+                      bounds:tuple[float]):
+        n = len(predictions)
+        B = float(self.loss.upper_bound)
+
+        def f_to_minimize(lambda_cls):
+            risk = evaluate_risk(
+                lbd=lambda_cls,
+                loss=self.loss,
+                predictions=predictions,
+                build_predictions=build_prediction_function,
+                matching_function=self.matching_function,
+                lambda_conf=lambda_cnf
+            )
+            if risk is None:
+                raise RuntimeError("No valid lambda loc found during CRC calibration")
+
+            corrected_risk = n / (n + 1) * risk + B / (n + 1)
+            corrected_risk = corrected_risk.item()
+            return corrected_risk
+            #return float(corrected_risk - alpha_cls)
+        bso = BinarySearchOptimizer()
+        return bso.optimize(
+            f_to_minimize,
+            alpha=alpha_cls,
+            bounds=bounds,
+            steps=40,   
+        )
+        #return brentq(f_to_minimize, a=bounds[0], b=bounds[1])
+
+
     def calibrate(
         self,
         predictions: ODPredictions,
@@ -558,6 +827,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
     ) -> torch.Tensor:
         if bounds is None:
             bounds = [0, 1]
+
         if self.lambda_classification is not None:
             logger.info("Replacing previously computed λ")
 
@@ -596,6 +866,22 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             conf_cls = get_conf_cls()
             return conf_boxes, conf_cls
 
+        if self.mode == "crc":
+            if overload_confidence_threshold is None :
+                if predictions.confidence_threshold is None:
+                    raise ValueError("predictions.confidence_threshold must be set for CRC calibration if overload_confidence_threshold is not provided")
+                overload_confidence_threshold = predictions.confidence_threshold
+            self.lambda_classification = self.crc_calibrate(
+                predictions,
+                build_predictions,
+                lambda_cnf=1 - overload_confidence_threshold,
+                alpha_cls=alpha,
+                bounds=bounds
+            )
+            return self.lambda_classification
+
+
+        # TODO : pour 3*CRC : remplacer cette optim par brent sur formule 2 de UQ40D (lambda_cls & lambda_loc)
         self.optimizer2 = SecondStepMonotonizingOptimizer()
         lambda_classification = self.optimizer2.optimize(
             predictions,
@@ -722,6 +1008,8 @@ class ODConformalizer(Conformalizer):
         classification_prediction_set: str = "lac",  # Fix where we type check
         optimizer="binary_search",
         device="cpu",
+        mode:str = "seqcrc",
+        split_calibration: bool = False,
         # TODO(leo) remove if nonessential: **kwargs,
     ):
         """Initialize the ODClassificationConformalizer object.
@@ -739,6 +1027,14 @@ class ODConformalizer(Conformalizer):
 
         """
         self.device = device
+
+        self.mode = mode.lower()
+        if self.mode != "seqcrc" and self.mode != "crc":
+            raise ValueError(f"mode {mode} not accepted, must be one of ['seqcrc', 'crc']")
+        if self.mode == "seqcrc" and split_calibration:
+            raise ValueError("Split calibration is not compatible with sequential CRC mode")
+        self.split_calibration = split_calibration
+
 
         if backend not in self.BACKENDS:
             raise ValueError(
@@ -794,6 +1090,7 @@ class ODConformalizer(Conformalizer):
                 prediction_set=localization_prediction_set,
                 device=device,
                 optimizer=optimizer,
+                mode = self.mode
                 # TODO(leo) remove if nonessential: **kwargs,
             )
         elif isinstance(localization_method, LocalizationConformalizer):
@@ -816,11 +1113,12 @@ class ODConformalizer(Conformalizer):
                 prediction_set=classification_prediction_set,
                 device=device,
                 optimizer=optimizer,
+                mode = self.mode
             )
         elif isinstance(classification_method, ODClassificationConformalizer):
             self.classification_conformalizer = classification_method
             self.classification_method = classification_method.method
-            self.classification_prediction_set = classification_method.prediction_set
+            self.classification_prediction_set = classification_method.method
         else:
             self.classification_conformalizer = None
             self.classification_method = None
@@ -848,6 +1146,7 @@ class ODConformalizer(Conformalizer):
                     if conf is not None
                 ],
                 optimizer=optimizer,
+                mode = self.mode
                 # TODO(leo) remove if nonessential: **kwargs,
             )
             self.confidence_method = confidence_method
@@ -906,6 +1205,12 @@ class ODConformalizer(Conformalizer):
 
         """
         # Checking Multiple Testing Correction
+        if self.split_calibration:
+            cnf_predictions, second_step_predictions = predictions.split(0.5)
+        else:
+            cnf_predictions = predictions
+            second_step_predictions = predictions
+
         n_conformalizers = sum(
             x is not None
             for x in [
@@ -981,7 +1286,7 @@ class ODConformalizer(Conformalizer):
 
             lambda_confidence_minus, lambda_confidence_plus = (
                 self.confidence_conformalizer.calibrate(
-                    predictions,
+                    cnf_predictions,
                     alpha_cnf=alpha_confidence,
                     alpha_loc=alpha_localization,
                     alpha_cls=alpha_classification,
@@ -991,9 +1296,14 @@ class ODConformalizer(Conformalizer):
             # Unique to Confidence due to dependence
             logger.info("Setting Confidence Threshold of Predictions")
             self.confidence_conformalizer.conformalize(
-                predictions,
+                cnf_predictions,
                 verbose=verbose,
             )
+            self.confidence_conformalizer.conformalize(
+                second_step_predictions,
+                verbose=verbose,
+            )
+
             self.confidence_threshold = (
                 1 - lambda_confidence_plus
             )  # predictions.confidence_threshold
@@ -1002,24 +1312,25 @@ class ODConformalizer(Conformalizer):
 
             if verbose:
                 logger.info(
-                    f"Calibrated Confidence λ : {lambda_confidence_plus:.4f}\n\t and associated Confidence Threshold : {predictions.confidence_threshold}",
+                    f"Calibrated Confidence λ : {lambda_confidence_plus:.4f}\n\t and associated Confidence Threshold : {cnf_predictions.confidence_threshold}",
                 )
         else:
-            predictions.confidence_threshold = self.confidence_threshold
-            predictions.matching = None
+            cnf_predictions.confidence_threshold = self.confidence_threshold
+            second_step_predictions.confidence_threshold = self.confidence_threshold
+            second_step_predictions.matching = None
             optimistic_confidence_threshold = self.confidence_threshold
             lambda_confidence_minus = None
             lambda_confidence_plus = None
 
         # Now that we fixed the confidence threshold, we need to do the matching before moving on to the next steps
 
-        if predictions.matching is not None:
+        if second_step_predictions.matching is not None:
             logger.warning("Overwriting previous matching")
         if verbose:
             logger.info("Matching Predictions to True Boxes")
 
         match_predictions_to_true_boxes(
-            predictions,  # ref to predictions object, modified in place within func call
+            second_step_predictions,  # ref to predictions object, modified in place within func call
             distance_function=self.matching_function,
             verbose=verbose,
             overload_confidence_threshold=optimistic_confidence_threshold,
@@ -1032,7 +1343,7 @@ class ODConformalizer(Conformalizer):
                 logger.info("Calibrating Localization Conformalizer")
 
             lambda_localization = self.localization_conformalizer.calibrate(
-                predictions,
+                second_step_predictions,
                 alpha=alpha_localization,
                 verbose=verbose,
                 overload_confidence_threshold=optimistic_confidence_threshold,
@@ -1050,7 +1361,7 @@ class ODConformalizer(Conformalizer):
                 logger.info("Calibrating Classification Conformalizer")
 
             lambda_classification = self.classification_conformalizer.calibrate(
-                predictions,
+                second_step_predictions,
                 alpha=alpha_classification,
                 verbose=verbose,
                 overload_confidence_threshold=optimistic_confidence_threshold,
@@ -1062,7 +1373,7 @@ class ODConformalizer(Conformalizer):
                 )
 
         result = ODParameters(
-            predictions_id=predictions.unique_id,
+            predictions_id=second_step_predictions.unique_id,
             global_alpha=global_alpha,
             alpha_confidence=alpha_confidence,
             alpha_localization=alpha_localization,
@@ -1071,7 +1382,7 @@ class ODConformalizer(Conformalizer):
             lambda_confidence_minus=lambda_confidence_minus,
             lambda_localization=lambda_localization,
             lambda_classification=lambda_classification,
-            confidence_threshold=predictions.confidence_threshold,
+            confidence_threshold=second_step_predictions.confidence_threshold,
         )
 
         # Saving the last parameters id to conformalize the predictions
@@ -1181,15 +1492,19 @@ class ODConformalizer(Conformalizer):
         verbose: bool = True,
     ) -> ODResults:
         print(f"Confidence threshold is {predictions.confidence_threshold}")
-        print(f"Matching is : {predictions.matching is None}")
-        if predictions.matching is None:
-            match_predictions_to_true_boxes(
-                predictions,
-                distance_function=self.matching_function,
-                verbose=False,
-                # TODO: overload_confidence_threshold=parameters.confidence_threshold,
-            )
-            print("Matching complete")
+        predictions.matching = None
+        #print(f"Matching is : {predictions.matching is None}")
+        #if predictions.matching is None:
+        match_predictions_to_true_boxes(
+            predictions,
+            distance_function=self.matching_function,
+            verbose=False,
+            overload_confidence_threshold=predictions.confidence_threshold
+            # TODO: overload_confidence_threshold=parameters.confidence_threshold,
+        )
+        print("Matching complete")
+
+
 
         odresults = self.evaluator.evaluate(
             predictions,
@@ -1549,14 +1864,13 @@ class BonferroniConformalizer(ODConformalizer):
         classification_prediction_set: str = "lac",  # Fix where we type check
         optimizer="binary_search",
         device="cpu",
-        split_cal_dataset:bool=False
     ):
         super().__init__(
             backend="auto",
             guarantee_level=guarantee_level,
             matching_function=matching_function,
             confidence_threshold=confidence_threshold,
-            multiple_testing_correction="bonferroni",
+            multiple_testing_correction=None,
             confidence_method=confidence_method,
             localization_method=localization_method,
             localization_prediction_set=localization_prediction_set,
@@ -1564,147 +1878,11 @@ class BonferroniConformalizer(ODConformalizer):
             classification_prediction_set=classification_prediction_set,
             optimizer=optimizer,
             device=device,
-        )
-        self.split_cal_dataset = split_cal_dataset
-
-    def calibrate(
-        self,
-        predictions: ODPredictions,
-        global_alpha: float | None = None,
-        alpha_confidence: float | None = None,
-        alpha_localization: float | None = None,
-        alpha_classification: float | None = None,
-        verbose: bool = True,
-    ) -> ODParameters:
-        if self.split_cal_dataset:
-            cnf_predictions, second_step_predictions = predictions.split(0.5)
-        else:
-            cnf_predictions = predictions
-            second_step_predictions = predictions
-
-        if global_alpha is not None:
-            alpha_confidence: float = global_alpha / 3
-            alpha_localization: float = global_alpha / 3
-            alpha_classification: float = global_alpha / 3
-        elif None in [alpha_confidence, alpha_localization, alpha_classification]:
-            raise ValueError("When global_alpha is not provided, explicit alpha values for each conformalizer must be provided.")
-
-        # check that all the conformalizers has been given
-        assert None not in [
-                self.confidence_conformalizer,
-                self.localization_conformalizer,
-                self.classification_conformalizer,
-            ]
-
-        # Confidence
-        if self.confidence_conformalizer is not None:
-            if verbose:
-                logger.info("Calibrating Confidence Conformalizer")
-
-            _, lambda_confidence_plus = (
-                self.confidence_conformalizer.calibrate(
-                    cnf_predictions,
-                    alpha_cnf=alpha_confidence,
-                    alpha_loc=alpha_localization,
-                    alpha_cls=alpha_classification,
-                    verbose=verbose,
-                )
-            )
-
-            lambda_confidence_minus = lambda_confidence_plus
-
-            # Unique to Confidence due to dependence
-            logger.info("Setting Confidence Threshold of Predictions")
-            self.confidence_conformalizer.conformalize(
-                second_step_predictions,
-                verbose=verbose,
-            )
-            self.confidence_threshold = (
-                1 - lambda_confidence_plus
-            )  # predictions.confidence_threshold
-
-            optimistic_confidence_threshold = 1 - lambda_confidence_minus
-
-            if verbose:
-                logger.info(
-                    f"Calibrated Confidence λ : {lambda_confidence_plus:.4f}\n\t and associated Confidence Threshold : {second_step_predictions.confidence_threshold}",
-                )
-        else:
-            second_step_predictions.confidence_threshold = self.confidence_threshold
-            second_step_predictions.matching = None
-            optimistic_confidence_threshold = self.confidence_threshold
-            lambda_confidence_minus = None
-            lambda_confidence_plus = None
-
-        # Now that we fixed the confidence threshold, we need to do the matching before moving on to the next steps
-
-        if second_step_predictions.matching is not None:
-            logger.warning("Overwriting previous matching")
-        if verbose:
-            logger.info("Matching Predictions to True Boxes")
-
-        match_predictions_to_true_boxes(
-            second_step_predictions,  # ref to predictions object, modified in place within func call
-            distance_function=self.matching_function,
-            verbose=verbose,
-            overload_confidence_threshold=optimistic_confidence_threshold,
+            mode="crc",
+            split_calibration=False,
         )
 
-        # Localization
-
-        if self.localization_conformalizer is not None:
-            if verbose:
-                logger.info("Calibrating Localization Conformalizer")
-
-            lambda_localization = self.localization_conformalizer.calibrate(
-                second_step_predictions,
-                alpha=alpha_localization,
-                verbose=verbose,
-                overload_confidence_threshold=optimistic_confidence_threshold,
-            )
-
-            if verbose:
-                logger.info(
-                    f"Calibrated Localization λ : {lambda_localization}",
-                )
-
-        # Classification
-
-        if self.classification_conformalizer is not None:
-            if verbose:
-                logger.info("Calibrating Classification Conformalizer")
-
-            lambda_classification = self.classification_conformalizer.calibrate(
-                second_step_predictions,
-                alpha=alpha_classification,
-                verbose=verbose,
-                overload_confidence_threshold=optimistic_confidence_threshold,
-            )
-
-            if verbose:
-                logger.info(
-                    f"Calibrated Classification λ : {lambda_classification}",
-                )
-
-        result = ODParameters(
-            predictions_id=None,
-            global_alpha=global_alpha,
-            alpha_confidence=alpha_confidence,
-            alpha_localization=alpha_localization,
-            alpha_classification=alpha_classification,
-            lambda_confidence_plus=lambda_confidence_plus,
-            lambda_confidence_minus=lambda_confidence_minus,
-            lambda_localization=lambda_localization,
-            lambda_classification=lambda_classification,
-            confidence_threshold=1 - lambda_confidence_plus,
-        )
-
-        # Saving the last parameters id to conformalize the predictions
-        self._last_parameters_id = result.unique_id
-
-        return result
-
-class SplitCalBonferroniConformalizer(BonferroniConformalizer):
+class SplitCalBonferroniConformalizer(ODConformalizer):
     def __init__(
         self,
         guarantee_level: str = "image",
@@ -1719,9 +1897,11 @@ class SplitCalBonferroniConformalizer(BonferroniConformalizer):
         device="cpu",
     ):
         super().__init__(
+            backend="auto",
             guarantee_level=guarantee_level,
             matching_function=matching_function,
             confidence_threshold=confidence_threshold,
+            multiple_testing_correction=None,
             confidence_method=confidence_method,
             localization_method=localization_method,
             localization_prediction_set=localization_prediction_set,
@@ -1729,7 +1909,8 @@ class SplitCalBonferroniConformalizer(BonferroniConformalizer):
             classification_prediction_set=classification_prediction_set,
             optimizer=optimizer,
             device=device,
-            split_cal_dataset=True
+            mode="crc",
+            split_calibration=True,
         )
 
 class DoubleCRCConformalizer(ODConformalizer):
@@ -1759,4 +1940,5 @@ class DoubleCRCConformalizer(ODConformalizer):
             classification_prediction_set=classification_prediction_set,
             optimizer=optimizer,
             device=device,
+            mode = "crc"
         )

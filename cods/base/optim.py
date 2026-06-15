@@ -23,7 +23,7 @@ class BinarySearchOptimizer(Optimizer):
 
     def optimize(
         self,
-        objective_function: Callable,
+        objective_function: Callable, # fonction de lambda_point qui renvoie le risque corrigé
         alpha: float,
         bounds: tuple | list | list[tuple],
         steps: int,
@@ -82,6 +82,14 @@ class BinarySearchOptimizer(Optimizer):
                         "No satisfactory solution of binary search found.",
                     )
                     return None
+
+        if len(good_lbds) == 0:
+            logging.error(
+                "No satisfactory solution of binary search found. "
+                f"alpha={alpha}, bounds={bounds}, "
+                f"final_lbds={current_lbds}"
+            )
+            return None
         return good_lbds[-1] if len(current_lbds) > 1 else good_lbds[-1][0]
 
 
