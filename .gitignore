@@ -184,3 +184,21 @@ monotonicity_*
 experiments/
 .DS_Store
 test_data/
+
+# Local datasets (COCO etc. downloaded via `make coco`) — never commit
+data/
+coco/
+
+# Locally-downloaded tooling (e.g. tectonic LaTeX binary)
+.tools/
+
+# One-off experiment outputs / generated reports
+*_results.json
+*_results.csv
+report.tex
+report.pdf
+*.aux
+*.synctex.gz
+
+# Root-level markdown scratch/notes (README.md is already tracked, so unaffected)
+/*.md
