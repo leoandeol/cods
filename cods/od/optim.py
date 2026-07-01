@@ -3,6 +3,7 @@ from logging import getLogger
 
 import numpy as np
 import torch
+from scipy.stats import binom
 from tqdm import tqdm
 
 from cods.base.optim import Optimizer
@@ -189,7 +190,11 @@ class FirstStepMonotonizingOptimizer(Optimizer):
         _log_raw_localization_losses = localization_losses.copy()
         _log_raw_classification_losses = classification_losses.copy()
 
-        if confidence_risk.detach().cpu().numpy() > alpha_cnf or localization_risk.detach().cpu().numpy() > alpha_loc or classification_risk.detach().cpu().numpy() > alpha_cls:
+        if (
+            confidence_risk.detach().cpu().numpy() > alpha_cnf
+            or localization_risk.detach().cpu().numpy() > alpha_loc
+            or classification_risk.detach().cpu().numpy() > alpha_cls
+        ):
             # Debug: all three risks to see why there isn't any solution
             logger.debug(f"Confidence risk: {confidence_risk}")
             logger.debug(f"Localization risk: {localization_risk}")
@@ -389,7 +394,11 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 f"λ={lambda_conf}. Corrected Risk = {confidence_risk.detach().cpu().numpy():.4f}",
             )
 
-            if confidence_risk.detach().cpu().numpy() > alpha_cnf or localization_risk.detach().cpu().numpy() > alpha_loc or classification_risk.detach().cpu().numpy() > alpha_cls:
+            if (
+                confidence_risk.detach().cpu().numpy() > alpha_cnf
+                or localization_risk.detach().cpu().numpy() > alpha_loc
+                or classification_risk.detach().cpu().numpy() > alpha_cls
+            ):
                 logger.info(
                     f"Solution Found: {previous_lbd} with risk {confidence_risk}",
                 )
@@ -780,3 +789,98 @@ class SecondStepMonotonizingOptimizer(Optimizer):
             raise ValueError("No good lambda found")
 
         return good_lbds[-1]
+
+
+def hb_p_value(r_hat: float, n: int, alpha: float) -> float:
+    """Hoeffding-Bentkus p-value for H0: R >= alpha, from empirical risk `r_hat`
+    over `n` examples (Learn Then Test, https://arxiv.org/abs/2110.01052)."""
+    bentkus_p_value = np.e * binom.cdf(np.ceil(n * r_hat), n, alpha)
+
+    def h1(y: float, mu: float) -> float:
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return y * np.log(y / mu) + (1 - y) * np.log((1 - y) / (1 - mu))
+
+    hoeffding_p_value = np.exp(-n * h1(min(r_hat, alpha), alpha))
+    return min(bentkus_p_value, hoeffding_p_value)
+
+
+def holm_bonferroni(p_values: np.ndarray, delta: float) -> np.ndarray:
+    """Holm-Bonferroni step-down at FWER `delta`; returns sorted rejected indices."""
+    m = len(p_values)
+    order = np.argsort(p_values)
+    thresholds = delta / (m - np.arange(m))
+    passes = p_values[order] <= thresholds
+    n_rejected = m if passes.all() else int(np.argmin(passes))
+    return np.sort(order[:n_rejected])
+
+
+class LearnThenTestOptimizer(Optimizer):
+    """Learn Then Test calibration of a scalar lambda by grid search
+    (https://arxiv.org/abs/2110.01052). Each lambda is tested against
+    H0(lambda): R(lambda) > alpha with a Hoeffding-Bentkus p-value; the smallest
+    lambda certified at FWER delta (Holm-Bonferroni) is returned. Assumes risk
+    non-increasing in lambda.
+    """
+
+    def __init__(self):
+        pass
+
+    def compute_p_values(
+        self,
+        compute_losses: Callable[[float], torch.Tensor],
+        alpha: float,
+        lambdas: torch.Tensor,
+        verbose: bool = True,
+        desc: str = "Learn Then Test",
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Sweep `lambdas`, returning per-candidate empirical risks and
+        Hoeffding-Bentkus p-values for H0(lambda): R(lambda) > alpha."""
+        r_hats = []
+        n_examples = None
+        pbar = tqdm(lambdas, disable=not verbose)
+        for lbd in pbar:
+            losses = compute_losses(float(lbd))
+            n_examples = n_examples or len(losses)
+            r_hat = losses.float().mean().item()
+            r_hats.append(r_hat)
+            pbar.set_description(f"{desc}: λ={float(lbd):.4f} -> r_hat={r_hat:.4f}")
+
+        r_hats = np.array(r_hats)
+        p_values = np.array([hb_p_value(r_hat, n_examples, alpha) for r_hat in r_hats])
+        return r_hats, p_values
+
+    def optimize(
+        self,
+        compute_losses: Callable[[float], torch.Tensor],
+        alpha: float,
+        lambdas: torch.Tensor,
+        delta: float = 0.1,
+        verbose: bool = True,
+    ) -> float | None:
+        """Smallest lambda certified at FWER `delta` (Holm-Bonferroni over the
+        Hoeffding-Bentkus p-values), or None. `compute_losses` maps a lambda to its
+        per-example loss tensor. Standalone single-task helper -- note
+        `LearnThenTestConformalizer` runs its own Bonferroni gatekeeping instead.
+        """
+        r_hats, p_values = self.compute_p_values(compute_losses, alpha, lambdas, verbose=verbose)
+        rejected = holm_bonferroni(p_values, delta)
+
+        self.lambdas = lambdas
+        self.r_hats = r_hats
+        self.p_values = p_values
+        self.rejected_indices = rejected
+
+        if len(rejected) == 0:
+            logger.warning(
+                f"Learn Then Test could not certify any λ for alpha={alpha}, delta={delta}: "
+                "the target risk level might be unreachable with this calibration set / λ grid.",
+            )
+            return None
+
+        lbd_hat = float(lambdas[rejected].min())
+        if verbose:
+            logger.info(
+                f"Learn Then Test selected λ={lbd_hat:.4f} "
+                f"({len(rejected)}/{len(lambdas)} candidates certified at level delta={delta})",
+            )
+        return lbd_hat
