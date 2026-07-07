@@ -94,7 +94,7 @@ def solve_crc(
         f_to_minimize,
         alpha=alpha,
         bounds=bounds,
-        steps=40,   
+        steps=40,
     )
 
     #return brentq(f_to_minimize, a=a, b=b)
@@ -115,7 +115,6 @@ def evaluate_risk(
     confidences = predictions.confidences
     device = predictions.true_boxes[0].device
 
-
     match_predictions_to_true_boxes(
         predictions,
         distance_function=matching_function,
@@ -131,16 +130,13 @@ def evaluate_risk(
         confidences_i = confidences[i]
 
         pred_boxes_i = pred_boxes[i][confidences_i >= 1 - lambda_conf]
-        pred_cls_i = [x for x, c in zip(pred_cls[i], confidences_i) if c >= 1 - lambda_conf]
+        pred_cls_i = [
+            x
+            for x, c in zip(pred_cls[i], confidences_i)
+            if c >= 1 - lambda_conf
+        ]
 
         matching_i = predictions.matching[i]
-        # matching_i = match_predictions_to_true_boxes(
-        #     predictions,
-        #     distance_function=matching_function,
-        #     verbose=False,
-        #     overload_confidence_threshold=1 - lambda_conf,
-        #     idx=i,
-        # )
 
         pred_cls_i = (
             torch.stack(pred_cls_i)
@@ -148,27 +144,54 @@ def evaluate_risk(
             else torch.tensor([]).float().to(device)
         )
 
-        tmp_matched_boxes_i = [
-            (
-                torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
-                if len(matching_i[j]) > 0
-                else torch.tensor([]).float().to(device)
+        missing_injective_match = False
+        tmp_matched_boxes_i = []
+        tmp_matched_cls_i = []
+
+        for j in range(len(true_boxes_i)):
+            matched_pred_indices_j = matching_i[j]
+
+            if len(matched_pred_indices_j) == 0:
+                missing_injective_match = True
+                break
+
+            m = matched_pred_indices_j[0]
+
+            matched_box_j = pred_boxes_i[m]
+            matched_cls_j = pred_cls_i[m]
+
+            if matched_box_j.numel() != 4:
+                missing_injective_match = True
+                break
+
+            if matched_cls_j.numel() == 0:
+                missing_injective_match = True
+                break
+
+            tmp_matched_boxes_i.append(matched_box_j.reshape(4))
+            tmp_matched_cls_i.append(matched_cls_j)
+
+        if missing_injective_match:
+            losses.append(
+                torch.tensor(
+                    [float(loss.upper_bound)],
+                    dtype=torch.float,
+                    device=device,
+                )
             )
-            for j in range(len(true_boxes_i))
-        ]
+            continue
+
         matched_pred_boxes_i = (
             torch.stack(tmp_matched_boxes_i)
             if len(tmp_matched_boxes_i) > 0
+            else torch.empty((0, 4), dtype=torch.float, device=device)
+        )
+
+        matched_pred_cls_i = (
+            torch.stack(tmp_matched_cls_i)
+            if len(tmp_matched_cls_i) > 0
             else torch.tensor([]).float().to(device)
         )
-        matched_pred_cls_i = [
-            (
-                torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                if len(matching_i[j]) > 0
-                else torch.tensor([]).float().to(device)
-            )
-            for j in range(len(true_boxes_i))
-        ]
 
         matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
             matched_pred_boxes_i,
@@ -183,7 +206,8 @@ def evaluate_risk(
             matched_conf_cls_i,
         )
 
-        losses.append(loss_i)
+        losses.append(loss_i.reshape(-1))
+
     return torch.cat(losses).mean()
 
 
@@ -1949,5 +1973,6 @@ class DoubleCRCConformalizer(ODConformalizer):
             classification_prediction_set=classification_prediction_set,
             optimizer=optimizer,
             device=device,
-            mode = "crc"
+            mode = "crc",
+            evaluation_confidence_loss=BoxCountRecallConfidenceLoss(device=device)
         )

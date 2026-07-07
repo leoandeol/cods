@@ -81,7 +81,9 @@ class BinarySearchOptimizer(Optimizer):
                     logging.error(
                         "No satisfactory solution of binary search found.",
                     )
-                    return None
+                    # TODO : à revoir, temporaire pour ne pas bloquer le code en cas de non solution
+                    return bounds[-1][-1]
+                    #return None
 
         if len(good_lbds) == 0:
             logging.error(
@@ -89,7 +91,8 @@ class BinarySearchOptimizer(Optimizer):
                 f"alpha={alpha}, bounds={bounds}, "
                 f"final_lbds={current_lbds}"
             )
-            return None
+            # TODO : à revoir, temporaire pour ne pas bloquer le code en cas de non solution
+            return bounds[-1][-1]
         return good_lbds[-1] if len(current_lbds) > 1 else good_lbds[-1][0]
 
 

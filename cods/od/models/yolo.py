@@ -4,6 +4,8 @@ from typing import ClassVar
 import numpy as np
 import torch
 from ultralytics import YOLO
+from pathlib import Path
+from huggingface_hub import hf_hub_download, list_repo_files
 
 from cods.od.models.mixins import BDD100KModelMixin, COCOLikeTargetMixin, VOCModelMixin
 from cods.od.models.model import ODModel
@@ -189,6 +191,65 @@ class YOLOModel(ABC, ODModel):
             "true_cls": list(true_cls),
             "pred_cls": pred_cls,
         }
+    
+    @classmethod
+    def from_hf(
+        cls,
+        repo_id: str,
+        filename: str | None = None,
+        device: str = "cpu",
+        save_dir_path=None,
+        model_name: str | None = None,
+        **kwargs,
+    ):
+        """
+        Build a YOLOModel subclass from a Hugging Face repo containing
+        an Ultralytics .pt checkpoint.
+
+        Example:
+            model = BDD100KYOLOModel.from_hf(
+                repo_id="ioget/yolo11n-finetuned-bdd100k",
+                device="cuda",
+            )
+
+        This keeps the existing CODS YOLO logic:
+          - raw-output hook
+          - full class scores
+          - CODS postprocess
+          - dataset-specific mixins/mappings
+        """
+        if filename is None:
+            files = list_repo_files(repo_id)
+            pt_files = [f for f in files if f.endswith(".pt")]
+
+            if len(pt_files) == 0:
+                raise RuntimeError(
+                    f"No .pt checkpoint found in Hugging Face repo {repo_id}. "
+                    f"Files found: {files}"
+                )
+
+            for preferred in ("best.pt", "last.pt", "model.pt", "weights.pt"):
+                if preferred in pt_files:
+                    filename = preferred
+                    break
+
+            if filename is None:
+                filename = pt_files[0]
+
+        weights_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=filename,
+        )
+
+        if model_name is None:
+            model_name = str(Path(weights_path))
+
+        return cls(
+            model_name=model_name,
+            device=device,
+            save_dir_path=save_dir_path,
+            **kwargs,
+        )
 
 class COCOYOLOModel(COCOLikeTargetMixin, YOLOModel):
     COCO91_USED_IDS: ClassVar[list[int]] = [
