@@ -4,7 +4,9 @@ from collections.abc import Callable
 import logging
 from types import MappingProxyType
 
+import numpy as np
 import torch
+from tqdm import tqdm
 
 #from scipy.optimize import brentq
 
@@ -40,6 +42,7 @@ from cods.od.loss import (
 from cods.od.metrics import ODEvaluator, compute_global_coverage
 from cods.od.optim import (
     FirstStepMonotonizingOptimizer,
+    LearnThenTestOptimizer,
     SecondStepMonotonizingOptimizer,
 )
 from cods.od.score import (
@@ -1586,6 +1589,517 @@ class ODConformalizer(Conformalizer):
         results = odresults
         # to rename coverage to risks
         return results
+
+
+####################################################################################################
+
+
+class LearnThenTestConformalizer(Conformalizer):
+    """Learn-Then-Test conformalizer for the three OD sub-tasks at once
+    (https://arxiv.org/abs/2110.01052). Drop-in alternative to `ODConformalizer`
+    (SeqCRC): same config/registries, but calibrates each lambda by grid search with
+    Hoeffding-Bentkus p-values and a Bonferroni gatekeeping procedure, giving a
+    high-probability guarantee P(R <= alpha) >= 1 - delta rather than SeqCRC's
+    in-expectation control. See CLAUDE.md for the full procedure and guarantee.
+    """
+
+    PREDICTION_SETS = ("additive", "multiplicative")
+    GUARANTEE_LEVELS = ("image",)
+    MATCHINGS = ODConformalizer.MATCHINGS
+
+    # Same registries as ODConformalizer's sub-conformalizers, so method/set names
+    # are interchangeable between the two.
+    CONFIDENCE_LOSSES = ConfidenceConformalizer.ACCEPTED_LOSSES
+    LOCALIZATION_LOSSES = LocalizationConformalizer.LOSSES
+    CLASSIFICATION_LOSSES = ODClassificationConformalizer.LOSSES
+    CLASSIFICATION_METHODS = ClassificationConformalizer.ACCEPTED_METHODS
+
+    def __init__(
+        self,
+        matching_function: str = "hausdorff",
+        guarantee_level: str = "image",
+        confidence_method: str = "box_count_recall",
+        localization_method: str = "boxwise",
+        localization_prediction_set: str = "additive",
+        classification_method: str = "binary",
+        classification_prediction_set: str = "lac",
+        n_lambda_confidence: int = 50,
+        n_lambda_localization: int = 50,
+        n_lambda_classification: int = 50,
+        lambda_localization_max: float | None = None,
+        device: str = "cpu",
+    ):
+        """Mirrors `ODConformalizer`'s constructor names/registries (so a SeqCRC
+        config can be reused as-is), plus the per-task grid sizes and
+        `lambda_localization_max` (default 1000 additive / 100 multiplicative).
+        """
+        super().__init__()
+        self.device = device
+
+        if matching_function not in self.MATCHINGS:
+            raise ValueError(
+                f"matching_function {matching_function} not accepted, must be one of {self.MATCHINGS}",
+            )
+        self.matching_function = matching_function
+
+        if guarantee_level not in self.GUARANTEE_LEVELS:
+            raise ValueError(
+                f"guarantee_level {guarantee_level} not accepted, must be one of {self.GUARANTEE_LEVELS}",
+            )
+        self.guarantee_level = guarantee_level
+
+        if confidence_method not in self.CONFIDENCE_LOSSES:
+            raise ValueError(
+                f"confidence_method {confidence_method} not accepted, must be one of {self.CONFIDENCE_LOSSES.keys()}",
+            )
+        self.confidence_method = confidence_method
+        self.confidence_loss = self.CONFIDENCE_LOSSES[confidence_method](device=self.device)
+
+        if localization_method not in self.LOCALIZATION_LOSSES:
+            raise ValueError(
+                f"localization_method {localization_method} not accepted, must be one of {self.LOCALIZATION_LOSSES.keys()}",
+            )
+        self.localization_method = localization_method
+        self.localization_loss = self.LOCALIZATION_LOSSES[localization_method](device=self.device)
+
+        if localization_prediction_set not in self.PREDICTION_SETS:
+            raise ValueError(
+                f"localization_prediction_set {localization_prediction_set} not accepted, must be one of {self.PREDICTION_SETS}",
+            )
+        self.localization_prediction_set = localization_prediction_set
+        self.lambda_localization_max = lambda_localization_max or (
+            1000.0 if localization_prediction_set == "additive" else 100.0
+        )
+
+        if classification_method not in self.CLASSIFICATION_LOSSES:
+            raise ValueError(
+                f"classification_method {classification_method} not accepted, must be one of {self.CLASSIFICATION_LOSSES.keys()}",
+            )
+        if classification_prediction_set not in self.CLASSIFICATION_METHODS:
+            raise ValueError(
+                f"classification_prediction_set {classification_prediction_set} not accepted, must be one of {self.CLASSIFICATION_METHODS.keys()}",
+            )
+        self.classification_method = classification_method
+        self.classification_prediction_set = classification_prediction_set
+        self._score_function = None
+
+        self._backend_classification_loss = self.CLASSIFICATION_LOSSES[classification_method]()
+        self.classification_loss = ClassificationLossWrapper(
+            self._backend_classification_loss,
+            device=self.device,
+        )
+
+        self.n_lambda_confidence = n_lambda_confidence
+        self.n_lambda_localization = n_lambda_localization
+        self.n_lambda_classification = n_lambda_classification
+
+        self.evaluator = ODEvaluator(
+            confidence_loss=self.confidence_loss,
+            localization_loss=self.localization_loss,
+            classification_loss=self.classification_loss,
+        )
+
+        self.global_delta = None
+        self.lambda_confidence = None
+        self.lambda_localization = None
+        self.lambda_classification = None
+
+    def _matched_arrays(
+        self,
+        predictions: ODPredictions,
+    ) -> tuple[list[torch.Tensor], list[list[torch.Tensor]]]:
+        """Per-image matched predicted boxes/class scores from `predictions.matching`,
+        for the current (fixed) confidence threshold."""
+        threshold = predictions.confidence_threshold
+        matched_pred_boxes = []
+        matched_pred_cls = []
+        for i in range(len(predictions)):
+            true_boxes_i = predictions.true_boxes[i]
+            mask = predictions.confidences[i] >= threshold
+            pred_boxes_i = predictions.pred_boxes[i][mask]
+            pred_cls_i = predictions.pred_cls[i][mask]
+            matching_i = predictions.matching[i]
+
+            tmp_boxes_i = [
+                (
+                    torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(self.device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
+            cls_i = [
+                (
+                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+                    if len(matching_i[j]) > 0
+                    else torch.tensor([]).float().to(self.device)
+                )
+                for j in range(len(true_boxes_i))
+            ]
+            matched_pred_boxes.append(
+                torch.stack(tmp_boxes_i)
+                if len(tmp_boxes_i) > 0
+                else torch.tensor([]).float().to(self.device),
+            )
+            matched_pred_cls.append(cls_i)
+        return matched_pred_boxes, matched_pred_cls
+
+    def calibrate(
+        self,
+        predictions: ODPredictions,
+        global_alpha: float | None = None,
+        global_delta: float = 0.1,
+        alpha_confidence: float | None = None,
+        alpha_localization: float | None = None,
+        alpha_classification: float | None = None,
+        verbose: bool = True,
+    ) -> ODParameters:
+        """Calibrate the three lambdas by Bonferroni gatekeeping (see CLAUDE.md).
+        Pass either `global_alpha` (split into `alpha_task = global_alpha / 3`) or the
+        three per-task alphas directly; `global_delta` is the family-wise budget.
+        """
+        n_tasks = 3
+
+        if global_alpha is not None:
+            if (
+                alpha_confidence is not None
+                or alpha_localization is not None
+                or alpha_classification is not None
+            ):
+                raise ValueError(
+                    "Provide either 'global_alpha' (split evenly across the three "
+                    "tasks, as a convenience) or explicit 'alpha_confidence' / "
+                    "'alpha_localization' / 'alpha_classification', not both.",
+                )
+            alpha_confidence = alpha_localization = alpha_classification = global_alpha / n_tasks
+        elif alpha_confidence is None or alpha_localization is None or alpha_classification is None:
+            raise ValueError(
+                "Either 'global_alpha' or all three of 'alpha_confidence', "
+                "'alpha_localization' and 'alpha_classification' must be provided.",
+            )
+        else:
+            global_alpha = alpha_confidence + alpha_localization + alpha_classification
+
+        self.global_delta = global_delta
+
+        n = len(predictions)
+        true_boxes = predictions.true_boxes
+        true_cls = predictions.true_cls
+        pred_boxes = predictions.pred_boxes
+        pred_cls = predictions.pred_cls
+        confidences = predictions.confidences
+        n_classes = predictions.n_classes
+
+        # Fixed grids; their sizes n1/n2/n3 enter the Bonferroni denominators.
+        lambda_confidence_grid = torch.linspace(0, 1, self.n_lambda_confidence)
+        lambda_localization_grid = torch.linspace(
+            0,
+            self.lambda_localization_max,
+            self.n_lambda_localization,
+        )
+        lambda_classification_grid = torch.linspace(0, 1, self.n_lambda_classification)
+        n1 = len(lambda_confidence_grid)
+        n2 = len(lambda_localization_grid)
+        n3 = len(lambda_classification_grid)
+
+        # Normalize losses (and alphas) by their upper bound B so risks are in [0, 1].
+        b_confidence = float(self.confidence_loss.upper_bound)
+        b_localization = float(self.localization_loss.upper_bound)
+        b_classification = float(self.classification_loss.upper_bound)
+
+        full_label_set = torch.arange(n_classes)[None, ...].to(self.device)
+        if self._score_function is None:
+            self._score_function = self.CLASSIFICATION_METHODS[self.classification_prediction_set](
+                n_classes,
+            )
+        self.optimizer = LearnThenTestOptimizer()
+
+        # Step 1: Confidence. Sweep the grid, keep lambda_conf with p <= delta/(3*n1).
+        if verbose:
+            logger.info("[Learn Then Test] Step 1: sweeping Confidence λ grid")
+        if predictions.matching is not None:
+            logger.warning("Overwriting previous matching")
+
+        def confidence_losses(lbd: float) -> torch.Tensor:
+            threshold = 1 - lbd
+            losses = []
+            for i in range(n):
+                mask = confidences[i] >= threshold
+                losses.append(
+                    self.confidence_loss(
+                        true_boxes[i],
+                        true_cls[i],
+                        pred_boxes[i][mask],
+                        pred_cls[i][mask],
+                    )
+                    / b_confidence,
+                )
+            return torch.stack(losses)
+
+        _, p_confidence = self.optimizer.compute_p_values(
+            confidence_losses,
+            alpha=alpha_confidence / b_confidence,
+            lambdas=lambda_confidence_grid,
+            verbose=verbose,
+            desc="[Learn Then Test] Confidence",
+        )
+
+        threshold_confidence = global_delta / (n_tasks * n1)
+        retained_confidence = np.where(p_confidence <= threshold_confidence)[0]
+        self.p_confidence = p_confidence
+        self.retained_confidence_indices = retained_confidence
+        if len(retained_confidence) == 0:
+            raise ValueError(
+                "Learn Then Test could not certify any λ for confidence at threshold "
+                f"threshold={threshold_confidence:.2e}: try a larger calibration "
+                "set, a finer/wider grid, or larger alpha / delta.",
+            )
+
+        # Step 2: for each retained λ_conf, re-match and sweep loc/cls grids
+        # (conditionally independent given λ_conf), keeping pairs with p <= delta/(3*n1*n_task).
+        threshold_localization = global_delta / (n_tasks * n1 * n2)
+        threshold_classification = global_delta / (n_tasks * n1 * n3)
+
+        if verbose:
+            logger.info(
+                f"[Learn Then Test] Step 2: sweeping Localization & Classification λ "
+                f"grids for each of the {len(retained_confidence)} retained Confidence "
+                f"λ candidates (re-matching each)",
+            )
+
+        # Pick the certified triple with the smallest lambdas (normalized to [0, 1]),
+        # i.e. the smallest/most efficient prediction sets.
+        loc_scale = self.lambda_localization_max if self.lambda_localization_max > 0 else 1.0
+        best_score = np.inf
+        best_triple: tuple[float, float, float] | None = None
+        n_jointly_certified = 0
+
+        for i in tqdm(
+            retained_confidence,
+            disable=not verbose,
+            desc="[Learn Then Test] retained λ_confidence -> (re-)matching & sub-sweeps",
+        ):
+            lbd_conf = float(lambda_confidence_grid[i])
+            predictions.confidence_threshold = 1 - lbd_conf
+            predictions.matching = None
+            match_predictions_to_true_boxes(
+                predictions,
+                distance_function=self.matching_function,
+                verbose=False,
+            )
+            matched_pred_boxes, matched_pred_cls = self._matched_arrays(predictions)
+
+            def localization_losses(
+                lbd: float,
+                matched_pred_boxes: list[torch.Tensor] = matched_pred_boxes,
+                matched_pred_cls: list[list[torch.Tensor]] = matched_pred_cls,
+            ) -> torch.Tensor:
+                losses = []
+                for j in range(n):
+                    conf_boxes_j = apply_margins(
+                        [matched_pred_boxes[j]],
+                        [lbd] * 4,
+                        mode=self.localization_prediction_set,
+                    )[0]
+                    conf_cls_j = [full_label_set for _ in matched_pred_cls[j]]
+                    losses.append(
+                        self.localization_loss(true_boxes[j], true_cls[j], conf_boxes_j, conf_cls_j)
+                        / b_localization,
+                    )
+                return torch.stack(losses)
+
+            def classification_losses(
+                lbd: float,
+                matched_pred_boxes: list[torch.Tensor] = matched_pred_boxes,
+                matched_pred_cls: list[list[torch.Tensor]] = matched_pred_cls,
+            ) -> torch.Tensor:
+                losses = []
+                for j in range(n):
+                    conf_boxes_j = matched_pred_boxes[j]
+                    conf_cls_j = [
+                        self._score_function.get_set(pred_cls=c, quantile=lbd)
+                        for c in matched_pred_cls[j]
+                    ]
+                    losses.append(
+                        self.classification_loss(
+                            true_boxes[j], true_cls[j], conf_boxes_j, conf_cls_j
+                        )
+                        / b_classification,
+                    )
+                return torch.stack(losses)
+
+            _, p_localization = self.optimizer.compute_p_values(
+                localization_losses,
+                alpha=alpha_localization / b_localization,
+                lambdas=lambda_localization_grid,
+                verbose=False,
+            )
+            _, p_classification = self.optimizer.compute_p_values(
+                classification_losses,
+                alpha=alpha_classification / b_classification,
+                lambdas=lambda_classification_grid,
+                verbose=False,
+            )
+
+            valid_localization = np.where(p_localization <= threshold_localization)[0]
+            valid_classification = np.where(p_classification <= threshold_classification)[0]
+            # A triple needs both a certified λ_loc and λ_cls for this λ_conf.
+            if len(valid_localization) == 0 or len(valid_classification) == 0:
+                continue
+            n_jointly_certified += len(valid_localization) * len(valid_classification)
+
+            lbd_loc = float(lambda_localization_grid[int(valid_localization.min())])
+            lbd_cls = float(lambda_classification_grid[int(valid_classification.min())])
+            score = lbd_conf + lbd_loc / loc_scale + lbd_cls
+            if score < best_score:
+                best_score = score
+                best_triple = (lbd_conf, lbd_loc, lbd_cls)
+
+        if best_triple is None:
+            raise ValueError(
+                "Learn Then Test certified Confidence λ(s) but no jointly-valid "
+                "(λ_confidence, λ_localization, λ_classification) triple: no retained "
+                "λ_confidence admits both a certified λ_localization and a certified "
+                "λ_classification. Try a larger calibration set, finer/wider grids, or "
+                "larger alpha / delta.",
+            )
+
+        lambda_confidence, lambda_localization, lambda_classification = best_triple
+        self.lambda_confidence = lambda_confidence
+        self.lambda_localization = lambda_localization
+        self.lambda_classification = lambda_classification
+
+        if verbose:
+            logger.info(
+                f"[Learn Then Test] Certified {n_jointly_certified} triple(s) at level "
+                f"delta={global_delta} (split delta/3 per task); selected "
+                f"λ_confidence={lambda_confidence:.4f}, "
+                f"λ_localization={lambda_localization:.4f}, "
+                f"λ_classification={lambda_classification:.4f}",
+            )
+
+        # Re-match at the selected λ_conf (the loop left it at the last one visited).
+        predictions.confidence_threshold = 1 - lambda_confidence
+        predictions.matching = None
+        if verbose:
+            logger.info(
+                "[Learn Then Test] Matching Predictions to True Boxes (selected λ_confidence)",
+            )
+        match_predictions_to_true_boxes(
+            predictions,
+            distance_function=self.matching_function,
+            verbose=verbose,
+        )
+
+        result = ODParameters(
+            predictions_id=predictions.unique_id,
+            global_alpha=global_alpha,
+            alpha_confidence=alpha_confidence,
+            alpha_localization=alpha_localization,
+            alpha_classification=alpha_classification,
+            lambda_confidence_plus=lambda_confidence,
+            lambda_confidence_minus=lambda_confidence,
+            lambda_localization=lambda_localization,
+            lambda_classification=lambda_classification,
+            confidence_threshold=predictions.confidence_threshold,
+        )
+        self._last_parameters_id = result.unique_id
+        return result
+
+    def conformalize(
+        self,
+        predictions: ODPredictions,
+        parameters: ODParameters | None = None,
+        verbose: bool = True,
+    ) -> ODConformalizedPredictions:
+        """Apply the calibrated λ values (`self.lambda_*`) to `predictions`;
+        `parameters` is attached to the result for bookkeeping."""
+        if self.lambda_confidence is None:
+            raise ValueError("Conformalizer must be calibrated before conformalizing.")
+        if parameters is None:
+            raise ValueError("Parameters must be provided for conformalization")
+        if verbose and parameters.predictions_id != predictions.unique_id:
+            logger.info("The parameters have been computed on another set of predictions.")
+
+        predictions.confidence_threshold = 1 - self.lambda_confidence
+        predictions.matching = None
+
+        if verbose:
+            logger.info("Conformalizing Localization")
+        conf_boxes = apply_margins(
+            predictions.pred_boxes,
+            [self.lambda_localization] * 4,
+            mode=self.localization_prediction_set,
+        )
+
+        if verbose:
+            logger.info("Conformalizing Classification")
+        if self._score_function is None:
+            self._score_function = self.CLASSIFICATION_METHODS[self.classification_prediction_set](
+                predictions.n_classes,
+            )
+        conf_cls = [
+            [
+                self._score_function.get_set(
+                    pred_cls=pred_cls_i_j, quantile=self.lambda_classification
+                )
+                for pred_cls_i_j in pred_cls_i
+            ]
+            for pred_cls_i in predictions.pred_cls
+        ]
+
+        return ODConformalizedPredictions(
+            predictions=predictions,
+            parameters=parameters,
+            conf_boxes=conf_boxes,
+            conf_cls=conf_cls,
+        )
+
+    def evaluate(
+        self,
+        predictions: ODPredictions,
+        parameters: ODParameters,
+        conformalized_predictions: ODConformalizedPredictions,
+        include_confidence_in_global: bool = False,
+        verbose: bool = True,
+    ) -> ODResults:
+        """Evaluate the conformalized predictions. `include_confidence_in_global` is
+        accepted for signature compatibility with `ODConformalizer.evaluate` (unused)."""
+        if predictions.matching is None:
+            match_predictions_to_true_boxes(
+                predictions,
+                distance_function=self.matching_function,
+                verbose=False,
+            )
+
+        odresults = self.evaluator.evaluate(predictions, parameters, conformalized_predictions)
+
+        if verbose:
+            logger.info("Evaluation Results:")
+            logger.info("\t Confidence:")
+            logger.info(
+                f"\t\t Risk: {torch.mean(odresults.confidence_coverages):.4f} "
+                f"(target alpha = {parameters.alpha_confidence:.4f})",
+            )
+            logger.info(f"\t\t Mean Set Size: {torch.mean(odresults.confidence_set_sizes):.2f}")
+            logger.info("\t Localization:")
+            logger.info(
+                f"\t\t Risk: {torch.mean(odresults.localization_coverages):.4f} "
+                f"(target alpha = {parameters.alpha_localization:.4f})",
+            )
+            logger.info(f"\t\t Mean Set Size: {torch.mean(odresults.localization_set_sizes):.2f}")
+            logger.info("\t Classification:")
+            logger.info(
+                f"\t\t Risk: {torch.mean(odresults.classification_coverages):.4f} "
+                f"(target alpha = {parameters.alpha_classification:.4f})",
+            )
+            logger.info(
+                f"\t\t Mean Set Size: {torch.mean(odresults.classification_set_sizes):.2f}",
+            )
+            if odresults.global_coverage is not None:
+                logger.info(f"\t Global Risk: {torch.mean(odresults.global_coverage)}")
+
+        return odresults
 
 
 ####################################################################################################
