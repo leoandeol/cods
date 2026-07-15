@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import tqdm
+from scipy.optimize import linear_sum_assignment
+from torchvision.ops import box_iou
 
 from cods.od.data import (
     ODConformalizedPredictions,
@@ -15,6 +17,142 @@ from cods.od.data import (
 from cods.od.utils import f_iou
 
 logger = getLogger("cods")
+
+
+def compute_box_level_metrics(
+    predictions: ODPredictions,
+    confidence_threshold: float | torch.Tensor | None = None,
+    iou_threshold: float = 0.5,
+    verbose: bool = True,
+) -> dict:
+    """Box-level TP/FP/FN counts and recall/precision, over all images pooled.
+
+    For each image, an injective matching pi: ground truth -> pred is computed by
+    maximizing the sum of IoU(gt, pred) over pairs (Hungarian assignment); some true
+    boxes stay unmatched when there are fewer predictions than ground truths.
+    Then, at box level:
+    - a predicted box is a TP if it is associated to a true box with the same class
+      and IoU >= `iou_threshold`; it is a FP otherwise,
+    - a true box is a FN iff it has no associated prediction, or its associated
+      prediction has the wrong class or IoU < `iou_threshold`.
+
+    Both aggregation options are returned:
+    - Option 1, all classes pooled: recall = TP/(TP+FN) (denominator = total number
+      of true boxes), precision = TP/(TP+FP).
+    - Option 2, per class then averaged: TP_k/FP_k are restricted to predictions of
+      class k and FN_k to true boxes of class k; macro averages are taken over
+      classes with a nonzero denominator (classes with >= 1 true box for recall,
+      classes with >= 1 prediction for precision).
+
+    Predictions are first filtered by `confidence_threshold` (defaults to
+    `predictions.confidence_threshold`, or 0 if unset). The predicted class of a box
+    is the argmax of its class scores.
+    """
+    if confidence_threshold is None:
+        confidence_threshold = (
+            predictions.confidence_threshold
+            if predictions.confidence_threshold is not None
+            else 0.0
+        )
+    if isinstance(confidence_threshold, torch.Tensor):
+        confidence_threshold = confidence_threshold.item()
+
+    n_classes = predictions.n_classes
+    tp_per_class = torch.zeros(n_classes)  # indexed by the (common) true = pred class
+    fp_per_class = torch.zeros(n_classes)  # indexed by the predicted class
+    fn_per_class = torch.zeros(n_classes)  # indexed by the true class
+
+    for i in range(len(predictions)):
+        true_boxes = predictions.true_boxes[i]
+        true_cls = predictions.true_cls[i]
+        mask = predictions.confidences[i] >= confidence_threshold
+        pred_boxes = predictions.pred_boxes[i][mask]
+        n_gt, n_pred = len(true_boxes), len(pred_boxes)
+        pred_labels = predictions.pred_cls[i][mask].argmax(dim=-1) if n_pred > 0 else torch.zeros(0)
+
+        # Injective matching gt -> pred maximizing the sum of IoU
+        if n_gt > 0 and n_pred > 0:
+            iou = box_iou(true_boxes.float(), pred_boxes.float())  # (n_gt, n_pred)
+            gt_idx, pred_idx = linear_sum_assignment(-iou.cpu().numpy())
+        else:
+            iou = None
+            gt_idx, pred_idx = (), ()
+
+        is_tp_pred = np.zeros(n_pred, dtype=bool)
+        gt_is_covered = np.zeros(n_gt, dtype=bool)
+        for g, p in zip(gt_idx, pred_idx):
+            if iou[g, p].item() >= iou_threshold and int(pred_labels[p]) == int(true_cls[g]):
+                is_tp_pred[p] = True
+                gt_is_covered[g] = True
+                tp_per_class[int(true_cls[g])] += 1
+        for p in range(n_pred):
+            if not is_tp_pred[p]:
+                fp_per_class[int(pred_labels[p])] += 1
+        for g in range(n_gt):
+            if not gt_is_covered[g]:
+                fn_per_class[int(true_cls[g])] += 1
+
+    tp = tp_per_class.sum().item()
+    fp = fp_per_class.sum().item()
+    fn = fn_per_class.sum().item()
+
+    # Sanity check (option 1): TP + FN = total number of true boxes
+    n_true_boxes = sum(len(tb) for tb in predictions.true_boxes)
+    if tp + fn != n_true_boxes:
+        logger.warning(
+            f"Box-level sanity check failed: TP + FN = {tp + fn} != {n_true_boxes} true boxes",
+        )
+
+    # Option 1: all classes pooled
+    recall = tp / (tp + fn) if tp + fn > 0 else float("nan")
+    precision = tp / (tp + fp) if tp + fp > 0 else float("nan")
+
+    # Option 2: per class, then macro-averaged over classes with a nonzero denominator
+    recall_denom = tp_per_class + fn_per_class  # = number of true boxes of each class
+    precision_denom = tp_per_class + fp_per_class  # = number of predictions of each class
+    recall_per_class = torch.where(
+        recall_denom > 0,
+        tp_per_class / recall_denom,
+        torch.full_like(recall_denom, float("nan")),
+    )
+    precision_per_class = torch.where(
+        precision_denom > 0,
+        tp_per_class / precision_denom,
+        torch.full_like(precision_denom, float("nan")),
+    )
+    macro_recall = (
+        recall_per_class[recall_denom > 0].mean().item()
+        if (recall_denom > 0).any()
+        else float("nan")
+    )
+    macro_precision = (
+        precision_per_class[precision_denom > 0].mean().item()
+        if (precision_denom > 0).any()
+        else float("nan")
+    )
+
+    if verbose:
+        logger.info(
+            f"Box-level metrics (IoU >= {iou_threshold}, conf >= {confidence_threshold}): "
+            f"TP={tp:.0f}, FP={fp:.0f}, FN={fn:.0f} | "
+            f"recall={recall:.4f}, precision={precision:.4f} | "
+            f"macro_recall={macro_recall:.4f}, macro_precision={macro_precision:.4f}",
+        )
+
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "recall": recall,
+        "precision": precision,
+        "tp_per_class": tp_per_class,
+        "fp_per_class": fp_per_class,
+        "fn_per_class": fn_per_class,
+        "recall_per_class": recall_per_class,
+        "precision_per_class": precision_per_class,
+        "macro_recall": macro_recall,
+        "macro_precision": macro_precision,
+    }
 
 
 def compute_global_coverage(
@@ -148,6 +286,240 @@ def compute_global_coverage(
             covs.append(coverage)
     covs = torch.stack(covs)
     return covs
+
+
+def _resolve_confidence_threshold(predictions, confidence_threshold):
+    if confidence_threshold is None:
+        confidence_threshold = (
+            predictions.confidence_threshold
+            if predictions.confidence_threshold is not None
+            else 0.0
+        )
+    if isinstance(confidence_threshold, torch.Tensor):
+        confidence_threshold = confidence_threshold.item()
+    return confidence_threshold
+
+
+def compute_precision_recall_lrp(
+    predictions: ODPredictions,
+    conformalized_predictions: ODConformalizedPredictions | None = None,
+    confidence_threshold: float | torch.Tensor | None = None,
+    iou_threshold: float = 0.5,
+    error_loc: str = "iou",
+    tp_selection: str = "confidence",
+    verbose: bool = True,
+) -> dict:
+    """Class-independent Precision, Recall and LRP with prediction -> ground-truth
+    matching (spec: "OD metrics: Precision, Recall, LRP, OCE", Section 2).
+
+    For each kept prediction (confidence >= `confidence_threshold`), an arrow is
+    drawn to the ground truth with highest IoU among those with IoU >= `iou_threshold`
+    and a class match. Then, per ground truth: no incoming arrow -> FN; otherwise the
+    claimant with the highest confidence (`tp_selection="confidence"`, variant 1) or
+    highest IoU (`tp_selection="iou"`, variant 2) becomes the single TP (its
+    localization error is recorded) and the other claimants lose their arrow.
+    Predictions left without an arrow are FPs.
+
+    Raw mode (`conformalized_predictions=None`): boxes are `pred_boxes` and the class
+    match is top-1 predicted class == true class. Conformal mode: boxes are the
+    margin-corrected `conf_boxes` and the class match is true class in the conformal
+    label set `conf_cls` (spec item 2).
+
+    `error_loc`:
+    - "iou": errorloc = (1 - IoU) / (1 - iou_threshold), in [0, 1] for a TP;
+    - "hausdorff": the CODS asymmetric signed Hausdorff distance, clamped to >= 0 and
+      normalized by the image diagonal (the [0, 1]-normalization is not fixed by the
+      spec; the diagonal makes it image-size independent).
+
+    Returns a dict with tp / fp / fn counts, precision = TP/(TP+FP),
+    recall = TP/(TP+FN), loc = sum of errorloc over TPs, and
+    lrp = (loc + FP + FN) / (TP + FP + FN).
+    """
+    if error_loc not in ("iou", "hausdorff"):
+        raise ValueError(f"error_loc {error_loc} not accepted, must be 'iou' or 'hausdorff'")
+    if tp_selection not in ("confidence", "iou"):
+        raise ValueError(
+            f"tp_selection {tp_selection} not accepted, must be 'confidence' or 'iou'",
+        )
+    confidence_threshold = _resolve_confidence_threshold(predictions, confidence_threshold)
+    conf_boxes_all = conformalized_predictions.conf_boxes if conformalized_predictions else None
+    conf_cls_all = conformalized_predictions.conf_cls if conformalized_predictions else None
+
+    tp, fp, fn = 0, 0, 0
+    loc_error_sum = 0.0
+
+    for i in range(len(predictions)):
+        true_boxes = predictions.true_boxes[i]
+        true_cls = predictions.true_cls[i]
+        mask = predictions.confidences[i] >= confidence_threshold
+        confidences = predictions.confidences[i][mask]
+        if conf_boxes_all is not None:
+            boxes = conf_boxes_all[i][mask]
+        else:
+            boxes = predictions.pred_boxes[i][mask]
+        n_gt, n_pred = len(true_boxes), len(boxes)
+
+        if conf_cls_all is not None:
+            kept_cls_sets = [s for s, keep in zip(conf_cls_all[i], mask) if keep]
+
+            def class_match(k, j, kept_cls_sets=kept_cls_sets, true_cls=true_cls):
+                return bool(torch.isin(true_cls[j], kept_cls_sets[k]).item())
+        else:
+            pred_labels = (
+                predictions.pred_cls[i][mask].argmax(dim=-1) if n_pred > 0 else torch.zeros(0)
+            )
+
+            def class_match(k, j, pred_labels=pred_labels, true_cls=true_cls):
+                return int(pred_labels[k]) == int(true_cls[j])
+
+        if n_gt > 0 and n_pred > 0:
+            iou = box_iou(true_boxes.float(), boxes.float())  # (n_gt, n_pred)
+        else:
+            iou = torch.zeros((n_gt, n_pred))
+
+        # Arrows prediction -> ground truth: best-IoU gt among those with
+        # IoU >= threshold and a class match.
+        arrows = [None] * n_pred
+        for k in range(n_pred):
+            best_j, best_iou = None, -1.0
+            for j in range(n_gt):
+                iou_jk = iou[j, k].item()
+                if iou_jk >= iou_threshold and iou_jk > best_iou and class_match(k, j):
+                    best_j, best_iou = j, iou_jk
+            arrows[k] = best_j
+
+        # Per ground truth: FN if unclaimed, otherwise a single TP among claimants.
+        for j in range(n_gt):
+            claimants = [k for k in range(n_pred) if arrows[k] == j]
+            if len(claimants) == 0:
+                fn += 1
+                continue
+            if tp_selection == "confidence":
+                winner = max(claimants, key=lambda k: confidences[k].item())
+            else:
+                winner = max(claimants, key=lambda k: iou[j, k].item())
+            for k in claimants:
+                if k != winner:
+                    arrows[k] = None
+            tp += 1
+            if error_loc == "iou":
+                loc_error_sum += (1.0 - iou[j, winner].item()) / (1.0 - iou_threshold)
+            else:
+                from cods.od.utils import assymetric_hausdorff_distance
+
+                d = assymetric_hausdorff_distance(
+                    true_boxes[j][None, :],
+                    boxes[winner][None, :],
+                )[0, 0].item()
+                shape = predictions.image_shapes[i]
+                diag = float(np.sqrt(float(shape[0]) ** 2 + float(shape[1]) ** 2))
+                loc_error_sum += min(max(d, 0.0) / diag, 1.0)
+
+        fp += sum(1 for k in range(n_pred) if arrows[k] is None)
+
+    n_true_boxes = sum(len(tb) for tb in predictions.true_boxes)
+    if tp + fn != n_true_boxes:
+        logger.warning(
+            f"Sanity check failed: TP + FN = {tp + fn} != {n_true_boxes} true boxes",
+        )
+
+    precision = tp / (tp + fp) if tp + fp > 0 else float("nan")
+    recall = tp / (tp + fn) if tp + fn > 0 else float("nan")
+    lrp = (loc_error_sum + fp + fn) / (tp + fp + fn) if tp + fp + fn > 0 else float("nan")
+
+    if verbose:
+        logger.info(
+            f"P/R/LRP (IoU >= {iou_threshold}, conf >= {confidence_threshold}, "
+            f"errorloc={error_loc}, tp_selection={tp_selection}): "
+            f"TP={tp}, FP={fp}, FN={fn} | precision={precision:.4f}, recall={recall:.4f}, "
+            f"LOC={loc_error_sum:.4f}, LRP={lrp:.4f}",
+        )
+
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "precision": precision,
+        "recall": recall,
+        "loc": loc_error_sum,
+        "lrp": lrp,
+    }
+
+
+def compute_oce(
+    predictions: ODPredictions,
+    conformalized_predictions: ODConformalizedPredictions | None = None,
+    confidence_threshold: float | torch.Tensor | None = None,
+    iou_thresholds: tuple = (0.5, 0.75),
+    verbose: bool = True,
+) -> dict:
+    """OCE metric with ground-truth -> predictions matching (spec Section 3).
+
+    For each ground truth (i, j) and IoU threshold tau, Q = set of kept predictions
+    whose box has IoU(box, gt) >= tau. The averaged foreground score vector
+    p_bar(c) = mean over Q of the model's class scores (0 if Q is empty), and
+    Brier_tau = sum over the K foreground classes of (1{c = true class} - p_bar(c))^2.
+    OCE_tau is the mean of Brier_tau over all ground truths of the dataset, and
+    OCE = sum of OCE_tau over `iou_thresholds` (default OCE_0.5 + OCE_0.75).
+
+    The class scores must be the foreground restriction of a softmax over K+1 classes
+    (K foreground + background). This is what CODS stores for DETR:
+    `pred_cls = softmax(logits)[..., :-1]` (the background column is dropped, so rows
+    sum to < 1 — the background class makes the softmax well defined but is not
+    scored, as required).
+
+    In conformal mode (`conformalized_predictions` given), Q is computed with the
+    margin-corrected `conf_boxes` (spec item 2); the scores p_bar stay the model's
+    softmax scores, since OCE evaluates probabilities, not label sets.
+    """
+    confidence_threshold = _resolve_confidence_threshold(predictions, confidence_threshold)
+    conf_boxes_all = conformalized_predictions.conf_boxes if conformalized_predictions else None
+
+    brier_sums = dict.fromkeys(iou_thresholds, 0.0)
+    n_gt_total = 0
+
+    for i in range(len(predictions)):
+        true_boxes = predictions.true_boxes[i]
+        true_cls = predictions.true_cls[i]
+        n_gt = len(true_boxes)
+        if n_gt == 0:
+            continue
+        n_gt_total += n_gt
+
+        mask = predictions.confidences[i] >= confidence_threshold
+        if conf_boxes_all is not None:
+            boxes = conf_boxes_all[i][mask]
+        else:
+            boxes = predictions.pred_boxes[i][mask]
+        scores = predictions.pred_cls[i][mask]  # (n_pred, K) foreground softmax scores
+        n_pred = len(boxes)
+
+        if n_pred > 0:
+            iou = box_iou(true_boxes.float(), boxes.float())  # (n_gt, n_pred)
+        for tau in iou_thresholds:
+            for j in range(n_gt):
+                if n_pred > 0:
+                    in_q = iou[j] >= tau
+                else:
+                    in_q = torch.zeros(0, dtype=torch.bool)
+                if in_q.any():
+                    p_bar = scores[in_q].mean(dim=0)
+                else:
+                    p_bar = torch.zeros(predictions.n_classes)
+                onehot = torch.zeros_like(p_bar)
+                onehot[int(true_cls[j])] = 1.0
+                brier_sums[tau] += torch.sum((onehot - p_bar) ** 2).item()
+
+    result = {}
+    for tau in iou_thresholds:
+        result[f"OCE_{tau}"] = brier_sums[tau] / n_gt_total if n_gt_total > 0 else float("nan")
+    result["OCE"] = sum(result[f"OCE_{tau}"] for tau in iou_thresholds)
+
+    if verbose:
+        parts = ", ".join(f"OCE_{tau}={result[f'OCE_{tau}']:.4f}" for tau in iou_thresholds)
+        logger.info(f"OCE (conf >= {confidence_threshold}): {parts}, OCE={result['OCE']:.4f}")
+
+    return result
 
 
 def getStretch(

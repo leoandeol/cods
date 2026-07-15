@@ -40,6 +40,7 @@ from cods.od.optim import (
     FirstStepMonotonizingOptimizer,
     LearnThenTestOptimizer,
     SecondStepMonotonizingOptimizer,
+    hb_p_value,
 )
 from cods.od.score import (
     MinAdditiveSignedAssymetricHausdorffNCScore,
@@ -1277,11 +1278,16 @@ class LearnThenTestConformalizer(Conformalizer):
         n_lambda_localization: int = 50,
         n_lambda_classification: int = 50,
         lambda_localization_max: float | None = None,
+        lambda_classification_grid: torch.Tensor | list | None = None,
         device: str = "cpu",
     ):
         """Mirrors `ODConformalizer`'s constructor names/registries (so a SeqCRC
         config can be reused as-is), plus the per-task grid sizes and
         `lambda_localization_max` (default 1000 additive / 100 multiplicative).
+        `lambda_classification_grid` overrides the uniform λ_cls grid (LTT paper
+        uses fine grids, e.g. step 1e-3; useful when class scores are small and
+        the risk curve only moves for λ close to 1 — pass e.g. a grid with a
+        log-spaced tail). When set, `n_lambda_classification` is ignored.
         """
         super().__init__()
         self.device = device
@@ -1342,6 +1348,11 @@ class LearnThenTestConformalizer(Conformalizer):
         self.n_lambda_confidence = n_lambda_confidence
         self.n_lambda_localization = n_lambda_localization
         self.n_lambda_classification = n_lambda_classification
+        self.lambda_classification_grid = (
+            torch.sort(torch.as_tensor(lambda_classification_grid, dtype=torch.float32)).values
+            if lambda_classification_grid is not None
+            else None
+        )
 
         self.evaluator = ODEvaluator(
             confidence_loss=self.confidence_loss,
@@ -1447,7 +1458,11 @@ class LearnThenTestConformalizer(Conformalizer):
             self.lambda_localization_max,
             self.n_lambda_localization,
         )
-        lambda_classification_grid = torch.linspace(0, 1, self.n_lambda_classification)
+        lambda_classification_grid = (
+            self.lambda_classification_grid
+            if self.lambda_classification_grid is not None
+            else torch.linspace(0, 1, self.n_lambda_classification)
+        )
         n1 = len(lambda_confidence_grid)
         n2 = len(lambda_localization_grid)
         n3 = len(lambda_classification_grid)
@@ -1750,6 +1765,360 @@ class LearnThenTestConformalizer(Conformalizer):
                 logger.info(f"\t Global Risk: {torch.mean(odresults.global_coverage)}")
 
         return odresults
+
+
+class SplitFixedSequenceConformalizer(LearnThenTestConformalizer):
+    """Learn-Then-Test conformalizer using Split Fixed Sequence Testing
+    (LTT paper, Appendix D, https://arxiv.org/abs/2110.01052) instead of the
+    Bonferroni gatekeeping of `LearnThenTestConformalizer`. Same constructor,
+    registries and conformalize/evaluate; only the calibration procedure differs.
+
+    Procedure (hypotheses live on the full 3D grid of
+    (λ_confidence, λ_localization, λ_classification) triples):
+    1. Split the calibration images into a graph-selection split I_graph
+       (first `split_ratio` fraction) and a testing split I_testing (the rest).
+    2. On I_graph, compute one Hoeffding-Bentkus p-value per task for every grid
+       point (each task's risk only depends on 1-2 coordinates, so the 3D p-value
+       field is assembled from per-task slices).
+    3. Learn a path through the 3D grid: for each beta = d/D, d = 0..D
+       (D = `n_sequence_steps`), pick lambda_bar(beta) = the grid point whose
+       vector of three p-values is closest to (beta, beta, beta) in sup-norm;
+       remove repeated points.
+    4. Run fixed sequence testing (paper Algorithm 1, single-start) along this
+       sequence using I_testing only: each triple is tested at level delta with
+       the max of its three Hoeffding-Bentkus p-values (union null,
+       paper Proposition 6); stop at the first failure. All triples certified
+       before the stop are FWER-delta valid.
+    5. Among certified triples, report the one with the smallest normalized
+       lambdas (same efficiency criterion as `LearnThenTestConformalizer`; the
+       paper's own selection rule is specific to its parameterization).
+    """
+
+    def __init__(
+        self,
+        *args,
+        split_ratio: float = 0.5,
+        n_sequence_steps: int = 50,
+        **kwargs,
+    ):
+        """Same arguments as `LearnThenTestConformalizer`, plus `split_ratio`
+        (fraction of calibration images used for the graph-selection split) and
+        `n_sequence_steps` (D: the path is discretized at beta = 0, 1/D, ..., 1).
+        """
+        super().__init__(*args, **kwargs)
+        if not 0 < split_ratio < 1:
+            raise ValueError(f"split_ratio must be in (0, 1), got {split_ratio}")
+        self.split_ratio = split_ratio
+        self.n_sequence_steps = n_sequence_steps
+
+    def calibrate(
+        self,
+        predictions: ODPredictions,
+        global_alpha: float | None = None,
+        global_delta: float = 0.1,
+        alpha_confidence: float | None = None,
+        alpha_localization: float | None = None,
+        alpha_classification: float | None = None,
+        verbose: bool = True,
+    ) -> ODParameters:
+        """Calibrate the three lambdas by Split Fixed Sequence Testing (see class
+        docstring). Pass either `global_alpha` (split into `alpha_task =
+        global_alpha / 3`) or the three per-task alphas directly; `global_delta`
+        is the level of each fixed-sequence test.
+        """
+        n_tasks = 3
+
+        if global_alpha is not None:
+            if (
+                alpha_confidence is not None
+                or alpha_localization is not None
+                or alpha_classification is not None
+            ):
+                raise ValueError(
+                    "Provide either 'global_alpha' (split evenly across the three "
+                    "tasks, as a convenience) or explicit 'alpha_confidence' / "
+                    "'alpha_localization' / 'alpha_classification', not both.",
+                )
+            alpha_confidence = alpha_localization = alpha_classification = global_alpha / n_tasks
+        elif alpha_confidence is None or alpha_localization is None or alpha_classification is None:
+            raise ValueError(
+                "Either 'global_alpha' or all three of 'alpha_confidence', "
+                "'alpha_localization' and 'alpha_classification' must be provided.",
+            )
+        else:
+            global_alpha = alpha_confidence + alpha_localization + alpha_classification
+
+        self.global_delta = global_delta
+
+        n = len(predictions)
+        n_graph = round(self.split_ratio * n)
+        n_testing = n - n_graph
+        if n_graph < 1 or n_testing < 1:
+            raise ValueError(
+                f"split_ratio={self.split_ratio} leaves an empty split "
+                f"(n={n}, n_graph={n_graph}, n_testing={n_testing})",
+            )
+
+        true_boxes = predictions.true_boxes
+        true_cls = predictions.true_cls
+        pred_boxes = predictions.pred_boxes
+        pred_cls = predictions.pred_cls
+        confidences = predictions.confidences
+        n_classes = predictions.n_classes
+
+        lambda_confidence_grid = torch.linspace(0, 1, self.n_lambda_confidence)
+        lambda_localization_grid = torch.linspace(
+            0,
+            self.lambda_localization_max,
+            self.n_lambda_localization,
+        )
+        lambda_classification_grid = (
+            self.lambda_classification_grid
+            if self.lambda_classification_grid is not None
+            else torch.linspace(0, 1, self.n_lambda_classification)
+        )
+        n1 = len(lambda_confidence_grid)
+        n2 = len(lambda_localization_grid)
+        n3 = len(lambda_classification_grid)
+
+        # Normalize losses (and alphas) by their upper bound B so risks are in [0, 1].
+        b_confidence = float(self.confidence_loss.upper_bound)
+        b_localization = float(self.localization_loss.upper_bound)
+        b_classification = float(self.classification_loss.upper_bound)
+        alpha_confidence_norm = alpha_confidence / b_confidence
+        alpha_localization_norm = alpha_localization / b_localization
+        alpha_classification_norm = alpha_classification / b_classification
+
+        full_label_set = torch.arange(n_classes)[None, ...].to(self.device)
+        if self._score_function is None:
+            self._score_function = self.CLASSIFICATION_METHODS[self.classification_prediction_set](
+                n_classes,
+            )
+
+        # Step 1: per-image normalized losses over the grid. Confidence only
+        # depends on λ_conf, localization on (λ_conf, λ_loc) and classification on
+        # (λ_conf, λ_cls), so these three arrays describe the full 3D grid.
+        if verbose:
+            logger.info(
+                "[Split Fixed Sequence] Step 1: sweeping the λ grids (losses for all images)",
+            )
+        if predictions.matching is not None:
+            logger.warning("Overwriting previous matching")
+
+        conf_losses = np.zeros((n1, n))
+        loc_losses = np.zeros((n1, n2, n))
+        cls_losses = np.zeros((n1, n3, n))
+
+        for a in tqdm(
+            range(n1),
+            disable=not verbose,
+            desc="[Split Fixed Sequence] λ_confidence sweep (matching + loc/cls sub-sweeps)",
+        ):
+            lbd_conf = float(lambda_confidence_grid[a])
+            threshold = 1 - lbd_conf
+            predictions.confidence_threshold = threshold
+            predictions.matching = None
+            match_predictions_to_true_boxes(
+                predictions,
+                distance_function=self.matching_function,
+                verbose=False,
+            )
+            matched_pred_boxes, matched_pred_cls = self._matched_arrays(predictions)
+
+            for i in range(n):
+                mask = confidences[i] >= threshold
+                conf_losses[a, i] = (
+                    float(
+                        self.confidence_loss(
+                            true_boxes[i],
+                            true_cls[i],
+                            pred_boxes[i][mask],
+                            pred_cls[i][mask],
+                        ),
+                    )
+                    / b_confidence
+                )
+
+            for b in range(n2):
+                lbd_loc = float(lambda_localization_grid[b])
+                for i in range(n):
+                    conf_boxes_i = apply_margins(
+                        [matched_pred_boxes[i]],
+                        [lbd_loc] * 4,
+                        mode=self.localization_prediction_set,
+                    )[0]
+                    conf_cls_i = [full_label_set for _ in matched_pred_cls[i]]
+                    loc_losses[a, b, i] = (
+                        float(
+                            self.localization_loss(
+                                true_boxes[i],
+                                true_cls[i],
+                                conf_boxes_i,
+                                conf_cls_i,
+                            ),
+                        )
+                        / b_localization
+                    )
+
+            for c in range(n3):
+                lbd_cls = float(lambda_classification_grid[c])
+                for i in range(n):
+                    conf_cls_i = [
+                        self._score_function.get_set(pred_cls=x, quantile=lbd_cls)
+                        for x in matched_pred_cls[i]
+                    ]
+                    cls_losses[a, c, i] = (
+                        float(
+                            self.classification_loss(
+                                true_boxes[i],
+                                true_cls[i],
+                                matched_pred_boxes[i],
+                                conf_cls_i,
+                            ),
+                        )
+                        / b_classification
+                    )
+
+        # Step 2: Hoeffding-Bentkus p-values on the graph-selection split, one per task.
+        graph = slice(0, n_graph)
+        testing = slice(n_graph, n)
+
+        p_confidence_graph = np.array(
+            [
+                hb_p_value(conf_losses[a, graph].mean(), n_graph, alpha_confidence_norm)
+                for a in range(n1)
+            ],
+        )
+        p_localization_graph = np.array(
+            [
+                [
+                    hb_p_value(loc_losses[a, b, graph].mean(), n_graph, alpha_localization_norm)
+                    for b in range(n2)
+                ]
+                for a in range(n1)
+            ],
+        )
+        p_classification_graph = np.array(
+            [
+                [
+                    hb_p_value(cls_losses[a, c, graph].mean(), n_graph, alpha_classification_norm)
+                    for c in range(n3)
+                ]
+                for a in range(n1)
+            ],
+        )
+
+        # Step 3: learn the path lambda_bar(d/D) over the 3D grid: for each beta,
+        # the triple whose p-value vector is closest to (beta, beta, beta) in
+        # sup-norm. Repeated points are removed (paper Algorithm 1 never retests).
+        if verbose:
+            logger.info(
+                "[Split Fixed Sequence] Step 2: learning the λ sequence on the graph split",
+            )
+        sequence: list[tuple[int, int, int]] = []
+        for d in range(self.n_sequence_steps + 1):
+            beta = d / self.n_sequence_steps
+            distances = np.maximum(
+                np.abs(p_confidence_graph - beta)[:, None, None],
+                np.maximum(
+                    np.abs(p_localization_graph - beta)[:, :, None],
+                    np.abs(p_classification_graph - beta)[:, None, :],
+                ),
+            )
+            idx = np.unravel_index(np.argmin(distances), distances.shape)
+            idx = (int(idx[0]), int(idx[1]), int(idx[2]))
+            if idx not in sequence:
+                sequence.append(idx)
+        self.sequence_indices = sequence
+
+        # Step 4: fixed sequence testing on the testing split, each hypothesis at
+        # level delta (single-start), with the union-null p-value max over tasks;
+        # stop at the first failure.
+        if verbose:
+            logger.info(
+                f"[Split Fixed Sequence] Step 3: fixed sequence testing along "
+                f"{len(sequence)} λ triple(s) on the testing split",
+            )
+        certified: list[tuple[int, int, int]] = []
+        for a, b, c in sequence:
+            p_value = max(
+                hb_p_value(conf_losses[a, testing].mean(), n_testing, alpha_confidence_norm),
+                hb_p_value(loc_losses[a, b, testing].mean(), n_testing, alpha_localization_norm),
+                hb_p_value(
+                    cls_losses[a, c, testing].mean(),
+                    n_testing,
+                    alpha_classification_norm,
+                ),
+            )
+            if p_value <= global_delta:
+                certified.append((a, b, c))
+            else:
+                break
+        self.certified_indices = certified
+
+        if len(certified) == 0:
+            raise ValueError(
+                "Split Fixed Sequence Testing could not certify any "
+                "(λ_confidence, λ_localization, λ_classification) triple at level "
+                f"delta={global_delta}: the first point of the learned sequence "
+                "already fails on the testing split. Try a larger calibration set, "
+                "finer/wider grids, or larger alpha / delta.",
+            )
+
+        # Step 5: among certified triples, pick the smallest normalized lambdas
+        # (most efficient prediction sets), as in LearnThenTestConformalizer.
+        loc_scale = self.lambda_localization_max if self.lambda_localization_max > 0 else 1.0
+        best = min(
+            certified,
+            key=lambda t: (
+                float(lambda_confidence_grid[t[0]])
+                + float(lambda_localization_grid[t[1]]) / loc_scale
+                + float(lambda_classification_grid[t[2]])
+            ),
+        )
+        lambda_confidence = float(lambda_confidence_grid[best[0]])
+        lambda_localization = float(lambda_localization_grid[best[1]])
+        lambda_classification = float(lambda_classification_grid[best[2]])
+        self.lambda_confidence = lambda_confidence
+        self.lambda_localization = lambda_localization
+        self.lambda_classification = lambda_classification
+
+        if verbose:
+            logger.info(
+                f"[Split Fixed Sequence] Certified {len(certified)} triple(s) at level "
+                f"delta={global_delta} (n_graph={n_graph}, n_testing={n_testing}); selected "
+                f"λ_confidence={lambda_confidence:.4f}, "
+                f"λ_localization={lambda_localization:.4f}, "
+                f"λ_classification={lambda_classification:.4f}",
+            )
+
+        # Re-match at the selected λ_conf (the sweep left it at the last one visited).
+        predictions.confidence_threshold = 1 - lambda_confidence
+        predictions.matching = None
+        if verbose:
+            logger.info(
+                "[Split Fixed Sequence] Matching Predictions to True Boxes (selected λ_confidence)",
+            )
+        match_predictions_to_true_boxes(
+            predictions,
+            distance_function=self.matching_function,
+            verbose=verbose,
+        )
+
+        result = ODParameters(
+            predictions_id=predictions.unique_id,
+            global_alpha=global_alpha,
+            alpha_confidence=alpha_confidence,
+            alpha_localization=alpha_localization,
+            alpha_classification=alpha_classification,
+            lambda_confidence_plus=lambda_confidence,
+            lambda_confidence_minus=lambda_confidence,
+            lambda_localization=lambda_localization,
+            lambda_classification=lambda_classification,
+            confidence_threshold=predictions.confidence_threshold,
+        )
+        self._last_parameters_id = result.unique_id
+        return result
 
 
 ####################################################################################################
