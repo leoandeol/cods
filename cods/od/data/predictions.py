@@ -126,6 +126,24 @@ class ODPredictions(Predictions):
             pred_cls=[self.pred_cls[i] for i in indices],
             names=self.names,
         )
+    
+    def __getitem__(self, index: int|slice) -> dict:
+        if isinstance(index, int):
+            return {
+                "image_path": self.image_paths[index],
+                "image_shape": self.image_shapes[index],
+                "true_boxes": self.true_boxes[index],
+                "pred_boxes": self.pred_boxes[index],
+                "confidences": self.confidences[index],
+                "true_cls": self.true_cls[index],
+                "pred_cls": self.pred_cls[index],
+                "name": self.names[index],
+            }
+        elif isinstance(index, slice):
+            indices = list(range(len(self)))[index]
+            return self.get_subset(indices)
+        else:
+            raise TypeError("Index must be an int or a slice.")
 
     def split(self, proportion:float=0.5)->tuple[ODPredictions, ODPredictions]:
         n = len(self)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 import logging
+from collections.abc import Callable
 from types import MappingProxyType
 
 import numpy as np
@@ -9,7 +9,6 @@ import torch
 from tqdm import tqdm
 
 #from scipy.optimize import brentq
-
 from cods.base.cp import Conformalizer
 from cods.base.optim import (
     BinarySearchOptimizer,
@@ -34,6 +33,8 @@ from cods.od.loss import (
     ClassificationLossWrapper,
     ODBinaryClassificationLoss,
     ODLoss,
+    PenalizedODBinaryClassificationLoss,
+    PenalizedPixelWiseRecallLoss,
     PixelWiseRecallLoss,
     RecallMimickingCnfLoss,
     ThresholdedBoxDistanceConfidenceLoss,
@@ -110,7 +111,6 @@ def evaluate_risk(
     matching_function,
     lambda_conf,
 ):
-
     true_boxes = predictions.true_boxes
     pred_boxes = predictions.pred_boxes
     true_cls = predictions.true_cls
@@ -118,11 +118,13 @@ def evaluate_risk(
     confidences = predictions.confidences
     device = predictions.true_boxes[0].device
 
+    threshold = 1 - lambda_conf
+
     match_predictions_to_true_boxes(
         predictions,
         distance_function=matching_function,
         verbose=False,
-        overload_confidence_threshold=1 - lambda_conf,
+        overload_confidence_threshold=threshold,
     )
 
     losses = []
@@ -131,88 +133,48 @@ def evaluate_risk(
         true_boxes_i = true_boxes[i]
         true_cls_i = true_cls[i]
         confidences_i = confidences[i]
-
-        pred_boxes_i = pred_boxes[i][confidences_i >= 1 - lambda_conf]
-        pred_cls_i = [
-            x
-            for x, c in zip(pred_cls[i], confidences_i)
-            if c >= 1 - lambda_conf
-        ]
-
         matching_i = predictions.matching[i]
+
+        keep = confidences_i >= threshold
+
+        pred_boxes_i = pred_boxes[i][keep]
+        pred_cls_i = [
+            cls_i
+            for cls_i, keep_i in zip(pred_cls[i], keep)
+            if bool(keep_i)
+        ]
 
         pred_cls_i = (
             torch.stack(pred_cls_i)
             if len(pred_cls_i) > 0
-            else torch.tensor([]).float().to(device)
+            else torch.empty(0, device=device)
         )
 
-        missing_injective_match = False
-        tmp_matched_boxes_i = []
-        tmp_matched_cls_i = []
-
-        for j in range(len(true_boxes_i)):
-            matched_pred_indices_j = matching_i[j]
-
-            if len(matched_pred_indices_j) == 0:
-                missing_injective_match = True
-                break
-
-            m = matched_pred_indices_j[0]
-
-            matched_box_j = pred_boxes_i[m]
-            matched_cls_j = pred_cls_i[m]
-
-            if matched_box_j.numel() != 4:
-                missing_injective_match = True
-                break
-
-            if matched_cls_j.numel() == 0:
-                missing_injective_match = True
-                break
-
-            tmp_matched_boxes_i.append(matched_box_j.reshape(4))
-            tmp_matched_cls_i.append(matched_cls_j)
-
-        if missing_injective_match:
-            losses.append(
-                torch.tensor(
-                    [float(loss.upper_bound)],
-                    dtype=torch.float,
-                    device=device,
-                )
+        if len(pred_boxes_i) == 0:
+            conf_boxes_i = pred_boxes_i.reshape(0, 4)
+            conf_cls_i = []
+        else:
+            conf_boxes_i, conf_cls_i = build_predictions(
+                pred_boxes_i,
+                pred_cls_i,
+                lbd,
             )
-            continue
-
-        matched_pred_boxes_i = (
-            torch.stack(tmp_matched_boxes_i)
-            if len(tmp_matched_boxes_i) > 0
-            else torch.empty((0, 4), dtype=torch.float, device=device)
-        )
-
-        matched_pred_cls_i = (
-            torch.stack(tmp_matched_cls_i)
-            if len(tmp_matched_cls_i) > 0
-            else torch.tensor([]).float().to(device)
-        )
-
-        matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
-            matched_pred_boxes_i,
-            matched_pred_cls_i,
-            lbd,
-        )
 
         loss_i = loss(
             true_boxes_i,
             true_cls_i,
-            matched_conf_boxes_i,
-            matched_conf_cls_i,
+            conf_boxes_i,
+            conf_cls_i,
+            **(
+                {"matching": matching_i}
+                if getattr(loss, "uses_matching", False)
+                else {}
+            ),
         )
 
-        losses.append(loss_i.reshape(-1))
+        losses.append(loss_i.reshape(-1).mean())
 
-    return torch.cat(losses).mean()
-
+    return torch.stack(losses).mean()
 
 class LocalizationConformalizer(Conformalizer):
     """A class for performing localization conformalization. Should be used within an ODConformalizer.
@@ -251,6 +213,7 @@ class LocalizationConformalizer(Conformalizer):
             "thresholded": ThresholdedRecallLoss,
             "boxwise-precision": BoxWisePrecisionLoss,
             "boxwise-iou": BoxWiseIoULoss,
+            "penalized_pixelwise": PenalizedPixelWiseRecallLoss
         }
     )
     OPTIMIZERS = MappingProxyType(
@@ -393,7 +356,7 @@ class LocalizationConformalizer(Conformalizer):
             f_to_minimize,
             alpha=alpha_loc,
             bounds=bounds,
-            steps=40,   
+            steps=40,
         )
         #return brentq(f_to_minimize, a=bounds[0], b=bounds[1])
 
@@ -529,8 +492,12 @@ class LocalizationConformalizer(Conformalizer):
                 float,
             ):
                 lambdas = [lambda_localization[0]] * 4
-        elif isinstance(lambda_localization, float):
-            lambdas = [lambda_localization] * 4
+        elif isinstance(lambda_localization, (float, int)):
+            lambdas = [float(lambda_localization)] * 4
+        else:
+            raise ValueError(
+                "lambda_localization must be a float, int, or a list of floats/ints",
+            )
         if verbose:
             logger.info("Conformalizing Localization with λ")
         return apply_margins(
@@ -736,6 +703,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
     LOSSES = MappingProxyType(
         {
             "binary": ODBinaryClassificationLoss,
+            "penalized_binary":PenalizedODBinaryClassificationLoss
         }
     )
 
@@ -794,11 +762,15 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             raise NotImplementedError("CRC backend is not supported yet")
 
         self.backend = backend
-        self._backend_loss = ODBinaryClassificationLoss()
-        self.loss = ClassificationLossWrapper(
-            self._backend_loss,
-            device=self.device,
-        )
+        if loss == "penalized_binary":
+            self._backend_loss = self.LOSSES[loss](device=self.device)
+            self.loss = self._backend_loss
+        else:
+            self._backend_loss = self.LOSSES[loss]()
+            self.loss = ClassificationLossWrapper(
+                self._backend_loss,
+                device=self.device,
+            )
         self.lambda_classification = None
 
         if optimizer not in self.OPTIMIZERS:
@@ -838,7 +810,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
             f_to_minimize,
             alpha=alpha_cls,
             bounds=bounds,
-            steps=40,   
+            steps=40,
         )
         #return brentq(f_to_minimize, a=bounds[0], b=bounds[1])
 
@@ -898,6 +870,7 @@ class ODClassificationConformalizer(ClassificationConformalizer):
                 if predictions.confidence_threshold is None:
                     raise ValueError("predictions.confidence_threshold must be set for CRC calibration if overload_confidence_threshold is not provided")
                 overload_confidence_threshold = predictions.confidence_threshold
+
             self.lambda_classification = self.crc_calibrate(
                 predictions,
                 build_predictions,

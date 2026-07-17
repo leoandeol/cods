@@ -367,7 +367,7 @@ def match_predictions_to_true_boxes(
     distance_function,
     overload_confidence_threshold=None,
     verbose=False,
-    hungarian=False,
+    hungarian=True,
     idx=None,
     class_factor: float = 0.25,
 ) -> None:

@@ -13,7 +13,6 @@ from cods.od.utils import apply_margins, match_predictions_to_true_boxes
 
 logger = getLogger("cods")
 
-
 # TODO(leo): only image level currently
 class FirstStepMonotonizingOptimizer(Optimizer):
     def __init__(self):
@@ -124,52 +123,86 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 **loss_kwargs
             )
 
-            tmp_matched_boxes_i = [
-                (
-                    torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
-            matched_pred_boxes_i = (
-                torch.stack(tmp_matched_boxes_i)
-                if len(tmp_matched_boxes_i) > 0
-                else torch.tensor([]).float().to(device)
-            )
-            matched_pred_cls_i = [
-                (
-                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
             margin = np.concatenate((image_shape, image_shape))
-            matched_conf_boxes_i = apply_margins(
-                [matched_pred_boxes_i],
-                margin,
-                mode="additive",  # TODO fix this
-            )[0]
+
+            if len(pred_boxes_i) == 0:
+                conf_boxes_i = pred_boxes_i.reshape(0, 4)
+            else:
+                conf_boxes_i = apply_margins(
+                    [pred_boxes_i],
+                    margin,
+                    mode="additive",
+                )[0]
 
             n_classes = len(predictions.pred_cls[0][0].squeeze())
-            matched_conf_cls_i = [
-                torch.arange(n_classes)[None, ...].to(device)
-                for _ in range(len(matched_pred_cls_i))
+
+            conf_cls_i = [
+                torch.arange(n_classes, device=device)
+                for _ in range(len(pred_boxes_i))
             ]
 
             localization_loss_i = localization_loss(
                 true_boxes_i,
                 true_cls_i,
-                matched_conf_boxes_i,
-                matched_conf_cls_i,
+                conf_boxes_i,
+                conf_cls_i,
+                **({"matching":matching_i} if getattr(localization_loss, "uses_matching", False) else {}),
             )
             classification_loss_i = classification_loss(
                 true_boxes_i,
                 true_cls_i,
-                matched_conf_boxes_i,
-                matched_conf_cls_i,
+                conf_boxes_i,
+                conf_cls_i,
+                **({"matching":matching_i} if getattr(classification_loss, "uses_matching", False) else {}),
             )
+            # tmp_matched_boxes_i = [
+            #     (
+            #         torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
+            #         if len(matching_i[j]) > 0
+            #         else torch.tensor([]).float().to(device)
+            #     )
+            #     for j in range(len(true_boxes_i))
+            # ]
+
+            # matched_pred_boxes_i = (
+            #     torch.stack(tmp_matched_boxes_i)
+            #     if len(tmp_matched_boxes_i) > 0
+            #     else torch.tensor([]).float().to(device)
+            # )
+
+            # matched_pred_cls_i = [
+            #     (
+            #         torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
+            #         if len(matching_i[j]) > 0
+            #         else torch.tensor([]).float().to(device)
+            #     )
+            #     for j in range(len(true_boxes_i))
+            # ]
+            # margin = np.concatenate((image_shape, image_shape))
+            # matched_conf_boxes_i = apply_margins(
+            #     [matched_pred_boxes_i],
+            #     margin,
+            #     mode="additive",  # TODO fix this
+            # )[0]
+
+            # n_classes = len(predictions.pred_cls[0][0].squeeze())
+            # matched_conf_cls_i = [
+            #     torch.arange(n_classes)[None, ...].to(device)
+            #     for _ in range(len(matched_pred_cls_i))
+            # ]
+
+            # localization_loss_i = localization_loss(
+            #     true_boxes_i,
+            #     true_cls_i,
+            #     matched_conf_boxes_i,
+            #     matched_conf_cls_i,
+            # )
+            # classification_loss_i = classification_loss(
+            #     true_boxes_i,
+            #     true_cls_i,
+            #     matched_conf_boxes_i,
+            #     matched_conf_cls_i,
+            # )
 
             confidence_losses.append(confidence_loss_i)
             localization_losses.append(localization_loss_i)
@@ -181,11 +214,13 @@ class FirstStepMonotonizingOptimizer(Optimizer):
             len(predictions),
             B,
         )
+
         localization_risk = self._correct_risk(
             localization_losses,
             len(predictions),
             B,
         )
+
         classification_risk = self._correct_risk(
             classification_losses,
             len(predictions),
@@ -288,53 +323,90 @@ class FirstStepMonotonizingOptimizer(Optimizer):
                 **loss_kwargs
             )
 
-            tmp_matched_boxes_i = [
-                (
-                    torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
-            matched_pred_boxes_i = (
-                torch.stack(tmp_matched_boxes_i)
-                if len(tmp_matched_boxes_i) > 0
-                else torch.tensor([]).float().to(device)
-            )
-            matched_pred_cls_i = [
-                (
-                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
+            # tmp_matched_boxes_i = [
+            #     (
+            #         torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
+            #         if len(matching_i[j]) > 0
+            #         else torch.tensor([]).float().to(device)
+            #     )
+            #     for j in range(len(true_boxes_i))
+            # ]
+            # matched_pred_boxes_i = (
+            #     torch.stack(tmp_matched_boxes_i)
+            #     if len(tmp_matched_boxes_i) > 0
+            #     else torch.tensor([]).float().to(device)
+            # )
 
+            #TODO : voir si on pénalise les boites non matchées ou pas
             margin = np.concatenate((image_shape, image_shape))
-            matched_conf_boxes_i = apply_margins(
-                [matched_pred_boxes_i],
-                margin,
-                mode="additive",  # TODO: fix this
-            )[0]
+
+            if len(pred_boxes_i) == 0:
+                conf_boxes_i = pred_boxes_i.reshape(0, 4)
+            else:
+                conf_boxes_i = apply_margins(
+                    [pred_boxes_i],
+                    margin,
+                    mode="additive",
+                )[0]
 
             n_classes = len(predictions.pred_cls[0][0].squeeze())
-            matched_conf_cls_i = [
-                torch.arange(n_classes)[None, ...].to(device)
-                for _ in range(len(matched_pred_cls_i))
+
+            conf_cls_i = [
+                torch.arange(n_classes, device=device)
+                for _ in range(len(pred_boxes_i))
             ]
 
             localization_loss_i = localization_loss(
                 true_boxes_i,
                 true_cls_i,
-                matched_conf_boxes_i,
-                matched_conf_cls_i,
+                conf_boxes_i,
+                conf_cls_i,
+                **({"matching":matching_i} if getattr(localization_loss, "uses_matching", False) else {}),
             )
+
             classification_loss_i = classification_loss(
                 true_boxes_i,
                 true_cls_i,
-                matched_conf_boxes_i,
-                matched_conf_cls_i,
+                conf_boxes_i,
+                conf_cls_i,
+                **({"matching":matching_i} if getattr(classification_loss, "uses_matching", False) else {}),
             )
+            # If no good matching -> loss set to the max
+
+                # matched_pred_cls_i = [
+                #     (
+                #         torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+                #         if len(matching_i[j]) > 0
+                #         else torch.tensor([]).float().to(device)
+                #     )
+                #     for j in range(len(true_boxes_i))
+                # ]
+
+                # margin = np.concatenate((image_shape, image_shape))
+                # matched_conf_boxes_i = apply_margins(
+                #     [matched_pred_boxes_i],
+                #     margin,
+                #     mode="additive",  # TODO: fix this
+                # )[0]
+
+                # n_classes = len(predictions.pred_cls[0][0].squeeze())
+                # matched_conf_cls_i = [
+                #     torch.arange(n_classes)[None, ...].to(device)
+                #     for _ in range(len(matched_pred_cls_i))
+                # ]
+
+                # localization_loss_i = localization_loss(
+                #     true_boxes_i,
+                #     true_cls_i,
+                #     matched_conf_boxes_i,
+                #     matched_conf_cls_i,
+                # )
+                # classification_loss_i = classification_loss(
+                #     true_boxes_i,
+                #     true_cls_i,
+                #     matched_conf_boxes_i,
+                #     matched_conf_cls_i,
+                # )
 
             _log_raw_confidence_losses[i] = confidence_loss_i.detach().clone()
             _log_raw_localization_losses[i] = localization_loss_i.detach().clone()
@@ -584,41 +656,60 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 if len(pred_cls_i) > 0
                 else torch.tensor([]).float().to(device)
             )
-
-            tmp_matched_boxes_i = [
-                (
-                    torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
+            if len(pred_boxes_i) == 0:
+                conf_boxes_i = pred_boxes_i.reshape(0, 4)
+                conf_cls_i = []
+            else:
+                conf_boxes_i, conf_cls_i = build_predictions(
+                    pred_boxes_i,
+                    pred_cls_i,
+                    lbd,
                 )
-                for j in range(len(true_boxes_i))
-            ]
-            matched_pred_boxes_i = (
-                torch.stack(tmp_matched_boxes_i)
-                if len(tmp_matched_boxes_i) > 0
-                else torch.tensor([]).float().to(device)
-            )
-            matched_pred_cls_i = [
-                (
-                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
-
-            matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
-                matched_pred_boxes_i,
-                matched_pred_cls_i,
-                lbd,
-            )
 
             loss_i = loss(
                 true_boxes_i,
                 true_cls_i,
-                matched_conf_boxes_i,
-                matched_conf_cls_i,
+                conf_boxes_i,
+                conf_cls_i,
+                **({"matching":matching_i} if getattr(loss, "uses_matching", False) else {}),
             )
+
+            loss_i = loss_i.reshape(-1).mean()
+
+            # tmp_matched_boxes_i = [
+            #     (
+            #         torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
+            #         if len(matching_i[j]) > 0
+            #         else torch.tensor([]).float().to(device)
+            #     )
+            #     for j in range(len(true_boxes_i))
+            # ]
+            # matched_pred_boxes_i = (
+            #     torch.stack(tmp_matched_boxes_i)
+            #     if len(tmp_matched_boxes_i) > 0
+            #     else torch.tensor([]).float().to(device)
+            # )
+            # matched_pred_cls_i = [
+            #     (
+            #         torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+            #         if len(matching_i[j]) > 0
+            #         else torch.tensor([]).float().to(device)
+            #     )
+            #     for j in range(len(true_boxes_i))
+            # ]
+
+            # matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
+            #     matched_pred_boxes_i,
+            #     matched_pred_cls_i,
+            #     lbd,
+            # )
+
+            # loss_i = loss(
+            #     true_boxes_i,
+            #     true_cls_i,
+            #     matched_conf_boxes_i,
+            #     matched_conf_cls_i,
+            # )
 
             losses.append(loss_i)
 
@@ -663,40 +754,59 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 else torch.tensor([]).float().to(device)
             )
 
-            # TODO: currently only support matching to a single box
-            tmp_matched_boxes_i = [
-                (
-                    torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
+            if len(pred_boxes_i) == 0:
+                conf_boxes_i = pred_boxes_i.reshape(0, 4)
+                conf_cls_i = []
+            else:
+                conf_boxes_i, conf_cls_i = build_predictions(
+                    pred_boxes_i,
+                    pred_cls_i,
+                    lbd,
                 )
-                for j in range(len(true_boxes_i))
-            ]
-            matched_pred_boxes_i = (
-                torch.stack(tmp_matched_boxes_i)
-                if len(tmp_matched_boxes_i) > 0
-                else torch.tensor([]).float().to(device)
-            )
-            matched_pred_cls_i = [
-                (
-                    torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
-            matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
-                matched_pred_boxes_i,
-                matched_pred_cls_i,
-                lbd,
-            )
 
             loss_i = loss(
                 true_boxes_i,
                 true_cls_i,
-                matched_conf_boxes_i,
-                matched_conf_cls_i,
+                conf_boxes_i,
+                conf_cls_i,
+                **({"matching":matching_i} if getattr(loss, "uses_matching", False) else {}),
             )
+
+            loss_i = loss_i.reshape(-1).mean()
+            # TODO: currently only support matching to a single box
+            # tmp_matched_boxes_i = [
+            #     (
+            #         torch.stack([pred_boxes_i[m] for m in matching_i[j]])[0]
+            #         if len(matching_i[j]) > 0
+            #         else torch.tensor([]).float().to(device)
+            #     )
+            #     for j in range(len(true_boxes_i))
+            # ]
+            # matched_pred_boxes_i = (
+            #     torch.stack(tmp_matched_boxes_i)
+            #     if len(tmp_matched_boxes_i) > 0
+            #     else torch.tensor([]).float().to(device)
+            # )
+            # matched_pred_cls_i = [
+            #     (
+            #         torch.stack([pred_cls_i[m] for m in matching_i[j]])[0]
+            #         if len(matching_i[j]) > 0
+            #         else torch.tensor([]).float().to(device)
+            #     )
+            #     for j in range(len(true_boxes_i))
+            # ]
+            # matched_conf_boxes_i, matched_conf_cls_i = build_predictions(
+            #     matched_pred_boxes_i,
+            #     matched_pred_cls_i,
+            #     lbd,
+            # )
+
+            # loss_i = loss(
+            #     true_boxes_i,
+            #     true_cls_i,
+            #     matched_conf_boxes_i,
+            #     matched_conf_cls_i,
+            # )
 
             _log_losses[i] = loss_i.clone()
             old_loss_i = losses[i].clone()
@@ -807,7 +917,12 @@ class SecondStepMonotonizingOptimizer(Optimizer):
                 left = lbd
 
         if len(good_lbds) == 0:
-            raise ValueError("No good lambda found")
+            logger.error(
+                "No good lambda found in SecondStepMonotonizingOptimizer. "
+                f"Returning upper_bound={upper_bound}. "
+                "This is degraded mode and has no formal guarantee."
+            )
+            return upper_bound
 
         return good_lbds[-1]
 

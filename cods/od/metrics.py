@@ -12,8 +12,8 @@ from cods.od.data import (
     ODPredictions,
     ODResults,
 )
-from cods.od.utils import f_iou
 from cods.od.loss import RecallMimickingCnfLoss
+from cods.od.utils import f_iou
 
 logger = getLogger("cods")
 
@@ -342,7 +342,7 @@ def unroll_metrics(
         threshes_objectness_vanilla,
     ) = getAveragePrecision(
         predictions,
-        pred_boxes,
+        #pred_boxes,
         verbose=True,
         iou_threshold=iou_threshold,
     )
@@ -356,7 +356,7 @@ def unroll_metrics(
         threshes_objectness_conf,
     ) = getAveragePrecision(
         predictions,
-        conf_boxes,
+        #conf_boxes,
         verbose=True,
         iou_threshold=iou_threshold,
     )
@@ -471,27 +471,6 @@ class ODEvaluator:
                 confidence_losses.append(confidence_loss_i)
                 confidence_set_sizes.append(confidence_set_size_i)
 
-            tmp_matched_boxes_i = [
-                (
-                    torch.stack([conf_boxes_i[m] for m in matching_i[j]])[0]
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
-            matched_conf_boxes_i = (
-                torch.stack(tmp_matched_boxes_i)
-                if len(tmp_matched_boxes_i) > 0
-                else torch.tensor([]).float().to(device)
-            )
-            matched_conf_cls_i = [
-                (
-                    torch.stack([conf_cls_i[m] for m in matching_i[j]])[0]  # TODO zero here ?
-                    if len(matching_i[j]) > 0
-                    else torch.tensor([]).float().to(device)
-                )
-                for j in range(len(true_boxes_i))
-            ]
 
             # if matched_conf_boxes_i.size() == 0:
             #     matched_conf_boxes_i = torch.tensor([]).float().to(device)
@@ -501,13 +480,15 @@ class ODEvaluator:
                 localization_loss_i = self.localization_loss(
                     true_boxes_i,
                     true_cls_i,
-                    matched_conf_boxes_i,
-                    matched_conf_cls_i,
-                )
-                # except:
-                #     print(len(matched_conf_boxes_i))
-                #     print(matched_conf_boxes_i.shape)
-                #     print(matched_conf_boxes_i)
+                    conf_boxes_i,
+                    conf_cls_i,
+                    **(
+                        {"matching": matching_i}
+                        if getattr(self.localization_loss, "uses_matching", False)
+                        else {}
+                    ),
+                ).reshape(-1).mean()
+
                 localization_set_size_i = []
                 for conf_box_i_j, pred_box_i_j in zip(
                     conf_boxes_i,
@@ -535,10 +516,14 @@ class ODEvaluator:
                 classification_loss_i = self.classification_loss(
                     true_boxes_i,
                     true_cls_i,
-                    matched_conf_boxes_i,
-                    matched_conf_cls_i,
-                )
-
+                    conf_boxes_i,
+                    conf_cls_i,
+                    **(
+                        {"matching": matching_i}
+                        if getattr(self.classification_loss, "uses_matching", False)
+                        else {}
+                    ),
+                ).reshape(-1).mean()
                 classification_losses.append(classification_loss_i)
 
                 classification_set_size_i = []

@@ -908,3 +908,121 @@ class RecallMimickingCnfLoss(ODLoss):
         
         res = 1 - s / n_true
         return torch.tensor([res], device=self.device, dtype=torch.float32)
+
+
+#  Custom penalizing losses for injective matching experimet
+def _valid_match_indices(matching, gt_idx: int, n_predictions: int) -> list[int]:
+    if matching is None or gt_idx >= len(matching):
+        return []
+
+    indices = matching[gt_idx]
+
+    if isinstance(indices, torch.Tensor):
+        indices = indices.reshape(-1).tolist()
+    elif not isinstance(indices, (list, tuple)):
+        indices = [indices]
+
+    return [
+        int(idx)
+        for idx in indices
+        if 0 <= int(idx) < n_predictions
+    ]
+
+class PenalizedODBinaryClassificationLoss(ODLoss):
+    uses_matching = True
+
+    def __init__(self, device: str = "cpu"):
+        super().__init__(upper_bound=1, device=device)
+
+    def __call__(
+        self,
+        true_boxes,
+        true_cls,
+        conf_boxes,
+        conf_cls,
+        matching,
+    ) -> torch.Tensor:
+        if len(true_cls) == 0:
+            return torch.zeros(1, device=true_cls.device)
+
+        losses = []
+
+        for j, true_cls_j in enumerate(true_cls):
+            matches_j = matching[j]
+
+            # Pas de prédiction associée à cette GT : pénalité maximale.
+            if matches_j is None or len(matches_j) == 0:
+                losses.append(
+                    torch.tensor(1.0, device=true_cls.device)
+                )
+                continue
+
+            m = matches_j[0]
+
+            if isinstance(m, torch.Tensor):
+                m = int(m.reshape(-1)[0].item())
+            else:
+                m = int(m)
+
+            # Ceci indique une incohérence d'indices, pas un vrai non-match.
+            if m < 0 or m >= len(conf_cls):
+                raise IndexError(
+                    f"Matching index {m} invalid for "
+                    f"{len(conf_cls)} conformal class sets."
+                )
+
+            target_cls = true_cls_j.reshape(-1)[0]
+            predicted_set = torch.as_tensor(
+                conf_cls[m],
+                device=true_cls.device,
+            ).reshape(-1)
+
+            loss_j = torch.logical_not(
+                torch.isin(target_cls, predicted_set)
+            ).float()
+
+            losses.append(loss_j)
+
+        return torch.stack(losses).mean().reshape(1)
+
+class PenalizedPixelWiseRecallLoss(PixelWiseRecallLoss):
+    uses_matching:bool=True
+    def __call__(
+        self,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls,
+        matching,
+    ) -> torch.Tensor:
+        if len(true_boxes) == 0:
+            return torch.zeros(1, device=true_boxes.device)
+
+        covered_areas = []
+
+        for j in range(len(true_boxes)):
+            matched_indices = _valid_match_indices(
+                matching,
+                gt_idx=j,
+                n_predictions=len(conf_boxes),
+            )
+
+            if len(matched_indices) == 0:
+                covered_areas.append(
+                    torch.tensor(0.0, device=true_boxes.device)
+                )
+                continue
+
+            matched_boxes = conf_boxes[matched_indices]
+
+            covered_area_j = self.get_covered_areas(
+                matched_boxes,
+                true_boxes[j : j + 1],
+            ).reshape(-1)[0]
+
+            covered_areas.append(covered_area_j)
+
+        return (
+            torch.ones(1, device=true_boxes.device)
+            - torch.stack(covered_areas).mean()
+        )
