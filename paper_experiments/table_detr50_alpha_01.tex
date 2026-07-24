@@ -1,0 +1,111 @@
+
+    \begin{table*}[htbp]
+    \centering
+    \tiny
+    \caption{Experimental Results using the DETR model for $\alphatot=0.1$}
+    \label{tab:detr50_results_alpha_01_styled}
+    \begin{tabular}{@{}lllll rrcrrcr@{}}
+    \toprule
+    \multicolumn{1}{c}{\multirow{2}{*}{\shortstack{ Matching\\Function}}} & 
+    \multicolumn{1}{c}{\multirow{2}{*}{\shortstack{ Conf.\\Loss}}} & 
+    \multicolumn{1}{c}{\multirow{2}{*}{\shortstack{ Loc.\\Loss}}} & 
+    \multicolumn{1}{c}{\multirow{2}{*}{\shortstack{ Cls.\\Pred.\\Set}}} & 
+    \multicolumn{1}{c}{\multirow{2}{*}{\shortstack{ Loc.\\Pred.\\Set.}}} & 
+    \multicolumn{2}{c}{Confidence} & \multicolumn{2}{c}{Localization} & 
+    \multicolumn{2}{c}{Classification} & \multicolumn{1}{c}{Global} \\
+    \cmidrule(lr){6-7} \cmidrule(lr){8-9} \cmidrule(lr){10-11} \cmidrule(lr){12-12}
+    & & & & & \multicolumn{1}{c}{Size} & \multicolumn{1}{c}{Risk} & 
+    \multicolumn{1}{c}{Size} & \multicolumn{1}{c}{Risk} & 
+    \multicolumn{1}{c}{Size} & \multicolumn{1}{c}{Risk} & 
+    \multicolumn{1}{c}{Risk} \\
+    \midrule
+    mix & box\_count\_threshold & thresholded & lac & additive & 26.47 & 0.0184 & 4.8865 & 0.0456 & 14.6013 & 0.046 & 0.0851 \\
+mix & box\_count\_threshold & thresholded & lac & multiplicative & 26.47 & 0.0184 & 2.7192 & 0.0504 & 14.6013 & 0.046 & 0.0937 \\
+mix & box\_count\_threshold & thresholded & aps & additive & 26.47 & 0.0184 & 4.8865 & 0.0424 & 19.5276 & 0.0404 & 0.076 \\
+mix & box\_count\_threshold & thresholded & aps & multiplicative & 26.47 & 0.0184 & 2.3063 & 0.0432 & 10.6422 & 0.05 & 0.089 \\
+mix & box\_count\_threshold & pixelwise & lac & additive & 26.47 & 0.0184 & 1.6194 & 0.0479 & 8.804 & 0.0486 & 0.0848 \\
+mix & box\_count\_threshold & pixelwise & lac & multiplicative & 26.47 & 0.0184 & 1.3834 & 0.0483 & 8.804 & 0.0486 & 0.0876 \\
+mix & box\_count\_threshold & pixelwise & aps & additive & 26.47 & 0.0184 & 1.6194 & 0.0479 & 10.6421 & 0.05 & 0.0857 \\
+mix & box\_count\_threshold & pixelwise & aps & multiplicative & 26.47 & 0.0184 & 1.3834 & 0.0483 & 10.6421 & 0.05 & 0.0885 \\
+mix & box\_count\_threshold & boxwise & lac & additive & 26.47 & 0.0184 & 4.1988 & 0.0479 & 8.804 & 0.0486 & 0.0825 \\
+mix & box\_count\_threshold & boxwise & lac & multiplicative & 26.47 & 0.0184 & 2.2334 & 0.0454 & 8.804 & 0.0486 & 0.0859 \\
+mix & box\_count\_threshold & boxwise & aps & additive & 26.47 & 0.0184 & 4.1988 & 0.0479 & 10.6421 & 0.05 & 0.0835 \\
+mix & box\_count\_threshold & boxwise & aps & multiplicative & 26.47 & 0.0184 & 2.2334 & 0.0454 & 10.6421 & 0.05 & 0.087 \\
+mix & box\_count\_recall & thresholded & lac & additive & 18.9968 & 0.0176 & 5.0007 & 0.044 & 13.3042 & 0.0494 & 0.0847 \\
+mix & box\_count\_recall & thresholded & lac & multiplicative & 18.9968 & 0.0176 & 2.5229 & 0.0388 & 13.3042 & 0.0494 & 0.0838 \\
+mix & box\_count\_recall & thresholded & aps & additive & 18.9968 & 0.0176 & 5.0007 & 0.044 & 16.4637 & 0.0483 & 0.0841 \\
+mix & box\_count\_recall & thresholded & aps & multiplicative & 18.9968 & 0.0176 & 2.5229 & 0.0388 & 16.4638 & 0.0483 & 0.083 \\
+mix & box\_count\_recall & pixelwise & lac & additive & 18.9968 & 0.0176 & 1.9124 & 0.047 & 13.3042 & 0.0494 & 0.0836 \\
+mix & box\_count\_recall & pixelwise & lac & multiplicative & 18.9968 & 0.0176 & 1.5764 & 0.0455 & 13.3042 & 0.0494 & 0.0855 \\
+mix & box\_count\_recall & pixelwise & aps & additive & 18.9968 & 0.0176 & 1.9124 & 0.047 & 16.4637 & 0.0483 & 0.0834 \\
+mix & box\_count\_recall & pixelwise & aps & multiplicative & 18.9968 & 0.0176 & 1.5764 & 0.0455 & 16.4638 & 0.0483 & 0.0851 \\
+mix & box\_count\_recall & boxwise & lac & additive & 18.9968 & 0.0176 & 4.5756 & 0.0458 & 13.3042 & 0.0494 & 0.0809 \\
+mix & box\_count\_recall & boxwise & lac & multiplicative & 18.9968 & 0.0176 & 2.4501 & 0.043 & 13.3042 & 0.0494 & 0.0846 \\
+mix & box\_count\_recall & boxwise & aps & additive & 18.9968 & 0.0176 & 4.5756 & 0.0458 & 16.4637 & 0.0483 & 0.0806 \\
+mix & box\_count\_recall & boxwise & aps & multiplicative & 18.9968 & 0.0176 & 2.4501 & 0.043 & 16.4638 & 0.0483 & 0.0842 \\
+hausdorff & box\_count\_threshold & thresholded & lac & additive & 26.47 & 0.0184 & 3.4744 & 0.0516 & 46.1216 & 0.0528 & 0.102 \\
+hausdorff & box\_count\_threshold & thresholded & lac & multiplicative & 26.47 & 0.0184 & 1.6263 & 0.0452 & 46.1216 & 0.0528 & 0.0967 \\
+hausdorff & box\_count\_threshold & thresholded & aps & additive & 26.47 & 0.0184 & 3.4744 & 0.0516 & 44.3476 & 0.0536 & 0.1028 \\
+hausdorff & box\_count\_threshold & thresholded & aps & multiplicative & 26.47 & 0.0184 & 1.6263 & 0.0452 & 44.3477 & 0.0536 & 0.0975 \\
+hausdorff & box\_count\_threshold & pixelwise & lac & additive & 26.47 & 0.0184 & 1.0944 & 0.0508 & 46.1216 & 0.0528 & 0.098 \\
+hausdorff & box\_count\_threshold & pixelwise & lac & multiplicative & 26.47 & 0.0184 & 1.0677 & 0.0482 & 46.1216 & 0.0528 & 0.0963 \\
+hausdorff & box\_count\_threshold & pixelwise & aps & additive & 26.47 & 0.0184 & 1.0944 & 0.0508 & 44.3476 & 0.0536 & 0.099 \\
+hausdorff & box\_count\_threshold & pixelwise & aps & multiplicative & 26.47 & 0.0184 & 1.0677 & 0.0482 & 44.3477 & 0.0536 & 0.0973 \\
+hausdorff & box\_count\_threshold & boxwise & lac & additive & 26.47 & 0.0184 & 2.7627 & 0.0538 & 46.1216 & 0.0528 & 0.0992 \\
+hausdorff & box\_count\_threshold & boxwise & lac & multiplicative & 26.47 & 0.0184 & 1.5777 & 0.0493 & 46.1216 & 0.0528 & 0.0973 \\
+hausdorff & box\_count\_threshold & boxwise & aps & additive & 26.47 & 0.0184 & 2.7627 & 0.0538 & 44.3476 & 0.0536 & 0.1 \\
+hausdorff & box\_count\_threshold & boxwise & aps & multiplicative & 26.47 & 0.0184 & 1.5777 & 0.0493 & 44.3477 & 0.0536 & 0.0981 \\
+hausdorff & box\_count\_recall & thresholded & lac & additive & 18.9968 & 0.0176 & 3.9182 & 0.0508 & 41.6162 & 0.0544 & 0.1024 \\
+hausdorff & box\_count\_recall & thresholded & lac & multiplicative & 18.9968 & 0.0176 & 1.8434 & 0.0404 & 41.6162 & 0.0544 & 0.0934 \\
+hausdorff & box\_count\_recall & thresholded & aps & additive & 18.9968 & 0.0176 & 3.9182 & 0.0508 & 40.1964 & 0.055 & 0.103 \\
+hausdorff & box\_count\_recall & thresholded & aps & multiplicative & 18.9968 & 0.0176 & 1.8434 & 0.0404 & 40.1967 & 0.055 & 0.0938 \\
+hausdorff & box\_count\_recall & pixelwise & lac & additive & 18.9968 & 0.0176 & 1.2032 & 0.0496 & 41.6162 & 0.0544 & 0.0977 \\
+hausdorff & box\_count\_recall & pixelwise & lac & multiplicative & 18.9968 & 0.0176 & 1.1396 & 0.0496 & 41.6162 & 0.0544 & 0.0985 \\
+hausdorff & box\_count\_recall & pixelwise & aps & additive & 18.9968 & 0.0176 & 1.2032 & 0.0496 & 40.1964 & 0.055 & 0.0986 \\
+hausdorff & box\_count\_recall & pixelwise & aps & multiplicative & 18.9968 & 0.0176 & 1.1396 & 0.0496 & 40.1967 & 0.055 & 0.0994 \\
+hausdorff & box\_count\_recall & boxwise & lac & additive & 18.9968 & 0.0176 & 3.3439 & 0.0504 & 41.6162 & 0.0544 & 0.0977 \\
+hausdorff & box\_count\_recall & boxwise & lac & multiplicative & 18.9968 & 0.0176 & 1.7463 & 0.0467 & 41.6162 & 0.0544 & 0.096 \\
+hausdorff & box\_count\_recall & boxwise & aps & additive & 18.9968 & 0.0176 & 3.3439 & 0.0504 & 40.1964 & 0.055 & 0.0984 \\
+hausdorff & box\_count\_recall & boxwise & aps & multiplicative & 18.9968 & 0.0176 & 1.7463 & 0.0467 & 40.1967 & 0.055 & 0.0969 \\
+lac & box\_count\_threshold & thresholded & lac & additive & 26.47 & 0.0184 & 22.3032 & 0.0384 & 1.0439 & 0.0511 & 0.0849 \\
+lac & box\_count\_threshold & thresholded & lac & multiplicative & 26.47 & 0.0184 & 20.7645 & 0.0468 & 1.0439 & 0.0511 & 0.0933 \\
+lac & box\_count\_threshold & thresholded & aps & additive & 26.47 & 0.0184 & 22.3032 & 0.0384 & 1.0656 & 0.0509 & 0.0846 \\
+lac & box\_count\_threshold & thresholded & aps & multiplicative & 26.47 & 0.0184 & 20.7645 & 0.0468 & 1.0656 & 0.0509 & 0.093 \\
+lac & box\_count\_threshold & pixelwise & lac & additive & 26.47 & 0.0184 & 17.7219 & 0.0477 & 1.0439 & 0.0511 & 0.0881 \\
+lac & box\_count\_threshold & pixelwise & lac & multiplicative & 26.47 & 0.0184 & 14.9356 & 0.0489 & 1.0439 & 0.0511 & 0.0893 \\
+lac & box\_count\_threshold & pixelwise & aps & additive & 26.47 & 0.0184 & 17.7219 & 0.0477 & 1.0656 & 0.0509 & 0.0882 \\
+lac & box\_count\_threshold & pixelwise & aps & multiplicative & 26.47 & 0.0184 & 14.9356 & 0.0489 & 1.0656 & 0.0509 & 0.0893 \\
+lac & box\_count\_threshold & boxwise & lac & additive & 26.47 & 0.0184 & 21.0545 & 0.0434 & 1.0439 & 0.0511 & 0.0831 \\
+lac & box\_count\_threshold & boxwise & lac & multiplicative & 26.47 & 0.0184 & 17.17 & 0.0461 & 1.0439 & 0.0511 & 0.0862 \\
+lac & box\_count\_threshold & boxwise & aps & additive & 26.47 & 0.0184 & 21.0545 & 0.0434 & 1.0656 & 0.0509 & 0.083 \\
+lac & box\_count\_threshold & boxwise & aps & multiplicative & 26.47 & 0.0184 & 17.17 & 0.0461 & 1.0656 & 0.0509 & 0.0863 \\
+lac & box\_count\_recall & thresholded & lac & additive & 18.9968 & 0.0176 & 20.7239 & 0.0312 & 1.2313 & 0.0497 & 0.0774 \\
+lac & box\_count\_recall & thresholded & lac & multiplicative & 18.9968 & 0.0176 & 22.3737 & 0.0396 & 1.2313 & 0.0497 & 0.085 \\
+lac & box\_count\_recall & thresholded & aps & additive & 18.9968 & 0.0176 & 20.7239 & 0.0312 & 1.2632 & 0.05 & 0.0777 \\
+lac & box\_count\_recall & thresholded & aps & multiplicative & 18.9968 & 0.0176 & 22.3737 & 0.0396 & 1.2632 & 0.05 & 0.0854 \\
+lac & box\_count\_recall & pixelwise & lac & additive & 18.9968 & 0.0176 & 16.4791 & 0.044 & 1.2313 & 0.0497 & 0.0844 \\
+lac & box\_count\_recall & pixelwise & lac & multiplicative & 18.9968 & 0.0176 & 16.1127 & 0.0431 & 1.2313 & 0.0497 & 0.0839 \\
+lac & box\_count\_recall & pixelwise & aps & additive & 18.9968 & 0.0176 & 16.4791 & 0.044 & 1.2632 & 0.05 & 0.0849 \\
+lac & box\_count\_recall & pixelwise & aps & multiplicative & 18.9968 & 0.0176 & 16.1127 & 0.0431 & 1.2632 & 0.05 & 0.0844 \\
+lac & box\_count\_recall & boxwise & lac & additive & 18.9968 & 0.0176 & 19.4332 & 0.0394 & 1.2313 & 0.0497 & 0.0795 \\
+lac & box\_count\_recall & boxwise & lac & multiplicative & 18.9968 & 0.0176 & 18.5152 & 0.0409 & 1.2313 & 0.0497 & 0.0814 \\
+lac & box\_count\_recall & boxwise & aps & additive & 18.9968 & 0.0176 & 19.4332 & 0.0394 & 1.2632 & 0.05 & 0.08 \\
+lac & box\_count\_recall & boxwise & aps & multiplicative & 18.9968 & 0.0176 & 18.5152 & 0.0409 & 1.2632 & 0.05 & 0.082 \\
+giou & box\_count\_threshold & thresholded & lac & additive & 26.47 & 0.0184 & 36.2302 & 0.0196 & 48.0582 & 0.0392 & 0.0586 \\
+giou & box\_count\_threshold & thresholded & aps & additive & 26.47 & 0.0184 & 36.2302 & 0.0196 & 47.2329 & 0.0401 & 0.0593 \\
+giou & box\_count\_threshold & pixelwise & lac & additive & 26.47 & 0.0184 & 32.078 & 0.0323 & 48.0582 & 0.0392 & 0.0702 \\
+giou & box\_count\_threshold & pixelwise & lac & multiplicative & 26.47 & 0.0184 & 195.8746 & 0.0221 & 48.0582 & 0.0392 & 0.0612 \\
+giou & box\_count\_threshold & pixelwise & aps & additive & 26.47 & 0.0184 & 32.078 & 0.0323 & 47.2333 & 0.0401 & 0.0708 \\
+giou & box\_count\_threshold & pixelwise & aps & multiplicative & 26.47 & 0.0184 & 195.8746 & 0.0221 & 47.2329 & 0.0401 & 0.062 \\
+giou & box\_count\_threshold & boxwise & lac & additive & 26.47 & 0.0184 & 35.6738 & 0.0269 & 48.0582 & 0.0392 & 0.0648 \\
+giou & box\_count\_threshold & boxwise & aps & additive & 26.47 & 0.0184 & 35.6738 & 0.0269 & 47.2333 & 0.0401 & 0.0654 \\
+giou & box\_count\_recall & thresholded & lac & additive & 18.9968 & 0.0176 & 32.7432 & 0.0124 & 48.0761 & 0.0387 & 0.0505 \\
+giou & box\_count\_recall & thresholded & aps & additive & 18.9968 & 0.0176 & 32.7432 & 0.0124 & 46.8378 & 0.0393 & 0.051 \\
+giou & box\_count\_recall & pixelwise & lac & additive & 18.9968 & 0.0176 & 29.1094 & 0.0251 & 48.0761 & 0.0387 & 0.0621 \\
+giou & box\_count\_recall & pixelwise & aps & additive & 18.9968 & 0.0176 & 29.1094 & 0.0251 & 46.8374 & 0.0393 & 0.0625 \\
+giou & box\_count\_recall & boxwise & lac & additive & 18.9968 & 0.0176 & 32.2681 & 0.0198 & 48.0761 & 0.0387 & 0.0568 \\
+giou & box\_count\_recall & boxwise & aps & additive & 18.9968 & 0.0176 & 32.2681 & 0.0198 & 46.8378 & 0.0393 & 0.0572 \\
+    \bottomrule
+    \end{tabular}
+    \end{table*}
+    

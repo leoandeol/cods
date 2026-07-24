@@ -4,6 +4,8 @@ from logging import getLogger
 
 import torch
 
+from itertools import permutations, product
+
 from cods.base.loss import Loss
 from cods.classif.loss import ClassificationLoss
 from cods.od.utils import (
@@ -842,3 +844,37 @@ class NumberPredictionsGapLoss(ODLoss):
         )
         loss = (len(true_boxes) - len(conf_boxes)) / max(len(true_boxes), 1)
         return min(loss, 1)
+
+def get_all_mappings(n_inputs, n_outputs, injections_only=False):
+    """
+    Génère toutes les fonctions de {1, ..., n} vers {1, ..., m}.
+    Si injections_only=True, ne génère que les injections.
+    Chaque fonction est représentée par un tuple (f(1), ..., f(n)).
+    """
+    if injections_only:
+        if n_inputs > n_outputs:
+            return iter(())
+        # permutations
+        return permutations(range(n_outputs), n_inputs)
+    else:
+        # produit cartésien
+        return product(range(n_outputs), repeat=n_inputs)
+
+class RecallMimickingCnfLoss(ODLoss):
+    def __call__(
+        self,
+        true_boxes: torch.Tensor,
+        true_cls: torch.Tensor,
+        conf_boxes: torch.Tensor,
+        conf_cls: torch.Tensor,
+    ) -> torch.Tensor:
+        for pi in get_all_mappings(len(true_boxes), len(conf_boxes)):
+            # compute recall for this mapping
+            mapped_conf_boxes = conf_boxes[list(pi)]
+            
+        # return (
+        #     torch.zeros(1).to(self.device)
+        #     if len(conf_boxes) >= len(true_boxes)
+        #     else torch.ones(1).to(self.device)
+        # )
+        ...
