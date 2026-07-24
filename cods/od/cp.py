@@ -1257,6 +1257,7 @@ class LearnThenTestConformalizer(Conformalizer):
     PREDICTION_SETS = ("additive", "multiplicative")
     GUARANTEE_LEVELS = ("image",)
     MATCHINGS = ODConformalizer.MATCHINGS
+    SELECTION_RULES = ("sum", "confidence_first")
 
     # Same registries as ODConformalizer's sub-conformalizers, so method/set names
     # are interchangeable between the two.
@@ -1279,6 +1280,7 @@ class LearnThenTestConformalizer(Conformalizer):
         n_lambda_classification: int = 50,
         lambda_localization_max: float | None = None,
         lambda_classification_grid: torch.Tensor | list | None = None,
+        selection_rule: str = "sum",
         device: str = "cpu",
     ):
         """Mirrors `ODConformalizer`'s constructor names/registries (so a SeqCRC
@@ -1288,9 +1290,20 @@ class LearnThenTestConformalizer(Conformalizer):
         uses fine grids, e.g. step 1e-3; useful when class scores are small and
         the risk curve only moves for λ close to 1 — pass e.g. a grid with a
         log-spaced tail). When set, `n_lambda_classification` is ignored.
+        `selection_rule` picks the reported triple among the certified ones (a
+        statistically free choice, since every certified triple is FWER-valid):
+        "sum" (default) minimizes the equally-weighted sum of normalized lambdas;
+        "confidence_first" is lexicographic — smallest λ_confidence first (i.e.
+        highest confidence threshold), then smallest normalized loc/cls sum.
         """
         super().__init__()
         self.device = device
+
+        if selection_rule not in self.SELECTION_RULES:
+            raise ValueError(
+                f"selection_rule {selection_rule} not accepted, must be one of {self.SELECTION_RULES}",
+            )
+        self.selection_rule = selection_rule
 
         if matching_function not in self.MATCHINGS:
             raise ValueError(
@@ -1364,6 +1377,23 @@ class LearnThenTestConformalizer(Conformalizer):
         self.lambda_confidence = None
         self.lambda_localization = None
         self.lambda_classification = None
+
+    def _select_triple(
+        self,
+        candidates: list[tuple[float, float, float]],
+    ) -> tuple[float, float, float]:
+        """Pick the reported (λ_confidence, λ_localization, λ_classification) among
+        the certified candidates. Every candidate is FWER-certified, so this choice
+        is statistically free.
+        - "sum": smallest equally-weighted sum of normalized lambdas.
+        - "confidence_first": lexicographic — smallest λ_confidence (highest
+          confidence threshold, fewest kept boxes), ties broken by the smallest
+          normalized loc/cls sum.
+        """
+        loc_scale = self.lambda_localization_max if self.lambda_localization_max > 0 else 1.0
+        if self.selection_rule == "confidence_first":
+            return min(candidates, key=lambda t: (t[0], t[1] / loc_scale + t[2]))
+        return min(candidates, key=lambda t: t[0] + t[1] / loc_scale + t[2])
 
     def _matched_arrays(
         self,
@@ -1532,11 +1562,9 @@ class LearnThenTestConformalizer(Conformalizer):
                 f"λ candidates (re-matching each)",
             )
 
-        # Pick the certified triple with the smallest lambdas (normalized to [0, 1]),
-        # i.e. the smallest/most efficient prediction sets.
-        loc_scale = self.lambda_localization_max if self.lambda_localization_max > 0 else 1.0
-        best_score = np.inf
-        best_triple: tuple[float, float, float] | None = None
+        # Collect one candidate triple per retained λ_conf; the reported one is
+        # chosen at the end by `_select_triple` (see `selection_rule`).
+        candidate_triples: list[tuple[float, float, float]] = []
         n_jointly_certified = 0
 
         for i in tqdm(
@@ -1613,14 +1641,13 @@ class LearnThenTestConformalizer(Conformalizer):
                 continue
             n_jointly_certified += len(valid_localization) * len(valid_classification)
 
+            # Given λ_conf, loc and cls are certified independently, so the smallest
+            # certified λ of each is the best candidate pair for this λ_conf.
             lbd_loc = float(lambda_localization_grid[int(valid_localization.min())])
             lbd_cls = float(lambda_classification_grid[int(valid_classification.min())])
-            score = lbd_conf + lbd_loc / loc_scale + lbd_cls
-            if score < best_score:
-                best_score = score
-                best_triple = (lbd_conf, lbd_loc, lbd_cls)
+            candidate_triples.append((lbd_conf, lbd_loc, lbd_cls))
 
-        if best_triple is None:
+        if len(candidate_triples) == 0:
             raise ValueError(
                 "Learn Then Test certified Confidence λ(s) but no jointly-valid "
                 "(λ_confidence, λ_localization, λ_classification) triple: no retained "
@@ -1629,7 +1656,9 @@ class LearnThenTestConformalizer(Conformalizer):
                 "larger alpha / delta.",
             )
 
-        lambda_confidence, lambda_localization, lambda_classification = best_triple
+        lambda_confidence, lambda_localization, lambda_classification = self._select_triple(
+            candidate_triples,
+        )
         self.lambda_confidence = lambda_confidence
         self.lambda_localization = lambda_localization
         self.lambda_classification = lambda_classification
@@ -2065,20 +2094,18 @@ class SplitFixedSequenceConformalizer(LearnThenTestConformalizer):
                 "finer/wider grids, or larger alpha / delta.",
             )
 
-        # Step 5: among certified triples, pick the smallest normalized lambdas
-        # (most efficient prediction sets), as in LearnThenTestConformalizer.
-        loc_scale = self.lambda_localization_max if self.lambda_localization_max > 0 else 1.0
-        best = min(
-            certified,
-            key=lambda t: (
-                float(lambda_confidence_grid[t[0]])
-                + float(lambda_localization_grid[t[1]]) / loc_scale
-                + float(lambda_classification_grid[t[2]])
-            ),
+        # Step 5: among certified triples, pick the reported one via `_select_triple`
+        # (see `selection_rule`; same rule as LearnThenTestConformalizer).
+        lambda_confidence, lambda_localization, lambda_classification = self._select_triple(
+            [
+                (
+                    float(lambda_confidence_grid[a]),
+                    float(lambda_localization_grid[b]),
+                    float(lambda_classification_grid[c]),
+                )
+                for a, b, c in certified
+            ],
         )
-        lambda_confidence = float(lambda_confidence_grid[best[0]])
-        lambda_localization = float(lambda_localization_grid[best[1]])
-        lambda_classification = float(lambda_classification_grid[best[2]])
         self.lambda_confidence = lambda_confidence
         self.lambda_localization = lambda_localization
         self.lambda_classification = lambda_classification
